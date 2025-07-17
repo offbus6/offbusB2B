@@ -13,6 +13,8 @@ import AgencyDashboard from "@/pages/agency/dashboard";
 import BusManagement from "@/pages/agency/bus-management";
 import UploadData from "@/pages/agency/upload-data";
 import UploadedData from "@/pages/agency/uploaded-data";
+import AgencyRegister from "@/pages/agency/register";
+import AgencyPending from "@/pages/agency/pending";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -34,7 +36,22 @@ function Router() {
     return <Landing />;
   }
 
-  const isSuperAdmin = user?.role === 'super_admin';
+  const isSuperAdmin = (user as any)?.role === 'super_admin';
+
+  // Check if user needs to register an agency
+  const userAgency = (user as any)?.agency;
+  const needsAgencyRegistration = !isSuperAdmin && !userAgency;
+
+  if (needsAgencyRegistration) {
+    return <AgencyRegister />;
+  }
+
+  // Check if user has pending agency approval
+  const hasPendingAgency = !isSuperAdmin && userAgency && userAgency.status !== 'approved';
+
+  if (hasPendingAgency) {
+    return <AgencyPending />;
+  }
 
   return (
     <div className="min-h-screen bg-[var(--airbnb-light)]">

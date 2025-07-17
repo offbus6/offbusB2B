@@ -3,10 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Bus, Users, MessageSquare, Shield } from "lucide-react";
 
 export default function Landing() {
-  const handleLogin = () => {
-    window.location.href = "/api/login";
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[var(--airbnb-light)] to-white">
       <div className="container mx-auto px-4 py-16">
@@ -70,12 +66,23 @@ export default function Landing() {
         </div>
 
         <div className="text-center">
-          <Button 
-            onClick={handleLogin}
-            className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-8 py-3 text-lg rounded-lg"
-          >
-            Get Started
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button 
+              onClick={() => window.location.href = "/api/login?role=super_admin"}
+              className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-8 py-3 text-lg rounded-lg min-w-[200px]"
+            >
+              Admin Login
+            </Button>
+            <Button 
+              onClick={() => window.location.href = "/api/login?role=agency"}
+              className="bg-[var(--airbnb-teal)] hover:bg-[var(--airbnb-teal)]/90 text-white px-8 py-3 text-lg rounded-lg min-w-[200px]"
+            >
+              Travel Agency Login
+            </Button>
+          </div>
+          <p className="text-sm text-[var(--airbnb-gray)] mt-4">
+            Choose your login type to get started
+          </p>
         </div>
 
         <div className="mt-16 text-center">

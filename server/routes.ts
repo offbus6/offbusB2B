@@ -250,10 +250,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Parse CSV data (simplified - in real implementation, use a proper CSV parser)
       const csvData = file.buffer.toString('utf8');
-      const lines = csvData.split('\n').filter(line => line.trim());
+      const lines = csvData.split('\n').filter((line: string) => line.trim());
       const headers = lines[0].split(',');
       
-      const travelerDataList = lines.slice(1).map(line => {
+      const travelerDataList = lines.slice(1).map((line: string) => {
         const values = line.split(',');
         return {
           busId: parseInt(busId),
@@ -264,7 +264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           couponCode: values[3]?.trim() || '',
           whatsappStatus: 'pending' as const,
         };
-      }).filter(data => data.travelerName && data.phone);
+      }).filter((data: any) => data.travelerName && data.phone);
 
       const insertedData = await storage.createTravelerData(travelerDataList);
       
