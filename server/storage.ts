@@ -4,6 +4,7 @@ import {
   buses,
   travelerData,
   uploadHistory,
+  adminCredentials,
   type User,
   type UpsertUser,
   type Agency,
@@ -14,6 +15,8 @@ import {
   type InsertTravelerData,
   type UploadHistory,
   type InsertUploadHistory,
+  type AdminCredentials,
+  type InsertAdminCredentials,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql, ne } from "drizzle-orm";
@@ -23,6 +26,11 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User>;
+  
+  // Admin operations
+  createAdminCredentials(admin: InsertAdminCredentials): Promise<AdminCredentials>;
+  getAdminCredentials(email: string, password: string): Promise<AdminCredentials | undefined>;
+  updateAdminCredentials(id: string, updates: Partial<InsertAdminCredentials>): Promise<AdminCredentials>;
   
   // Agency operations
   createAgency(agency: InsertAgency): Promise<Agency>;
@@ -36,7 +44,6 @@ export interface IStorage {
   updateAgencyStatus(id: number, status: string): Promise<Agency>;
   updateAgency(id: number, updates: Partial<InsertAgency>): Promise<Agency>;
   deleteAgency(id: number): Promise<void>;
-  getOrCreateAdminUser(): Promise<User>;
   
   // Bus operations
   createBus(bus: InsertBus): Promise<Bus>;
@@ -130,7 +137,34 @@ export class DatabaseStorage implements IStorage {
     return agency;
   }
 
-  // Admin user creation removed - only live data supported
+  // Admin operations
+  async createAdminCredentials(admin: InsertAdminCredentials): Promise<AdminCredentials> {
+    const [credentials] = await db
+      .insert(adminCredentials)
+      .values(admin)
+      .returning();
+    return credentials;
+  }
+
+  async getAdminCredentials(email: string, password: string): Promise<AdminCredentials | undefined> {
+    const [credentials] = await db
+      .select()
+      .from(adminCredentials)
+      .where(and(eq(adminCredentials.email, email), eq(adminCredentials.password, password)));
+    return credentials;
+  }
+
+  async updateAdminCredentials(id: string, updates: Partial<InsertAdminCredentials>): Promise<AdminCredentials> {
+    const [credentials] = await db
+      .update(adminCredentials)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(adminCredentials.id, id))
+      .returning();
+    return credentials;
+  }
 
   // Dummy data seeding removed - system now uses only live data
 

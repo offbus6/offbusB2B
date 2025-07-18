@@ -162,6 +162,18 @@ export const insertUploadHistorySchema = createInsertSchema(uploadHistory).omit(
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+// Admin credentials table
+export const adminCredentials = pgTable("admin_credentials", {
+  id: varchar("id").primaryKey().notNull(),
+  email: varchar("email").notNull().unique(),
+  password: varchar("password").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type AdminCredentials = typeof adminCredentials.$inferSelect;
+export type InsertAdminCredentials = typeof adminCredentials.$inferInsert;
 export type Agency = typeof agencies.$inferSelect;
 export type InsertAgency = z.infer<typeof insertAgencySchema>;
 export type Bus = typeof buses.$inferSelect;

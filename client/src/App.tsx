@@ -9,6 +9,8 @@ import Landing from "@/pages/landing";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AgencyApproval from "@/pages/admin/agency-approval";
 import ManageAgencies from "@/pages/admin/manage-agencies";
+import AdminProfile from "@/pages/admin/profile";
+import AdminSignup from "@/pages/admin-signup";
 import AgencyDashboard from "@/pages/agency/dashboard";
 import BusManagement from "@/pages/agency/bus-management";
 import UploadData from "@/pages/agency/upload-data";
@@ -42,6 +44,7 @@ function Router() {
       <Switch>
         <Route path="/login" component={Login} />
         <Route path="/admin-login" component={AdminLogin} />
+        <Route path="/admin-signup" component={AdminSignup} />
         <Route path="/agency-login" component={AgencyLogin} />
         <Route path="/signup" component={Signup} />
         <Route path="/" component={Landing} />
@@ -86,6 +89,7 @@ function Router() {
                   <Route path="/admin/dashboard" component={AdminDashboard} />
                   <Route path="/admin/agency-approval" component={AgencyApproval} />
                   <Route path="/admin/manage-agencies" component={ManageAgencies} />
+                  <Route path="/admin/profile" component={AdminProfile} />
                 </>
               ) : (
                 <>

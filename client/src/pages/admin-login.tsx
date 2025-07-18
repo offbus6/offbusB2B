@@ -136,6 +136,19 @@ export default function AdminLogin() {
                   </Button>
                 </form>
               </Form>
+              
+              <div className="mt-4 text-center">
+                <p className="text-sm text-gray-600">
+                  Need to create an admin account?{" "}
+                  <Button 
+                    variant="link" 
+                    onClick={() => navigate("/admin-signup")}
+                    className="text-red-600 hover:text-red-700 p-0 h-auto"
+                  >
+                    Sign up here
+                  </Button>
+                </p>
+              </div>
             </CardContent>
           </Card>
           

@@ -18,8 +18,9 @@ let currentUser: any = null;
 
 // Session storage for browser sessions
 const sessionStore = new Map<string, any>();
-import { insertAgencySchema, insertBusSchema, insertTravelerDataSchema } from "@shared/schema";
+import { insertAgencySchema, insertBusSchema, insertTravelerDataSchema, adminCredentials } from "@shared/schema";
 import { z } from "zod";
+import { db } from "./db";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -84,7 +85,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin login removed - only live data authentication supported
+  // Admin Login
+  app.post('/api/auth/admin/login', async (req: any, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      // Check admin credentials in database
+      const adminCredentials = await storage.getAdminCredentials(email, password);
+      
+      if (adminCredentials) {
+        const userWithRole = {
+          id: adminCredentials.id,
+          email: adminCredentials.email,
+          role: 'super_admin'
+        };
+        
+        // Store user globally and in session
+        currentUser = userWithRole;
+        sessionStore.set(req.sessionID, { user: userWithRole });
+        
+        res.json({
+          user: userWithRole,
+          role: 'super_admin',
+          message: 'Admin login successful'
+        });
+        return;
+      }
+      
+      res.status(401).json({ message: 'Invalid admin credentials' });
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ message: "Admin login failed" });
+    }
+  });
+
+  // Admin Signup (one-time setup)
+  app.post('/api/auth/admin/signup', async (req: any, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      // Check if admin already exists
+      const [existingAdmin] = await db.select().from(adminCredentials).limit(1);
+      if (existingAdmin) {
+        return res.status(400).json({ message: 'Admin already exists' });
+      }
+      
+      // Create admin credentials
+      const adminId = Date.now().toString();
+      const admin = await storage.createAdminCredentials({
+        id: adminId,
+        email,
+        password,
+      });
+      
+      res.json({ message: 'Admin account created successfully' });
+    } catch (error) {
+      console.error("Admin signup error:", error);
+      res.status(500).json({ message: "Admin signup failed" });
+    }
+  });
+
+  // Admin Profile Update
+  app.patch('/api/auth/admin/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const { email, password } = req.body;
+      const adminId = req.user.id;
+      
+      // Verify user is admin
+      if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+      
+      // Update admin credentials
+      const updatedAdmin = await storage.updateAdminCredentials(adminId, {
+        email,
+        password,
+      });
+      
+      res.json({ 
+        message: 'Profile updated successfully',
+        email: updatedAdmin.email 
+      });
+    } catch (error) {
+      console.error("Admin profile update error:", error);
+      res.status(500).json({ message: "Profile update failed" });
+    }
+  });
 
   // Separate Travel Agent Login for Security
   app.post('/api/auth/agency/login', async (req: any, res) => {
