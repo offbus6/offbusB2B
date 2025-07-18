@@ -58,7 +58,7 @@ export default function BusManagement() {
     },
   });
 
-  // Redirect to login if not authenticated
+  // Redirect to agency login if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       toast({
@@ -67,7 +67,7 @@ export default function BusManagement() {
         variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = "/api/login";
+        window.location.href = "/agency-login";
       }, 500);
       return;
     }
@@ -106,7 +106,7 @@ export default function BusManagement() {
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
+          window.location.href = "/agency-login";
         }, 500);
         return;
       }
@@ -146,7 +146,7 @@ export default function BusManagement() {
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
+          window.location.href = "/agency-login";
         }, 500);
         return;
       }
@@ -177,7 +177,7 @@ export default function BusManagement() {
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
+          window.location.href = "/agency-login";
         }, 500);
         return;
       }
