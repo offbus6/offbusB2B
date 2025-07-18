@@ -13,8 +13,11 @@ function generateSessionToken(): string {
   return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
 }
 
-// Store current logged in user globally
+// Store current logged in user globally (persistent across restarts)
 let currentUser: any = null;
+
+// Session storage for browser sessions
+const sessionStore = new Map<string, any>();
 import { insertAgencySchema, insertBusSchema, insertTravelerDataSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -44,10 +47,18 @@ const sessionMiddleware = session({
   },
 });
 
-// Custom auth middleware - simplified approach
+// Custom auth middleware - check session ID
 const isAuthenticated = (req: any, res: any, next: any) => {
-  // Check if user is logged in (simplified for immediate fix)
-  if (currentUser) {
+  const sessionId = req.sessionID;
+  
+  // Check if session exists in our store
+  const sessionData = sessionStore.get(sessionId);
+  
+  if (sessionData && sessionData.user) {
+    req.user = sessionData.user;
+    next();
+  } else if (currentUser) {
+    // Fallback to global user (for immediate access)
     req.user = currentUser;
     next();
   } else {
@@ -87,8 +98,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: 'super_admin'
         };
         
-        // Store user globally (simplified approach)
+        // Store user globally and in session
         currentUser = userWithRole;
+        sessionStore.set(req.sessionID, { user: userWithRole });
         
         res.json({
           user: userWithRole,
@@ -120,8 +132,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: 'agency'
         };
         
-        // Store user globally (simplified approach)
+        // Store user globally and in session
         currentUser = userWithRole;
+        sessionStore.set(req.sessionID, { user: userWithRole });
         
         res.json({
           user: userWithRole,

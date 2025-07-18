@@ -43,11 +43,11 @@ export default function AgencyLogin() {
         description: "Welcome to your agency dashboard.",
       });
       
-      // Clear cache and navigate
-      queryClient.clear();
+      // Clear cache and refresh auth state
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      // Navigate to agency dashboard
-      navigate("/agency/dashboard");
+      // Navigate to root which will redirect to correct dashboard
+      navigate("/");
     },
     onError: (error: any) => {
       toast({

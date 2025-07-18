@@ -43,11 +43,11 @@ export default function AdminLogin() {
         description: "Welcome to the admin dashboard.",
       });
       
-      // Clear cache and navigate
-      queryClient.clear();
+      // Clear cache and refresh auth state
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      // Navigate to admin dashboard
-      navigate("/admin/dashboard");
+      // Navigate to root which will redirect to correct dashboard
+      navigate("/");
     },
     onError: (error: any) => {
       toast({
