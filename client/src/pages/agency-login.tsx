@@ -50,9 +50,10 @@ export default function AgencyLogin() {
       navigate("/");
     },
     onError: (error: any) => {
+      console.error("Login error:", error);
       toast({
         title: "Login Failed",
-        description: "Invalid agency credentials",
+        description: error.message || "Invalid agency credentials",
         variant: "destructive",
       });
     },
