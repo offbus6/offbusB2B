@@ -21,7 +21,9 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("POST", "/api/auth/logout");
+      return await apiRequest("/api/auth/logout", {
+        method: "POST",
+      });
     },
     onSuccess: () => {
       toast({
@@ -29,11 +31,12 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
         description: "You have been logged out.",
       });
       
-      // Clear the user data cache
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Clear all cached data
+      queryClient.clear();
       
-      // Navigate to home
+      // Navigate to home and force reload
       navigate("/");
+      window.location.reload();
     },
     onError: (error: any) => {
       toast({

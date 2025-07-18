@@ -123,3 +123,7 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - System now uses only live database data - no seeding, no static responses
 - Removed admin credentials and dummy agency data from codebase
 - Database cleared of all test data, preserving only real user signups
+- **FIXED: Logout functionality now works properly (July 18, 2025)**
+- Fixed session destruction to clear all session data and global variables
+- Updated frontend logout to properly clear cache and reload
+- Corrected logout URL from /api/logout to /api/auth/logout in agency pages

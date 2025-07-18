@@ -253,10 +253,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/auth/logout', (req: any, res) => {
-    // Clear current user (simplified approach)
+    // Clear current user and session
     currentUser = null;
     
-    res.json({ message: 'Logged out successfully' });
+    // Clear from session store
+    const sessionId = req.sessionID;
+    sessionStore.delete(sessionId);
+    
+    // Clear session data
+    req.session.user = null;
+    
+    // Destroy the session completely
+    req.session.destroy((err: any) => {
+      if (err) {
+        console.error('Session destruction error:', err);
+        return res.status(500).json({ message: 'Logout failed' });
+      }
+      
+      // Clear the session cookie
+      res.clearCookie('connect.sid');
+      res.json({ message: 'Logged out successfully' });
+    });
   });
 
   // Stats endpoints

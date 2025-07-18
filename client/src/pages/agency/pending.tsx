@@ -8,7 +8,7 @@ export default function AgencyPending() {
   const agency = (user as any)?.agency;
 
   const handleLogout = () => {
-    window.location.href = "/api/logout";
+    window.location.href = "/api/auth/logout";
   };
 
   const getStatusIcon = (status: string) => {
