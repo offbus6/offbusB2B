@@ -292,6 +292,22 @@ export class DatabaseStorage implements IStorage {
       }
 
       console.log("Dummy data seeded successfully!");
+      console.log("=== LOGIN CREDENTIALS ===");
+      console.log("Admin Login:");
+      console.log("  Username: admin");
+      console.log("  Password: admin123");
+      console.log("");
+      console.log("Travel Agency Logins:");
+      console.log("  Golden Tours:");
+      console.log("    Username: goldentours");
+      console.log("    Password: demo123");
+      console.log("  Blue Sky Travel:");
+      console.log("    Username: bluesky");
+      console.log("    Password: demo123");
+      console.log("  Mountain Express (Pending):");
+      console.log("    Username: mountain");
+      console.log("    Password: demo123");
+      console.log("========================");
     } catch (error) {
       console.error("Error seeding dummy data:", error);
     }
