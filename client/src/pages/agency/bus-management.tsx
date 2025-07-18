@@ -245,24 +245,24 @@ export default function BusManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Bus Management</h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              onClick={handleAddNew}
-              className="bg-[var(--airbnb-red)] hover:bg-[var(--airbnb-red-dark)] text-white"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Bus
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingBus ? 'Edit Bus' : 'Add New Bus'}
-              </DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <Button 
+          onClick={handleAddNew}
+          className="bg-[var(--airbnb-red)] hover:bg-[var(--airbnb-red-dark)] text-white"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Bus
+        </Button>
+      </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingBus ? 'Edit Bus' : 'Add New Bus'}
+            </DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -477,13 +477,12 @@ export default function BusManagement() {
             </Form>
           </DialogContent>
         </Dialog>
-      </div>
 
-      {busesLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--airbnb-red)]"></div>
-        </div>
-      ) : (
+        {busesLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--airbnb-red)]"></div>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {buses?.map((bus: any) => (
             <Card key={bus.id} className="border-l-4 border-l-[var(--airbnb-red)] hover:shadow-lg transition-shadow">
