@@ -100,10 +100,17 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
             <div className="hidden md:flex items-center space-x-4">
               <Button 
                 variant="ghost" 
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/agency-login")}
                 className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)]"
               >
-                Login
+                Agency Login
+              </Button>
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate("/admin-login")}
+                className="text-red-600 hover:text-red-700"
+              >
+                Admin
               </Button>
               <Button 
                 onClick={() => navigate("/signup")}
@@ -145,10 +152,17 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
                 <div className="flex flex-col space-y-2 pt-4 border-t border-[var(--airbnb-border)]">
                   <Button 
                     variant="ghost" 
-                    onClick={() => navigate("/login")}
+                    onClick={() => navigate("/agency-login")}
                     className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] justify-start"
                   >
-                    Login
+                    Agency Login
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => navigate("/admin-login")}
+                    className="text-red-600 hover:text-red-700 justify-start"
+                  >
+                    Admin Access
                   </Button>
                   <Button 
                     onClick={() => navigate("/signup")}

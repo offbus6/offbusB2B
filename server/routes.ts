@@ -11,20 +11,25 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
-// Session middleware
+// Session middleware with more secure configuration
 const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
+  rolling: true, // Reset expiration on activity
   cookie: {
     secure: false, // Set to true in production with HTTPS
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax', // CSRF protection
   },
 });
 
-// Custom auth middleware
+// Custom auth middleware with debugging
 const isAuthenticated = (req: any, res: any, next: any) => {
+  console.log('Auth check - Session ID:', req.sessionID);
+  console.log('Auth check - Session user:', req.session?.user ? 'exists' : 'missing');
+  
   if (req.session?.user) {
     next();
   } else {
@@ -47,10 +52,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Username/Password Authentication
-  app.post('/api/auth/login', async (req: any, res) => {
+  // Separate Admin Login for Security
+  app.post('/api/auth/admin/login', async (req: any, res) => {
     try {
       const { username, password } = req.body;
+      
+      console.log('Admin login attempt:', { username, sessionID: req.sessionID });
       
       // Check for admin credentials
       if (username === 'admin' && password === 'admin123') {
@@ -60,20 +67,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: 'super_admin'
         };
         
+        console.log('Admin login successful, saving session...');
+        
         // Save session explicitly
         req.session.save((err: any) => {
           if (err) {
             console.error("Session save error:", err);
             return res.status(500).json({ message: "Login failed" });
           }
+          
+          console.log('Session saved successfully');
           res.json({
             user: adminUser,
             role: 'super_admin',
-            message: 'Login successful'
+            message: 'Admin login successful'
           });
         });
         return;
       }
+      
+      res.status(401).json({ message: 'Invalid admin credentials' });
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ message: "Admin login failed" });
+    }
+  });
+
+  // Separate Travel Agent Login for Security
+  app.post('/api/auth/agency/login', async (req: any, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      console.log('Agency login attempt:', { username, sessionID: req.sessionID });
       
       // Check for agency credentials
       const agency = await storage.getAgencyByCredentials(username, password);
@@ -85,27 +110,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: 'agency'
         };
         
+        console.log('Agency login successful, saving session...');
+        
         // Save session explicitly
         req.session.save((err: any) => {
           if (err) {
             console.error("Session save error:", err);
             return res.status(500).json({ message: "Login failed" });
           }
+          
+          console.log('Session saved successfully');
           res.json({
             user,
             agency,
             role: 'agency',
-            message: 'Login successful'
+            message: 'Agency login successful'
           });
         });
         return;
       }
       
-      res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ message: 'Invalid agency credentials' });
     } catch (error) {
-      console.error("Login error:", error);
-      res.status(500).json({ message: "Login failed" });
+      console.error("Agency login error:", error);
+      res.status(500).json({ message: "Agency login failed" });
     }
+  });
+
+  // Legacy login endpoint (for backward compatibility)
+  app.post('/api/auth/login', async (req: any, res) => {
+    res.status(400).json({ 
+      message: 'Please use specific login endpoints: /api/auth/admin/login or /api/auth/agency/login' 
+    });
   });
 
   app.post('/api/auth/logout', (req: any, res) => {

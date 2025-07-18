@@ -23,11 +23,19 @@ export default function Landing() {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
             <Button 
-              onClick={() => window.location.href = "/login"}
+              onClick={() => window.location.href = "/agency-login"}
               className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-10 py-4 text-lg rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
             >
-              Sign In
+              Travel Agency Login
               <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
+            <Button 
+              onClick={() => window.location.href = "/admin-login"}
+              variant="outline"
+              className="border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white px-10 py-4 text-lg rounded-xl font-semibold transition-all"
+            >
+              Admin Access
+              <Shield className="ml-2 w-5 h-5" />
             </Button>
             <Button 
               onClick={() => window.location.href = "/signup"}

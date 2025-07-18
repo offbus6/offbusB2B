@@ -18,6 +18,8 @@ import AgencyPending from "@/pages/agency/pending";
 import RoleSelection from "@/pages/role-selection";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
+import AdminLogin from "@/pages/admin-login";
+import AgencyLogin from "@/pages/agency-login";
 import Sidebar from "@/components/layout/sidebar";
 import Layout from "@/components/layout/layout";
 
@@ -39,6 +41,8 @@ function Router() {
     return (
       <Switch>
         <Route path="/login" component={Login} />
+        <Route path="/admin-login" component={AdminLogin} />
+        <Route path="/agency-login" component={AgencyLogin} />
         <Route path="/signup" component={Signup} />
         <Route path="/" component={Landing} />
         <Route component={NotFound} />
