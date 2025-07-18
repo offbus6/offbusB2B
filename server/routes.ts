@@ -59,10 +59,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...adminUser,
           role: 'super_admin'
         };
-        res.json({
-          user: adminUser,
-          role: 'super_admin',
-          message: 'Login successful'
+        
+        // Save session explicitly
+        req.session.save((err: any) => {
+          if (err) {
+            console.error("Session save error:", err);
+            return res.status(500).json({ message: "Login failed" });
+          }
+          res.json({
+            user: adminUser,
+            role: 'super_admin',
+            message: 'Login successful'
+          });
         });
         return;
       }
@@ -76,11 +84,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           agency,
           role: 'agency'
         };
-        res.json({
-          user,
-          agency,
-          role: 'agency',
-          message: 'Login successful'
+        
+        // Save session explicitly
+        req.session.save((err: any) => {
+          if (err) {
+            console.error("Session save error:", err);
+            return res.status(500).json({ message: "Login failed" });
+          }
+          res.json({
+            user,
+            agency,
+            role: 'agency',
+            message: 'Login successful'
+          });
         });
         return;
       }
