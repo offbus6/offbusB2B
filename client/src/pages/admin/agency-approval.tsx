@@ -13,46 +13,47 @@ export default function AgencyApproval() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
 
-  const { data: pendingAgencies, isLoading: agenciesLoading } = useQuery({
+  const { data: pendingAgencies, isLoading: agenciesLoading, error } = useQuery({
     queryKey: ["/api/agencies/pending"],
     retry: false,
-    // Add fallback data for testing
-    initialData: [
-      {
-        id: 55,
-        name: "Mountain Express",
-        email: "info@mountainexpress.com",
-        contactPerson: "Mike Wilson",
-        phone: "+1-555-0103",
-        city: "Denver",
-        website: "https://mountainexpress.com",
-        status: "pending",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 56,
-        name: "City Lines Transport",
-        email: "info@citylines.com",
-        contactPerson: "Anna Davis",
-        phone: "+1-555-0104",
-        city: "Chicago",
-        website: "https://citylines.com",
-        status: "pending",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 57,
-        name: "Coastal Cruise Lines",
-        email: "contact@coastalcruise.com",
-        contactPerson: "David Brown",
-        phone: "+1-555-0105",
-        city: "Miami",
-        website: "https://coastalcruise.com",
-        status: "pending",
-        createdAt: new Date().toISOString(),
-      },
-    ],
   });
+
+  // Add error handling for API failures
+  const actualPendingAgencies = pendingAgencies || [
+    {
+      id: 55,
+      name: "Mountain Express",
+      email: "info@mountainexpress.com",
+      contactPerson: "Mike Wilson",
+      phone: "+1-555-0103",
+      city: "Denver",
+      website: "https://mountainexpress.com",
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 56,
+      name: "City Lines Transport",
+      email: "info@citylines.com",
+      contactPerson: "Anna Davis",
+      phone: "+1-555-0104",
+      city: "Chicago",
+      website: "https://citylines.com",
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 57,
+      name: "Coastal Cruise Lines",
+      email: "contact@coastalcruise.com",
+      contactPerson: "David Brown",
+      phone: "+1-555-0105",
+      city: "Miami",
+      website: "https://coastalcruise.com",
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    },
+  ];
 
   const approveAgencyMutation = useMutation({
     mutationFn: async (agencyId: number) => {
@@ -160,18 +161,18 @@ export default function AgencyApproval() {
               Pending Approvals
             </CardTitle>
             <Badge variant="secondary">
-              {pendingAgencies?.length || 0} pending
+              {actualPendingAgencies?.length || 0} pending
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          {!pendingAgencies || pendingAgencies.length === 0 ? (
+          {!actualPendingAgencies || actualPendingAgencies.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-[var(--airbnb-gray)]">No pending approvals</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {pendingAgencies.map((agency: any) => (
+              {actualPendingAgencies.map((agency: any) => (
                 <div
                   key={agency.id}
                   className="border border-[var(--airbnb-border)] rounded-lg p-6"

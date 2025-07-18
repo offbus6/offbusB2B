@@ -298,17 +298,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
 
-      // Use direct SQL query to get pending agencies
-      const query = `
-        SELECT * FROM agencies WHERE status = 'pending'
-        ORDER BY created_at DESC
-      `;
-      
-      const { Pool } = await import('@neondatabase/serverless');
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-      const result = await pool.query(query);
-      
-      res.json(result.rows);
+      const pendingAgencies = await storage.getPendingAgencies();
+      res.json(pendingAgencies);
     } catch (error) {
       console.error("Error fetching pending agencies:", error);
       res.status(500).json({ message: "Failed to fetch pending agencies" });
@@ -322,17 +313,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
 
-      // Use direct SQL query to get all agencies
-      const query = `
-        SELECT * FROM agencies
-        ORDER BY created_at DESC
-      `;
-      
-      const { Pool } = await import('@neondatabase/serverless');
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-      const result = await pool.query(query);
-      
-      res.json(result.rows);
+      const agencies = await storage.getAllAgencies();
+      res.json(agencies);
     } catch (error) {
       console.error("Error fetching agencies:", error);
       res.status(500).json({ message: "Failed to fetch agencies" });
@@ -349,26 +331,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { status } = req.body;
 
-      // Use direct SQL query to update agency status
-      const query = `
-        UPDATE agencies 
-        SET status = $1, updated_at = NOW()
-        WHERE id = $2
-        RETURNING *
-      `;
-      
-      const { Pool } = await import('@neondatabase/serverless');
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-      const result = await pool.query(query, [status, id]);
-      
-      if (result.rows.length === 0) {
-        return res.status(404).json({ message: "Agency not found" });
-      }
-      
-      res.json(result.rows[0]);
+      const agency = await storage.updateAgencyStatus(parseInt(id), status);
+      res.json(agency);
     } catch (error) {
       console.error("Error updating agency status:", error);
       res.status(500).json({ message: "Failed to update agency status" });
+    }
+  });
+
+  app.delete('/api/agencies/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.claims.sub);
+      if (user?.role !== 'super_admin') {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const { id } = req.params;
+      await storage.deleteAgency(parseInt(id));
+      res.json({ message: "Agency deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting agency:", error);
+      res.status(500).json({ message: "Failed to delete agency" });
     }
   });
 
