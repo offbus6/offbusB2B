@@ -454,7 +454,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Traveler data routes
   app.post('/api/traveler-data/upload', isAuthenticated, upload.single('file'), async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
       const agency = await storage.getAgencyByUserId(userId);
       
       if (!agency || agency.status !== 'approved') {
@@ -519,7 +523,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/traveler-data', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
       const agency = await storage.getAgencyByUserId(userId);
       
       if (!agency) {
@@ -536,7 +544,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/traveler-data/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
       const agency = await storage.getAgencyByUserId(userId);
       
       if (!agency) {
@@ -557,7 +569,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Upload history routes
   app.get('/api/upload-history', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
       const agency = await storage.getAgencyByUserId(userId);
       
       if (!agency) {
@@ -575,7 +591,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stats routes
   app.get('/api/stats/system', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
       if (user?.role !== 'super_admin') {
         return res.status(403).json({ message: "Forbidden" });
       }
@@ -590,7 +611,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/stats/agency', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
       const agency = await storage.getAgencyByUserId(userId);
       
       if (!agency) {

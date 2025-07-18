@@ -121,6 +121,25 @@ export default function UploadData() {
     setSelectedFile(file);
   };
 
+  const downloadSampleCSV = () => {
+    const csvContent = `traveler_name,phone
+John Doe,+1-555-0123
+Jane Smith,+1-555-0456
+Mike Johnson,+1-555-0789
+Sarah Wilson,+1-555-0321
+David Brown,+1-555-0654`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'traveler_data_sample.csv';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -295,6 +314,17 @@ export default function UploadData() {
                 <li>Phone numbers should include country code for WhatsApp integration</li>
                 <li>Maximum file size: 10MB</li>
               </ul>
+            </div>
+
+            <div className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={downloadSampleCSV}
+                className="w-full"
+              >
+                Download Sample CSV Template
+              </Button>
             </div>
           </CardContent>
         </Card>
