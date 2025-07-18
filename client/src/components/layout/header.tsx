@@ -21,7 +21,7 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/auth/logout", "POST");
+      return await apiRequest("POST", "/api/auth/logout");
     },
     onSuccess: () => {
       toast({
