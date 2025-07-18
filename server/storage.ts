@@ -149,17 +149,14 @@ export class DatabaseStorage implements IStorage {
 
   async seedDummyData(): Promise<void> {
     try {
-      // Force reseed of dummy data
-      console.log("Clearing existing data and reseeding...");
+      // Check if agencies already exist
+      const existingAgencies = await db.select().from(agencies).limit(1);
+      if (existingAgencies.length > 0) {
+        console.log("Database already contains agencies, skipping seeding...");
+        return;
+      }
 
-      // Clear existing data in correct order to avoid foreign key constraints
-      await db.delete(travelerData);
-      await db.delete(uploadHistory);
-      await db.delete(buses);
-      await db.delete(agencies);
-      await db.delete(users).where(ne(users.id, 'admin_user'));
-
-      console.log("Seeding dummy data...");
+      console.log("Database is empty, seeding dummy data...");
 
       // Create agency users first
       const agencyUser1 = await this.upsertUser({
