@@ -66,22 +66,14 @@ export default function Landing() {
         </div>
 
         <div className="text-center">
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button 
-              onClick={() => window.location.href = "/api/login?role=super_admin"}
-              className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-8 py-3 text-lg rounded-lg min-w-[200px]"
-            >
-              Admin Login
-            </Button>
-            <Button 
-              onClick={() => window.location.href = "/api/login?role=agency"}
-              className="bg-[var(--airbnb-teal)] hover:bg-[var(--airbnb-teal)]/90 text-white px-8 py-3 text-lg rounded-lg min-w-[200px]"
-            >
-              Travel Agency Login
-            </Button>
-          </div>
+          <Button 
+            onClick={() => window.location.href = "/api/login"}
+            className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-8 py-3 text-lg rounded-lg"
+          >
+            Get Started
+          </Button>
           <p className="text-sm text-[var(--airbnb-gray)] mt-4">
-            Choose your login type to get started
+            Choose your role after login to access the appropriate dashboard
           </p>
         </div>
 

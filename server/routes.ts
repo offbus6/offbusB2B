@@ -38,6 +38,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Role assignment endpoint
+  app.post('/api/auth/assign-role', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { role } = req.body;
+      
+      if (!role || !['super_admin', 'agency'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      await storage.updateUserRole(userId, role);
+      res.json({ message: "Role assigned successfully" });
+    } catch (error) {
+      console.error("Error assigning role:", error);
+      res.status(500).json({ message: "Failed to assign role" });
+    }
+  });
+
   // Agency routes
   app.post('/api/agencies', isAuthenticated, async (req: any, res) => {
     try {

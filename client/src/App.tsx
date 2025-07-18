@@ -15,6 +15,7 @@ import UploadData from "@/pages/agency/upload-data";
 import UploadedData from "@/pages/agency/uploaded-data";
 import AgencyRegister from "@/pages/agency/register";
 import AgencyPending from "@/pages/agency/pending";
+import RoleSelection from "@/pages/role-selection";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -36,7 +37,13 @@ function Router() {
     return <Landing />;
   }
 
-  const isSuperAdmin = (user as any)?.role === 'super_admin';
+  const userRole = (user as any)?.role;
+  const isSuperAdmin = userRole === 'super_admin';
+
+  // Check if user needs to select a role
+  if (!userRole) {
+    return <RoleSelection />;
+  }
 
   // Check if user needs to register an agency
   const userAgency = (user as any)?.agency;
