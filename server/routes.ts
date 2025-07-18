@@ -360,6 +360,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Seed test data for development
+  app.post('/api/test/seed-data', async (req, res) => {
+    try {
+      const { db } = await import('./db');
+      const { agencies } = await import('@shared/schema');
+      
+      // Add test agencies
+      const testAgencies = [
+        {
+          userId: 'test1',
+          name: 'Golden Express Travel',
+          email: 'info@goldenexpress.com',
+          contactPerson: 'John Smith',
+          phone: '+1-555-0101',
+          city: 'Mumbai',
+          status: 'pending',
+          password: 'password123',
+        },
+        {
+          userId: 'test2',
+          name: 'Blue Sky Transport',
+          email: 'contact@bluesky.com',
+          contactPerson: 'Sarah Johnson',
+          phone: '+1-555-0102',
+          city: 'Delhi',
+          status: 'pending',
+          password: 'password123',
+        },
+        {
+          userId: 'test3',
+          name: 'Mountain View Travels',
+          email: 'hello@mountainview.com',
+          contactPerson: 'Mike Wilson',
+          phone: '+1-555-0103',
+          city: 'Bangalore',
+          status: 'approved',
+          password: 'password123',
+        }
+      ];
+
+      for (const agency of testAgencies) {
+        await db.insert(agencies).values(agency).onConflictDoNothing();
+      }
+
+      res.json({ success: true, message: 'Test data seeded successfully' });
+    } catch (error) {
+      console.error("Seed data error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Admin middleware for admin-only routes
   const adminAuth = (req: any, res: any, next: any) => {
     console.log('Admin auth check - session:', req.session);

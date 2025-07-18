@@ -34,7 +34,10 @@ export default function AdminLogin() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: AdminLoginData) => {
-      const response = await apiRequest("POST", "/api/auth/admin/login", data);
+      const response = await apiRequest("/api/auth/admin/login", {
+        method: "POST",
+        body: data,
+      });
       return await response.json();
     },
     onSuccess: (data) => {
@@ -50,6 +53,7 @@ export default function AdminLogin() {
       navigate("/");
     },
     onError: (error: any) => {
+      console.error("Login error:", error);
       toast({
         title: "Login Failed",
         description: "Invalid admin credentials",
