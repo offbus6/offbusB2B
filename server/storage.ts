@@ -123,9 +123,9 @@ export class DatabaseStorage implements IStorage {
     return agency;
   }
 
-  async getAgencyByCredentials(username: string, password: string): Promise<Agency | undefined> {
+  async getAgencyByCredentials(email: string, password: string): Promise<Agency | undefined> {
     const [agency] = await db.select().from(agencies).where(
-      and(eq(agencies.username, username), eq(agencies.password, password))
+      and(eq(agencies.email, email), eq(agencies.password, password))
     );
     return agency;
   }

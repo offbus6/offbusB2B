@@ -14,7 +14,7 @@ import { LogIn, ArrowLeft } from "lucide-react";
 import Layout from "@/components/layout/layout";
 
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -28,7 +28,7 @@ export default function Login() {
   const form = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -52,7 +52,7 @@ export default function Login() {
     onError: (error: any) => {
       toast({
         title: "Login Failed",
-        description: error.message || "Invalid username or password",
+        description: error.message || "Invalid email or password",
         variant: "destructive",
       });
     },
@@ -83,13 +83,14 @@ export default function Login() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="username"
+                  name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-[var(--airbnb-dark)]">Username</FormLabel>
+                      <FormLabel className="text-[var(--airbnb-dark)]">Email</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Enter your username"
+                          type="email"
+                          placeholder="Enter your email"
                           {...field}
                           className="border-gray-300 focus:border-[var(--airbnb-primary)] focus:ring-[var(--airbnb-primary)]"
                         />
@@ -141,7 +142,7 @@ export default function Login() {
             <div className="mt-6 p-4 bg-gray-50 rounded-xl">
               <p className="text-xs text-gray-600 mb-2 font-semibold">Demo Credentials:</p>
               <p className="text-xs text-gray-600">
-                Admin: <span className="font-mono bg-gray-200 px-1 rounded">admin</span> / <span className="font-mono bg-gray-200 px-1 rounded">admin123</span>
+                Admin: <span className="font-mono bg-gray-200 px-1 rounded">admin@travelflow.com</span> / <span className="font-mono bg-gray-200 px-1 rounded">admin123</span>
               </p>
             </div>
           </CardContent>

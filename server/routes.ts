@@ -87,10 +87,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Separate Admin Login for Security
   app.post('/api/auth/admin/login', async (req: any, res) => {
     try {
-      const { username, password } = req.body;
+      const { email, password } = req.body;
       
       // Check for admin credentials
-      if (username === 'admin' && password === 'admin123') {
+      if (email === 'admin@travelflow.com' && password === 'admin123') {
         const adminUser = await storage.getOrCreateAdminUser();
         
         const userWithRole = {
@@ -120,10 +120,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Separate Travel Agent Login for Security
   app.post('/api/auth/agency/login', async (req: any, res) => {
     try {
-      const { username, password } = req.body;
+      const { email, password } = req.body;
       
       // Check for agency credentials
-      const agency = await storage.getAgencyByCredentials(username, password);
+      const agency = await storage.getAgencyByCredentials(email, password);
       if (agency) {
         const user = await storage.getUser(agency.userId);
         const userWithRole = {
@@ -152,11 +152,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Legacy login endpoint (for backward compatibility)
+  // General login endpoint that routes to appropriate login
   app.post('/api/auth/login', async (req: any, res) => {
-    res.status(400).json({ 
-      message: 'Please use specific login endpoints: /api/auth/admin/login or /api/auth/agency/login' 
-    });
+    try {
+      const { email, password } = req.body;
+      
+      // Check for admin credentials first
+      if (email === 'admin@travelflow.com' && password === 'admin123') {
+        const adminUser = await storage.getOrCreateAdminUser();
+        
+        const userWithRole = {
+          ...adminUser,
+          role: 'super_admin'
+        };
+        
+        // Store user globally and in session
+        currentUser = userWithRole;
+        sessionStore.set(req.sessionID, { user: userWithRole });
+        
+        res.json({
+          user: userWithRole,
+          role: 'super_admin',
+          message: 'Admin login successful'
+        });
+        return;
+      }
+      
+      // Check for agency credentials
+      const agency = await storage.getAgencyByCredentials(email, password);
+      if (agency) {
+        const user = await storage.getUser(agency.userId);
+        const userWithRole = {
+          ...user,
+          agency,
+          role: 'agency'
+        };
+        
+        // Store user globally and in session
+        currentUser = userWithRole;
+        sessionStore.set(req.sessionID, { user: userWithRole });
+        
+        res.json({
+          user: userWithRole,
+          agency,
+          role: 'agency',
+          message: 'Agency login successful'
+        });
+        return;
+      }
+      
+      res.status(401).json({ message: 'Invalid credentials' });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
   });
 
   app.post('/api/auth/logout', (req: any, res) => {

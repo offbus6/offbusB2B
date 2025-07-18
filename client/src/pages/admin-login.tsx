@@ -13,7 +13,7 @@ import { useLocation } from "wouter";
 import Layout from "@/components/layout/layout";
 
 const adminLoginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -27,7 +27,7 @@ export default function AdminLogin() {
   const form = useForm<AdminLoginData>({
     resolver: zodResolver(adminLoginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -83,13 +83,14 @@ export default function AdminLogin() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField
                     control={form.control}
-                    name="username"
+                    name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-red-700">Admin Username</FormLabel>
+                        <FormLabel className="text-red-700">Admin Email</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter admin username"
+                            type="email"
+                            placeholder="Enter admin email"
                             {...field}
                             className="border-red-200 focus:border-red-400"
                           />

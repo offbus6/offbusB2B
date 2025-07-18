@@ -13,7 +13,7 @@ import { useLocation } from "wouter";
 import Layout from "@/components/layout/layout";
 
 const agencyLoginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -27,7 +27,7 @@ export default function AgencyLogin() {
   const form = useForm<AgencyLoginData>({
     resolver: zodResolver(agencyLoginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -83,13 +83,14 @@ export default function AgencyLogin() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField
                     control={form.control}
-                    name="username"
+                    name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-[var(--airbnb-dark)]">Username</FormLabel>
+                        <FormLabel className="text-[var(--airbnb-dark)]">Email</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter your username"
+                            type="email"
+                            placeholder="Enter your email"
                             {...field}
                             className="border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)]"
                           />
