@@ -10,7 +10,10 @@ export default function RoleSelection() {
 
   const assignRoleMutation = useMutation({
     mutationFn: async (role: string) => {
-      await apiRequest("POST", "/api/auth/assign-role", { role });
+      await apiRequest("/api/auth/assign-role", {
+        method: "POST",
+        body: { role },
+      });
     },
     onSuccess: () => {
       toast({

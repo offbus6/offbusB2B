@@ -127,3 +127,9 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - Fixed session destruction to clear all session data and global variables
 - Updated frontend logout to properly clear cache and reload
 - Corrected logout URL from /api/logout to /api/auth/logout in agency pages
+- **FIXED: Agency login API requests - frontend now uses correct apiRequest signature (July 18, 2025)**
+- Fixed "Unexpected token '<!DOCTYPE'" error by updating all frontend apiRequest calls
+- Updated signup route to handle all form fields (email, password, firstName, lastName, agencyName, phone, city, state, logoUrl)
+- Added getUserByEmail method to prevent duplicate email registrations
+- Fixed backend/frontend mismatch in signup and login API calls
+- All authentication flows now working correctly - signup, login, logout, and admin approval

@@ -34,7 +34,10 @@ export default function AgencyLogin() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: AgencyLoginData) => {
-      const response = await apiRequest("POST", "/api/auth/agency/login", data);
+      const response = await apiRequest("/api/auth/agency/login", {
+        method: "POST",
+        body: data,
+      });
       return await response.json();
     },
     onSuccess: (data) => {

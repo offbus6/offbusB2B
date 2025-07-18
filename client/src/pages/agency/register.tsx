@@ -34,7 +34,10 @@ export default function AgencyRegister() {
 
   const createAgencyMutation = useMutation({
     mutationFn: async (data: z.infer<typeof agencyFormSchema>) => {
-      await apiRequest("POST", "/api/agencies", data);
+      await apiRequest("/api/agencies", {
+        method: "POST",
+        body: data,
+      });
     },
     onSuccess: () => {
       toast({
