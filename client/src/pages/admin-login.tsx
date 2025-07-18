@@ -43,15 +43,11 @@ export default function AdminLogin() {
         description: "Welcome to the admin dashboard.",
       });
       
-      // Force refresh user data and wait for it
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Clear cache and force full page reload to ensure cookies are loaded
+      queryClient.clear();
       
-      // Wait a moment for the cookie to be set, then navigate
-      setTimeout(() => {
-        navigate("/admin/dashboard");
-        // Force a page refresh to ensure cookies are properly loaded
-        window.location.reload();
-      }, 500);
+      // Use window.location.href for full page navigation instead of SPA routing
+      window.location.href = "/admin/dashboard";
     },
     onError: (error: any) => {
       toast({
