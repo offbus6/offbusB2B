@@ -52,74 +52,8 @@ export default function ManageAgencies() {
     retry: false,
   });
 
-  // Add fallback data for working demonstration
-  const actualAgencies = agencies || [
-    {
-      id: 53,
-      name: "Golden Tours",
-      email: "info@goldentours.com",
-      contactPerson: "John Smith",
-      phone: "+1-555-0101",
-      state: "New York",
-      city: "New York",
-      website: "https://goldentours.com",
-      logoUrl: null,
-      status: "approved",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 54,
-      name: "Blue Sky Travel",
-      email: "contact@bluesky.com",
-      contactPerson: "Sarah Johnson",
-      phone: "+1-555-0102",
-      state: "California",
-      city: "Los Angeles",
-      website: "https://blueskytravel.com",
-      logoUrl: null,
-      status: "approved",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 55,
-      name: "Mountain Express",
-      email: "info@mountainexpress.com",
-      contactPerson: "Mike Wilson",
-      phone: "+1-555-0103",
-      state: "Colorado",
-      city: "Denver",
-      website: "https://mountainexpress.com",
-      logoUrl: null,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 56,
-      name: "City Lines Transport",
-      email: "info@citylines.com",
-      contactPerson: "Anna Davis",
-      phone: "+1-555-0104",
-      state: "Illinois",
-      city: "Chicago",
-      website: "https://citylines.com",
-      logoUrl: null,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 57,
-      name: "Coastal Cruise Lines",
-      email: "contact@coastalcruise.com",
-      contactPerson: "David Brown",
-      phone: "+1-555-0105",
-      state: "Florida",
-      city: "Miami",
-      website: "https://coastalcruise.com",
-      logoUrl: null,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    },
-  ];
+  // Use only real database data - no static fallbacks
+  const actualAgencies = agencies || [];
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {

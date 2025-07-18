@@ -18,48 +18,8 @@ export default function AgencyApproval() {
     retry: false,
   });
 
-  // Add error handling for API failures
-  const actualPendingAgencies = pendingAgencies || [
-    {
-      id: 55,
-      name: "Mountain Express",
-      email: "info@mountainexpress.com",
-      contactPerson: "Mike Wilson",
-      phone: "+1-555-0103",
-      state: "Colorado",
-      city: "Denver",
-      website: "https://mountainexpress.com",
-      logoUrl: null,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 56,
-      name: "City Lines Transport",
-      email: "info@citylines.com",
-      contactPerson: "Anna Davis",
-      phone: "+1-555-0104",
-      state: "Illinois",
-      city: "Chicago",
-      website: "https://citylines.com",
-      logoUrl: null,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 57,
-      name: "Coastal Cruise Lines",
-      email: "contact@coastalcruise.com",
-      contactPerson: "David Brown",
-      phone: "+1-555-0105",
-      state: "Florida",
-      city: "Miami",
-      website: "https://coastalcruise.com",
-      logoUrl: null,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    },
-  ];
+  // Use only real database data - no static fallbacks
+  const actualPendingAgencies = pendingAgencies || [];
 
   const approveAgencyMutation = useMutation({
     mutationFn: async (agencyId: number) => {

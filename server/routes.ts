@@ -50,20 +50,29 @@ const sessionMiddleware = session({
 
 // Custom auth middleware - check session ID
 const isAuthenticated = (req: any, res: any, next: any) => {
-  const sessionId = req.sessionID;
+  console.log('Admin auth check - session:', req.session);
+  console.log('Admin auth check - user:', req.session?.user);
   
-  // Check if session exists in our store
-  const sessionData = sessionStore.get(sessionId);
-  
-  if (sessionData && sessionData.user) {
-    req.user = sessionData.user;
-    next();
-  } else if (currentUser) {
-    // Fallback to global user (for immediate access)
-    req.user = currentUser;
+  // Check if user is stored in session (admin login)
+  if (req.session?.user) {
+    req.user = req.session.user;
     next();
   } else {
-    res.status(401).json({ message: "Unauthorized" });
+    // Check if session exists in our store (regular user login)
+    const sessionId = req.sessionID;
+    const sessionData = sessionStore.get(sessionId);
+    
+    if (sessionData && sessionData.user) {
+      req.user = sessionData.user;
+      next();
+    } else if (currentUser) {
+      // Fallback to global user (for immediate access)
+      req.user = currentUser;
+      next();
+    } else {
+      console.log('Authentication failed - no valid session');
+      res.status(401).json({ message: "Admin authentication required" });
+    }
   }
 };
 
@@ -356,10 +365,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('Admin auth check - session:', req.session);
     console.log('Admin auth check - user:', req.session?.user);
     
-    if (!req.session?.user?.role || req.session.user.role !== 'super_admin') {
-      return res.status(401).json({ message: "Admin authentication required" });
+    // First check if user is in session (admin login)
+    if (req.session?.user) {
+      if (req.session.user.role === 'super_admin') {
+        req.user = req.session.user;
+        next();
+        return;
+      }
     }
-    next();
+    
+    // Fallback to global user (for immediate access)
+    if (currentUser && currentUser.role === 'super_admin') {
+      req.user = currentUser;
+      next();
+      return;
+    }
+    
+    console.log('Admin authentication failed - no valid admin session');
+    res.status(401).json({ message: "Admin authentication required" });
   };
 
   // Admin routes for managing agencies
