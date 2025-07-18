@@ -16,7 +16,7 @@ import {
   type InsertUploadHistory,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, count, sql } from "drizzle-orm";
+import { eq, and, desc, count, sql, ne } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -149,14 +149,41 @@ export class DatabaseStorage implements IStorage {
 
   async seedDummyData(): Promise<void> {
     try {
-      // Check if dummy data already exists
-      const existingAgencies = await this.getAllAgencies();
-      if (existingAgencies.length > 0) {
-        console.log("Dummy data already exists, skipping seed");
-        return;
-      }
+      // Force reseed of dummy data
+      console.log("Clearing existing data and reseeding...");
+
+      // Clear existing data
+      await db.delete(travelerData);
+      await db.delete(buses);
+      await db.delete(agencies);
+      await db.delete(users).where(ne(users.id, 'admin_user'));
 
       console.log("Seeding dummy data...");
+
+      // Create agency users first
+      const agencyUser1 = await this.upsertUser({
+        id: "agency_user_1",
+        email: "info@goldentours.com",
+        firstName: "John",
+        lastName: "Smith",
+        role: "agency"
+      });
+
+      const agencyUser2 = await this.upsertUser({
+        id: "agency_user_2",
+        email: "contact@bluesky.com",
+        firstName: "Sarah",
+        lastName: "Johnson",
+        role: "agency"
+      });
+
+      const agencyUser3 = await this.upsertUser({
+        id: "agency_user_3",
+        email: "info@mountainexpress.com",
+        firstName: "Mike",
+        lastName: "Wilson",
+        role: "agency"
+      });
 
       // Create dummy agencies
       const agency1 = await this.createAgency({
@@ -165,7 +192,8 @@ export class DatabaseStorage implements IStorage {
         password: "demo123",
         email: "info@goldentours.com",
         phone: "+1-555-0101",
-        address: "123 Main St, New York, NY 10001",
+        address: "123 Main St",
+        city: "New York",
         contactPerson: "John Smith",
         licenseNumber: "NY-BUS-001",
         status: "approved",
@@ -178,7 +206,8 @@ export class DatabaseStorage implements IStorage {
         password: "demo123",
         email: "contact@bluesky.com",
         phone: "+1-555-0102",
-        address: "456 Oak Ave, Los Angeles, CA 90001",
+        address: "456 Oak Ave",
+        city: "Los Angeles",
         contactPerson: "Sarah Johnson",
         licenseNumber: "CA-BUS-002",
         status: "approved",
@@ -191,8 +220,9 @@ export class DatabaseStorage implements IStorage {
         password: "demo123",
         email: "info@mountainexpress.com",
         phone: "+1-555-0103",
-        address: "789 Pine Rd, Denver, CO 80001",
-        contactPerson: "Mike Davis",
+        address: "789 Pine Rd",
+        city: "Denver",
+        contactPerson: "Mike Wilson",
         licenseNumber: "CO-BUS-003",
         status: "pending",
         userId: "agency_user_3",
