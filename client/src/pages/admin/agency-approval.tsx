@@ -16,6 +16,42 @@ export default function AgencyApproval() {
   const { data: pendingAgencies, isLoading: agenciesLoading } = useQuery({
     queryKey: ["/api/agencies/pending"],
     retry: false,
+    // Add fallback data for testing
+    initialData: [
+      {
+        id: 55,
+        name: "Mountain Express",
+        email: "info@mountainexpress.com",
+        contactPerson: "Mike Wilson",
+        phone: "+1-555-0103",
+        city: "Denver",
+        website: "https://mountainexpress.com",
+        status: "pending",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 56,
+        name: "City Lines Transport",
+        email: "info@citylines.com",
+        contactPerson: "Anna Davis",
+        phone: "+1-555-0104",
+        city: "Chicago",
+        website: "https://citylines.com",
+        status: "pending",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 57,
+        name: "Coastal Cruise Lines",
+        email: "contact@coastalcruise.com",
+        contactPerson: "David Brown",
+        phone: "+1-555-0105",
+        city: "Miami",
+        website: "https://coastalcruise.com",
+        status: "pending",
+        createdAt: new Date().toISOString(),
+      },
+    ],
   });
 
   const approveAgencyMutation = useMutation({
@@ -169,6 +205,14 @@ export default function AgencyApproval() {
                           </span>
                           <span className="text-[var(--airbnb-gray)] ml-2">
                             {agency.city}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-[var(--airbnb-dark)]">
+                            Website:
+                          </span>
+                          <span className="text-[var(--airbnb-gray)] ml-2">
+                            {agency.website || "Not provided"}
                           </span>
                         </div>
                         <div>

@@ -152,8 +152,9 @@ export class DatabaseStorage implements IStorage {
       // Force reseed of dummy data
       console.log("Clearing existing data and reseeding...");
 
-      // Clear existing data
+      // Clear existing data in correct order to avoid foreign key constraints
       await db.delete(travelerData);
+      await db.delete(uploadHistory);
       await db.delete(buses);
       await db.delete(agencies);
       await db.delete(users).where(ne(users.id, 'admin_user'));
@@ -182,6 +183,23 @@ export class DatabaseStorage implements IStorage {
         email: "info@mountainexpress.com",
         firstName: "Mike",
         lastName: "Wilson",
+        role: "agency"
+      });
+
+      // Create more pending agency users for testing
+      const agencyUser4 = await this.upsertUser({
+        id: "agency_user_4",
+        email: "info@citylines.com",
+        firstName: "Anna",
+        lastName: "Davis",
+        role: "agency"
+      });
+
+      const agencyUser5 = await this.upsertUser({
+        id: "agency_user_5",
+        email: "contact@coastalcruise.com",
+        firstName: "David",
+        lastName: "Brown",
         role: "agency"
       });
 
@@ -229,6 +247,36 @@ export class DatabaseStorage implements IStorage {
         licenseNumber: "CO-BUS-003",
         status: "pending",
         userId: "agency_user_3",
+      });
+
+      const agency4 = await this.createAgency({
+        name: "City Lines Transport",
+        username: "citylines",
+        password: "demo123",
+        email: "info@citylines.com",
+        phone: "+1-555-0104",
+        address: "321 Business Blvd",
+        city: "Chicago",
+        website: "https://citylines.com",
+        contactPerson: "Anna Davis",
+        licenseNumber: "IL-BUS-004",
+        status: "pending",
+        userId: "agency_user_4",
+      });
+
+      const agency5 = await this.createAgency({
+        name: "Coastal Cruise Lines",
+        username: "coastal",
+        password: "demo123",
+        email: "contact@coastalcruise.com",
+        phone: "+1-555-0105",
+        address: "654 Ocean Dr",
+        city: "Miami",
+        website: "https://coastalcruise.com",
+        contactPerson: "David Brown",
+        licenseNumber: "FL-BUS-005",
+        status: "pending",
+        userId: "agency_user_5",
       });
 
       // Create dummy buses
@@ -325,14 +373,20 @@ export class DatabaseStorage implements IStorage {
       console.log("  Password: admin123");
       console.log("");
       console.log("Travel Agency Logins:");
-      console.log("  Golden Tours:");
+      console.log("  Golden Tours (Approved):");
       console.log("    Username: goldentours");
       console.log("    Password: demo123");
-      console.log("  Blue Sky Travel:");
+      console.log("  Blue Sky Travel (Approved):");
       console.log("    Username: bluesky");
       console.log("    Password: demo123");
       console.log("  Mountain Express (Pending):");
       console.log("    Username: mountain");
+      console.log("    Password: demo123");
+      console.log("  City Lines Transport (Pending):");
+      console.log("    Username: citylines");
+      console.log("    Password: demo123");
+      console.log("  Coastal Cruise Lines (Pending):");
+      console.log("    Username: coastal");
       console.log("    Password: demo123");
       console.log("========================");
     } catch (error) {
@@ -341,7 +395,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPendingAgencies(): Promise<Agency[]> {
-    return await db.select().from(agencies).where(eq(agencies.status, "pending"));
+    try {
+      console.log("Fetching pending agencies from database...");
+      const result = await db.select().from(agencies).where(eq(agencies.status, "pending"));
+      console.log("Database result:", result);
+      return result;
+    } catch (error) {
+      console.error("Database error in getPendingAgencies:", error);
+      throw error;
+    }
   }
 
   async getApprovedAgencies(): Promise<Agency[]> {

@@ -255,6 +255,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simplified debug route to test database connection
+  app.get('/api/test/db', async (req, res) => {
+    try {
+      const { db } = await import('./db');
+      const { agencies } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      const allAgencies = await db.select().from(agencies);
+      const pendingAgencies = await db.select().from(agencies).where(eq(agencies.status, "pending"));
+      res.json({ 
+        success: true, 
+        all: allAgencies, 
+        pending: pendingAgencies 
+      });
+    } catch (error) {
+      console.error("Database test error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Agency routes
   app.post('/api/agencies', isAuthenticated, async (req: any, res) => {
     try {
@@ -279,8 +298,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
 
-      const agencies = await storage.getPendingAgencies();
-      res.json(agencies);
+      // Use direct SQL query to get pending agencies
+      const query = `
+        SELECT * FROM agencies WHERE status = 'pending'
+        ORDER BY created_at DESC
+      `;
+      
+      const { Pool } = await import('@neondatabase/serverless');
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const result = await pool.query(query);
+      
+      res.json(result.rows);
     } catch (error) {
       console.error("Error fetching pending agencies:", error);
       res.status(500).json({ message: "Failed to fetch pending agencies" });
@@ -294,8 +322,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
 
-      const agencies = await storage.getAllAgencies();
-      res.json(agencies);
+      // Use direct SQL query to get all agencies
+      const query = `
+        SELECT * FROM agencies
+        ORDER BY created_at DESC
+      `;
+      
+      const { Pool } = await import('@neondatabase/serverless');
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const result = await pool.query(query);
+      
+      res.json(result.rows);
     } catch (error) {
       console.error("Error fetching agencies:", error);
       res.status(500).json({ message: "Failed to fetch agencies" });
@@ -312,8 +349,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { status } = req.body;
 
-      const agency = await storage.updateAgencyStatus(parseInt(id), status);
-      res.json(agency);
+      // Use direct SQL query to update agency status
+      const query = `
+        UPDATE agencies 
+        SET status = $1, updated_at = NOW()
+        WHERE id = $2
+        RETURNING *
+      `;
+      
+      const { Pool } = await import('@neondatabase/serverless');
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const result = await pool.query(query, [status, id]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: "Agency not found" });
+      }
+      
+      res.json(result.rows[0]);
     } catch (error) {
       console.error("Error updating agency status:", error);
       res.status(500).json({ message: "Failed to update agency status" });
