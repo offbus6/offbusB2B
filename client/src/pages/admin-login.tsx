@@ -34,7 +34,8 @@ export default function AdminLogin() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: AdminLoginData) => {
-      return await apiRequest("POST", "/api/auth/admin/login", data);
+      const response = await apiRequest("POST", "/api/auth/admin/login", data);
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -45,8 +46,10 @@ export default function AdminLogin() {
       // Invalidate and refetch user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      // Navigate to admin dashboard
-      navigate("/admin/dashboard");
+      // Small delay to ensure session is set before navigation
+      setTimeout(() => {
+        navigate("/admin/dashboard");
+      }, 100);
     },
     onError: (error: any) => {
       toast({

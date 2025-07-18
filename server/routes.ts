@@ -17,17 +17,19 @@ const MemoryStoreSession = MemoryStore(session);
 
 const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
-  resave: false,
-  saveUninitialized: false,
+  resave: true, // Force save
+  saveUninitialized: true, // Save uninitialized sessions
   rolling: true, // Reset expiration on activity
+  name: 'connect.sid', // Use default session name
   store: new MemoryStoreSession({
     checkPeriod: 86400000, // prune expired entries every 24h
   }),
   cookie: {
     secure: false, // Set to true in production with HTTPS
-    httpOnly: true,
+    httpOnly: false, // Allow client-side access for debugging
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax', // CSRF protection
+    path: '/', // Ensure cookie is available for all paths
   },
 });
 
@@ -35,6 +37,8 @@ const sessionMiddleware = session({
 const isAuthenticated = (req: any, res: any, next: any) => {
   console.log('Auth check - Session ID:', req.sessionID);
   console.log('Auth check - Session user:', req.session?.user ? 'exists' : 'missing');
+  console.log('Auth check - Session:', req.session);
+  console.log('Auth check - Cookies:', req.headers.cookie);
   
   if (req.session?.user) {
     next();

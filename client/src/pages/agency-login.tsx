@@ -34,7 +34,8 @@ export default function AgencyLogin() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: AgencyLoginData) => {
-      return await apiRequest("POST", "/api/auth/agency/login", data);
+      const response = await apiRequest("POST", "/api/auth/agency/login", data);
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -45,8 +46,10 @@ export default function AgencyLogin() {
       // Invalidate and refetch user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      // Navigate to agency dashboard
-      navigate("/agency/dashboard");
+      // Small delay to ensure session is set before navigation
+      setTimeout(() => {
+        navigate("/agency/dashboard");
+      }, 100);
     },
     onError: (error: any) => {
       toast({
