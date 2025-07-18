@@ -45,8 +45,10 @@ export const agencies = pgTable("agencies", {
   email: varchar("email").notNull(),
   contactPerson: varchar("contact_person").notNull(),
   phone: varchar("phone").notNull(),
+  state: varchar("state"),
   city: varchar("city").notNull(),
   website: varchar("website"),
+  logoUrl: varchar("logo_url"),
   username: varchar("username").unique(),
   password: varchar("password"),
   status: varchar("status", { enum: ["pending", "approved", "rejected", "on_hold"] })
