@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { LogIn, ArrowLeft } from "lucide-react";
+import Layout from "@/components/layout/layout";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -62,7 +63,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--airbnb-light)] to-white flex items-center justify-center p-4">
+    <Layout variant="auth">
+      <div className="bg-gradient-to-br from-[var(--airbnb-light)] to-white flex items-center justify-center p-4 min-h-screen">
       <div className="w-full max-w-md">
         <Card className="airbnb-shadow border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="text-center pb-6">
@@ -156,6 +158,7 @@ export default function Login() {
           </Button>
         </div>
       </div>
-    </div>
+      </div>
+    </Layout>
   );
 }

@@ -1,10 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bus, Users, MessageSquare, Shield, Star, CheckCircle, TrendingUp, Globe, ArrowRight, Zap } from "lucide-react";
+import Layout from "@/components/layout/layout";
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--airbnb-light)] via-white to-blue-50">
+    <Layout variant="landing">
+      <div className="bg-gradient-to-br from-[var(--airbnb-light)] via-white to-blue-50">
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-20">
         <div className="text-center mb-20">
@@ -177,6 +179,7 @@ export default function Landing() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </Layout>
   );
 }

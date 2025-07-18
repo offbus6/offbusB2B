@@ -19,7 +19,7 @@ import RoleSelection from "@/pages/role-selection";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
 import Sidebar from "@/components/layout/sidebar";
-import Header from "@/components/layout/header";
+import Layout from "@/components/layout/layout";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -70,33 +70,34 @@ function Router() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--airbnb-light)]">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <Switch>
-            {isSuperAdmin ? (
-              <>
-                <Route path="/" component={AdminDashboard} />
-                <Route path="/admin/dashboard" component={AdminDashboard} />
-                <Route path="/admin/agency-approval" component={AgencyApproval} />
-                <Route path="/admin/manage-agencies" component={ManageAgencies} />
-              </>
-            ) : (
-              <>
-                <Route path="/" component={AgencyDashboard} />
-                <Route path="/agency/dashboard" component={AgencyDashboard} />
-                <Route path="/agency/bus-management" component={BusManagement} />
-                <Route path="/agency/upload-data" component={UploadData} />
-                <Route path="/agency/uploaded-data" component={UploadedData} />
-              </>
-            )}
-            <Route component={NotFound} />
-          </Switch>
-        </main>
+    <Layout variant="dashboard">
+      <div className="bg-[var(--airbnb-light)] min-h-screen">
+        <div className="flex">
+          <Sidebar />
+          <main className="flex-1 p-8">
+            <Switch>
+              {isSuperAdmin ? (
+                <>
+                  <Route path="/" component={AdminDashboard} />
+                  <Route path="/admin/dashboard" component={AdminDashboard} />
+                  <Route path="/admin/agency-approval" component={AgencyApproval} />
+                  <Route path="/admin/manage-agencies" component={ManageAgencies} />
+                </>
+              ) : (
+                <>
+                  <Route path="/" component={AgencyDashboard} />
+                  <Route path="/agency/dashboard" component={AgencyDashboard} />
+                  <Route path="/agency/bus-management" component={BusManagement} />
+                  <Route path="/agency/upload-data" component={UploadData} />
+                  <Route path="/agency/uploaded-data" component={UploadedData} />
+                </>
+              )}
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 
