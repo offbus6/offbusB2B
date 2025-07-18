@@ -5,6 +5,9 @@ import {
   travelerData,
   uploadHistory,
   adminCredentials,
+  whatsappConfig,
+  whatsappTemplates,
+  whatsappQueue,
   type User,
   type UpsertUser,
   type Agency,
@@ -17,6 +20,12 @@ import {
   type InsertUploadHistory,
   type AdminCredentials,
   type InsertAdminCredentials,
+  type WhatsappConfig,
+  type InsertWhatsappConfig,
+  type WhatsappTemplate,
+  type InsertWhatsappTemplate,
+  type WhatsappQueue,
+  type InsertWhatsappQueue,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql, ne } from "drizzle-orm";
@@ -55,6 +64,7 @@ export interface IStorage {
   
   // Traveler data operations
   createTravelerData(data: InsertTravelerData[]): Promise<TravelerData[]>;
+  getTravelerData(id: number): Promise<TravelerData | undefined>;
   getTravelerDataByAgency(agencyId: number): Promise<TravelerData[]>;
   getTravelerDataByBus(busId: number): Promise<TravelerData[]>;
   updateTravelerData(id: number, updates: Partial<InsertTravelerData>): Promise<TravelerData>;
@@ -75,6 +85,27 @@ export interface IStorage {
     totalMessages: number;
     totalCoupons: number;
     totalTravelers: number;
+  }>;
+
+  // WhatsApp operations
+  getWhatsappConfig(): Promise<WhatsappConfig | undefined>;
+  createWhatsappConfig(config: InsertWhatsappConfig): Promise<WhatsappConfig>;
+  updateWhatsappConfig(id: number, config: Partial<InsertWhatsappConfig>): Promise<WhatsappConfig>;
+  
+  getWhatsappTemplates(): Promise<WhatsappTemplate[]>;
+  createWhatsappTemplate(template: InsertWhatsappTemplate): Promise<WhatsappTemplate>;
+  updateWhatsappTemplate(id: number, template: Partial<InsertWhatsappTemplate>): Promise<WhatsappTemplate>;
+  deleteWhatsappTemplate(id: number): Promise<void>;
+  
+  getWhatsappQueue(): Promise<WhatsappQueue[]>;
+  createWhatsappQueue(queue: InsertWhatsappQueue): Promise<WhatsappQueue>;
+  updateWhatsappQueueStatus(id: number, status: string): Promise<WhatsappQueue>;
+  
+  getWhatsappQueueStats(): Promise<{
+    totalMessages: number;
+    pendingMessages: number;
+    sentMessages: number;
+    failedMessages: number;
   }>;
 }
 
@@ -253,6 +284,11 @@ export class DatabaseStorage implements IStorage {
       .returning();
   }
 
+  async getTravelerData(id: number): Promise<TravelerData | undefined> {
+    const [traveler] = await db.select().from(travelerData).where(eq(travelerData.id, id));
+    return traveler;
+  }
+
   async getTravelerDataByAgency(agencyId: number): Promise<TravelerData[]> {
     return await db
       .select()
@@ -360,6 +396,89 @@ export class DatabaseStorage implements IStorage {
       totalMessages: messageCount?.count || 0,
       totalCoupons: couponCount?.count || 0,
       totalTravelers: travelerCount?.count || 0,
+    };
+  }
+
+  // WhatsApp operations
+  async getWhatsappConfig(): Promise<WhatsappConfig | undefined> {
+    const [config] = await db.select().from(whatsappConfig).limit(1);
+    return config;
+  }
+
+  async createWhatsappConfig(config: InsertWhatsappConfig): Promise<WhatsappConfig> {
+    const [newConfig] = await db.insert(whatsappConfig).values(config).returning();
+    return newConfig;
+  }
+
+  async updateWhatsappConfig(id: number, config: Partial<InsertWhatsappConfig>): Promise<WhatsappConfig> {
+    const [updatedConfig] = await db
+      .update(whatsappConfig)
+      .set({ ...config, updatedAt: new Date() })
+      .where(eq(whatsappConfig.id, id))
+      .returning();
+    return updatedConfig;
+  }
+
+  async getWhatsappTemplates(): Promise<WhatsappTemplate[]> {
+    return await db.select().from(whatsappTemplates).orderBy(whatsappTemplates.dayTrigger);
+  }
+
+  async createWhatsappTemplate(template: InsertWhatsappTemplate): Promise<WhatsappTemplate> {
+    const [newTemplate] = await db.insert(whatsappTemplates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updateWhatsappTemplate(id: number, template: Partial<InsertWhatsappTemplate>): Promise<WhatsappTemplate> {
+    const [updatedTemplate] = await db
+      .update(whatsappTemplates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(whatsappTemplates.id, id))
+      .returning();
+    return updatedTemplate;
+  }
+
+  async deleteWhatsappTemplate(id: number): Promise<void> {
+    await db.delete(whatsappTemplates).where(eq(whatsappTemplates.id, id));
+  }
+
+  async getWhatsappQueue(): Promise<WhatsappQueue[]> {
+    return await db.select().from(whatsappQueue).orderBy(desc(whatsappQueue.createdAt));
+  }
+
+  async createWhatsappQueue(queue: InsertWhatsappQueue): Promise<WhatsappQueue> {
+    const [newQueue] = await db.insert(whatsappQueue).values(queue).returning();
+    return newQueue;
+  }
+
+  async updateWhatsappQueueStatus(id: number, status: string): Promise<WhatsappQueue> {
+    const [updatedQueue] = await db
+      .update(whatsappQueue)
+      .set({ status: status as any, updatedAt: new Date() })
+      .where(eq(whatsappQueue.id, id))
+      .returning();
+    return updatedQueue;
+  }
+
+  async getWhatsappQueueStats(): Promise<{
+    totalMessages: number;
+    pendingMessages: number;
+    sentMessages: number;
+    failedMessages: number;
+  }> {
+    const [stats] = await db
+      .select({
+        totalMessages: count(),
+        pendingMessages: count(sql`case when status = 'pending' then 1 end`),
+        sentMessages: count(sql`case when status = 'sent' then 1 end`),
+        failedMessages: count(sql`case when status = 'failed' then 1 end`),
+      })
+      .from(whatsappQueue);
+
+    return {
+      totalMessages: stats.totalMessages,
+      pendingMessages: stats.pendingMessages,
+      sentMessages: stats.sentMessages,
+      failedMessages: stats.failedMessages,
     };
   }
 }

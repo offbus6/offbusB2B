@@ -10,6 +10,7 @@ import AdminDashboard from "@/pages/admin/dashboard";
 import AgencyApproval from "@/pages/admin/agency-approval";
 import ManageAgencies from "@/pages/admin/manage-agencies";
 import AdminProfile from "@/pages/admin/profile";
+import WhatsappConfig from "@/pages/admin/whatsapp-config";
 import AdminSignup from "@/pages/admin-signup";
 import AgencyDashboard from "@/pages/agency/dashboard";
 import BusManagement from "@/pages/agency/bus-management";
@@ -90,6 +91,7 @@ function Router() {
                   <Route path="/admin/agency-approval" component={AgencyApproval} />
                   <Route path="/admin/manage-agencies" component={ManageAgencies} />
                   <Route path="/admin/profile" component={AdminProfile} />
+                  <Route path="/admin/whatsapp-config" component={WhatsappConfig} />
                 </>
               ) : (
                 <>

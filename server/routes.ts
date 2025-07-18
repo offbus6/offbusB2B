@@ -287,6 +287,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // WhatsApp API endpoints
+  app.get('/api/admin/whatsapp-config', isAuthenticated, async (req: any, res) => {
+    try {
+      const config = await storage.getWhatsappConfig();
+      res.json(config);
+    } catch (error) {
+      console.error("Error fetching WhatsApp config:", error);
+      res.status(500).json({ message: "Failed to fetch WhatsApp config" });
+    }
+  });
+
+  app.post('/api/admin/whatsapp-config', isAuthenticated, async (req: any, res) => {
+    try {
+      const existingConfig = await storage.getWhatsappConfig();
+      let config;
+      
+      if (existingConfig) {
+        config = await storage.updateWhatsappConfig(existingConfig.id, req.body);
+      } else {
+        config = await storage.createWhatsappConfig(req.body);
+      }
+      
+      res.json(config);
+    } catch (error) {
+      console.error("Error saving WhatsApp config:", error);
+      res.status(500).json({ message: "Failed to save WhatsApp config" });
+    }
+  });
+
+  app.get('/api/admin/whatsapp-templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const templates = await storage.getWhatsappTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching WhatsApp templates:", error);
+      res.status(500).json({ message: "Failed to fetch WhatsApp templates" });
+    }
+  });
+
+  app.post('/api/admin/whatsapp-templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const template = await storage.createWhatsappTemplate(req.body);
+      res.json(template);
+    } catch (error) {
+      console.error("Error creating WhatsApp template:", error);
+      res.status(500).json({ message: "Failed to create WhatsApp template" });
+    }
+  });
+
+  app.patch('/api/admin/whatsapp-templates/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const template = await storage.updateWhatsappTemplate(id, req.body);
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating WhatsApp template:", error);
+      res.status(500).json({ message: "Failed to update WhatsApp template" });
+    }
+  });
+
+  app.delete('/api/admin/whatsapp-templates/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteWhatsappTemplate(id);
+      res.json({ message: "Template deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting WhatsApp template:", error);
+      res.status(500).json({ message: "Failed to delete WhatsApp template" });
+    }
+  });
+
+  app.get('/api/admin/whatsapp-queue/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const stats = await storage.getWhatsappQueueStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching WhatsApp queue stats:", error);
+      res.status(500).json({ message: "Failed to fetch WhatsApp queue stats" });
+    }
+  });
+
+  app.post('/api/admin/whatsapp-test', isAuthenticated, async (req: any, res) => {
+    try {
+      const { whatsappService } = await import('./whatsapp-service');
+      await whatsappService.sendTestMessage();
+      res.json({ message: "Test message sent successfully" });
+    } catch (error) {
+      console.error("Error testing WhatsApp:", error);
+      res.status(500).json({ message: "Failed to test WhatsApp" });
+    }
+  });
+
   app.get('/api/stats/agency/:agencyId', isAuthenticated, async (req: any, res) => {
     try {
       const agencyId = parseInt(req.params.agencyId);

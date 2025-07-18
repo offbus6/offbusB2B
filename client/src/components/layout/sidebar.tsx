@@ -8,7 +8,8 @@ import {
   Bus, 
   Upload, 
   Database,
-  User 
+  User,
+  MessageSquare 
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -37,6 +38,11 @@ export default function Sidebar() {
       href: "/admin/profile", 
       icon: User, 
       label: "Profile" 
+    },
+    { 
+      href: "/admin/whatsapp-config", 
+      icon: MessageSquare, 
+      label: "WhatsApp Config" 
     },
   ];
 

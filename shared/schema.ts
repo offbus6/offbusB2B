@@ -172,6 +172,46 @@ export const adminCredentials = pgTable("admin_credentials", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// WhatsApp API configuration table
+export const whatsappConfig = pgTable("whatsapp_config", {
+  id: serial("id").primaryKey(),
+  provider: varchar("provider", { enum: ["business_api", "twilio", "messagebird", "other"] }).notNull(),
+  apiKey: varchar("api_key").notNull(),
+  apiSecret: varchar("api_secret"),
+  phoneNumber: varchar("phone_number").notNull(),
+  webhookUrl: varchar("webhook_url"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// WhatsApp message templates table
+export const whatsappTemplates = pgTable("whatsapp_templates", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  dayTrigger: integer("day_trigger").notNull(), // 30, 60, 90, etc.
+  subject: varchar("subject").notNull(),
+  message: text("message").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// WhatsApp message queue table
+export const whatsappQueue = pgTable("whatsapp_queue", {
+  id: serial("id").primaryKey(),
+  travelerId: integer("traveler_id").notNull().references(() => travelerData.id),
+  templateId: integer("template_id").notNull().references(() => whatsappTemplates.id),
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  status: varchar("status", { enum: ["pending", "sent", "failed", "cancelled"] }).notNull().default("pending"),
+  message: text("message").notNull(), // Processed message with dynamic variables
+  phoneNumber: varchar("phone_number").notNull(),
+  sentAt: timestamp("sent_at"),
+  error: text("error"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export type AdminCredentials = typeof adminCredentials.$inferSelect;
 export type InsertAdminCredentials = typeof adminCredentials.$inferInsert;
 export type Agency = typeof agencies.$inferSelect;
@@ -182,3 +222,11 @@ export type TravelerData = typeof travelerData.$inferSelect;
 export type InsertTravelerData = z.infer<typeof insertTravelerDataSchema>;
 export type UploadHistory = typeof uploadHistory.$inferSelect;
 export type InsertUploadHistory = z.infer<typeof insertUploadHistorySchema>;
+
+// WhatsApp types
+export type WhatsappConfig = typeof whatsappConfig.$inferSelect;
+export type InsertWhatsappConfig = typeof whatsappConfig.$inferInsert;
+export type WhatsappTemplate = typeof whatsappTemplates.$inferSelect;
+export type InsertWhatsappTemplate = typeof whatsappTemplates.$inferInsert;
+export type WhatsappQueue = typeof whatsappQueue.$inferSelect;
+export type InsertWhatsappQueue = typeof whatsappQueue.$inferInsert;
