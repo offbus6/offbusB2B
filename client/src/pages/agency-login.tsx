@@ -46,8 +46,12 @@ export default function AgencyLogin() {
       // Force refresh user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      // Navigate immediately
-      navigate("/agency/dashboard");
+      // Wait a moment for the cookie to be set, then navigate
+      setTimeout(() => {
+        navigate("/agency/dashboard");
+        // Force a page refresh to ensure cookies are properly loaded
+        window.location.reload();
+      }, 500);
     },
     onError: (error: any) => {
       toast({
