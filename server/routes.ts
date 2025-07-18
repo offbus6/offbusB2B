@@ -302,12 +302,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/signup', async (req, res) => {
     try {
-      const { username, email, password, firstName, lastName, agencyName, phone, city } = req.body;
+      const { email, password, firstName, lastName, agencyName, phone, city, state, logoUrl } = req.body;
       
-      // Check if username already exists
-      const existingAgency = await storage.getAgencyByUsername(username);
-      if (existingAgency) {
-        return res.status(400).json({ message: 'Username already exists' });
+      console.log('Signup request received:', { email, firstName, lastName, agencyName, phone, city, state });
+      
+      // Check if email already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email already exists' });
       }
       
       // Create user
@@ -328,11 +330,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         contactPerson: `${firstName} ${lastName}`,
         phone,
         city,
-        username,
+        state,
+        logoUrl,
         password, // In production, hash this password
         status: 'pending'
       });
       
+      console.log('Agency created successfully:', agency);
       res.json({ message: 'Account created successfully' });
     } catch (error) {
       console.error("Signup error:", error);
