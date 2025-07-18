@@ -43,11 +43,11 @@ export default function AdminLogin() {
         description: "Welcome to the admin dashboard.",
       });
       
-      // Clear cache and force full page reload to ensure cookies are loaded
+      // Clear cache and navigate
       queryClient.clear();
       
-      // Use window.location.href for full page navigation instead of SPA routing
-      window.location.href = "/admin/dashboard";
+      // Navigate to admin dashboard
+      navigate("/admin/dashboard");
     },
     onError: (error: any) => {
       toast({

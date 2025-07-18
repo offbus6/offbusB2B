@@ -43,11 +43,11 @@ export default function AgencyLogin() {
         description: "Welcome to your agency dashboard.",
       });
       
-      // Clear cache and force full page reload to ensure cookies are loaded
+      // Clear cache and navigate
       queryClient.clear();
       
-      // Use window.location.href for full page navigation instead of SPA routing
-      window.location.href = "/agency/dashboard";
+      // Navigate to agency dashboard
+      navigate("/agency/dashboard");
     },
     onError: (error: any) => {
       toast({
