@@ -119,3 +119,7 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - Enhanced agency login system to allow unapproved agencies to login and see pending approval page
 - Added contact information (+91 9900408888) and 24-hour wait message for pending agencies
 - Updated pending approval page with call-to-action for faster approval process
+- **CRITICAL: Removed all dummy/static data and hardcoded credentials (July 18, 2025)**
+- System now uses only live database data - no seeding, no static responses
+- Removed admin credentials and dummy agency data from codebase
+- Database cleared of all test data, preserving only real user signups

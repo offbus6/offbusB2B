@@ -84,38 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Separate Admin Login for Security
-  app.post('/api/auth/admin/login', async (req: any, res) => {
-    try {
-      const { email, password } = req.body;
-      
-      // Check for admin credentials
-      if (email === 'admin@travelflow.com' && password === 'admin123') {
-        const adminUser = await storage.getOrCreateAdminUser();
-        
-        const userWithRole = {
-          ...adminUser,
-          role: 'super_admin'
-        };
-        
-        // Store user globally and in session
-        currentUser = userWithRole;
-        sessionStore.set(req.sessionID, { user: userWithRole });
-        
-        res.json({
-          user: userWithRole,
-          role: 'super_admin',
-          message: 'Admin login successful'
-        });
-        return;
-      }
-      
-      res.status(401).json({ message: 'Invalid admin credentials' });
-    } catch (error) {
-      console.error("Admin login error:", error);
-      res.status(500).json({ message: "Admin login failed" });
-    }
-  });
+  // Admin login removed - only live data authentication supported
 
   // Separate Travel Agent Login for Security
   app.post('/api/auth/agency/login', async (req: any, res) => {
@@ -157,27 +126,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/login', async (req: any, res) => {
     try {
       const { email, password } = req.body;
-      
-      // Check for admin credentials first
-      if (email === 'admin@travelflow.com' && password === 'admin123') {
-        const adminUser = await storage.getOrCreateAdminUser();
-        
-        const userWithRole = {
-          ...adminUser,
-          role: 'super_admin'
-        };
-        
-        // Store user globally and in session
-        currentUser = userWithRole;
-        sessionStore.set(req.sessionID, { user: userWithRole });
-        
-        res.json({
-          user: userWithRole,
-          role: 'super_admin',
-          message: 'Admin login successful'
-        });
-        return;
-      }
       
       // Check for agency credentials
       const agency = await storage.getAgencyByCredentials(email, password);
@@ -238,14 +186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Seed dummy data on startup
-  setTimeout(async () => {
-    try {
-      await storage.seedDummyData();
-    } catch (error) {
-      console.error("Error seeding dummy data:", error);
-    }
-  }, 1000); // Wait 1 second for database to be ready
+  // Dummy data seeding removed - system now uses only live data
 
   app.post('/api/auth/signup', async (req, res) => {
     try {
