@@ -30,14 +30,6 @@ export default function Landing() {
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
             <Button 
-              onClick={() => window.location.href = "/admin-login"}
-              variant="outline"
-              className="border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white px-10 py-4 text-lg rounded-xl font-semibold transition-all"
-            >
-              Admin Access
-              <Shield className="ml-2 w-5 h-5" />
-            </Button>
-            <Button 
               onClick={() => window.location.href = "/signup"}
               variant="outline"
               className="border-2 border-[var(--airbnb-primary)] text-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)] hover:text-white px-10 py-4 text-lg rounded-xl font-semibold transition-all"

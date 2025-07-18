@@ -106,13 +106,6 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
                 Agency Login
               </Button>
               <Button 
-                variant="ghost" 
-                onClick={() => navigate("/admin-login")}
-                className="text-red-600 hover:text-red-700"
-              >
-                Admin
-              </Button>
-              <Button 
                 onClick={() => navigate("/signup")}
                 className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white"
               >
@@ -156,13 +149,6 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
                     className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] justify-start"
                   >
                     Agency Login
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => navigate("/admin-login")}
-                    className="text-red-600 hover:text-red-700 justify-start"
-                  >
-                    Admin Access
                   </Button>
                   <Button 
                     onClick={() => navigate("/signup")}

@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import session from "express-session";
+import MemoryStore from "memorystore";
 import { storage } from "./storage";
 import { insertAgencySchema, insertBusSchema, insertTravelerDataSchema } from "@shared/schema";
 import { z } from "zod";
@@ -11,12 +12,17 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
-// Session middleware with more secure configuration
+// Session middleware with memory store for persistence
+const MemoryStoreSession = MemoryStore(session);
+
 const sessionMiddleware = session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
   resave: false,
   saveUninitialized: false,
   rolling: true, // Reset expiration on activity
+  store: new MemoryStoreSession({
+    checkPeriod: 86400000, // prune expired entries every 24h
+  }),
   cookie: {
     secure: false, // Set to true in production with HTTPS
     httpOnly: true,
@@ -152,6 +158,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: 'Logged out successfully' });
     });
   });
+
+  // Stats endpoints
+  app.get('/api/stats/system', isAuthenticated, async (req: any, res) => {
+    try {
+      const stats = await storage.getSystemStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching system stats:", error);
+      res.status(500).json({ message: "Failed to fetch system stats" });
+    }
+  });
+
+  app.get('/api/stats/agency/:agencyId', isAuthenticated, async (req: any, res) => {
+    try {
+      const agencyId = parseInt(req.params.agencyId);
+      const stats = await storage.getAgencyStats(agencyId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching agency stats:", error);
+      res.status(500).json({ message: "Failed to fetch agency stats" });
+    }
+  });
+
+  // Seed dummy data on startup
+  setTimeout(async () => {
+    try {
+      await storage.seedDummyData();
+    } catch (error) {
+      console.error("Error seeding dummy data:", error);
+    }
+  }, 1000); // Wait 1 second for database to be ready
 
   app.post('/api/auth/signup', async (req, res) => {
     try {

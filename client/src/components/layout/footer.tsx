@@ -132,6 +132,9 @@ export default function Footer({ variant = 'landing' }: FooterProps) {
             <a href="#cookies" className="text-gray-300 hover:text-white text-sm transition-colors">
               Cookie Policy
             </a>
+            <Link href="/admin-login" className="text-red-400 hover:text-red-300 text-sm transition-colors">
+              Admin Access
+            </Link>
           </div>
         </div>
       </div>

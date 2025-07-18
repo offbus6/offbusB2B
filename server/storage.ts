@@ -147,6 +147,156 @@ export class DatabaseStorage implements IStorage {
     return admin;
   }
 
+  async seedDummyData(): Promise<void> {
+    try {
+      // Check if dummy data already exists
+      const existingAgencies = await this.getAllAgencies();
+      if (existingAgencies.length > 0) {
+        console.log("Dummy data already exists, skipping seed");
+        return;
+      }
+
+      console.log("Seeding dummy data...");
+
+      // Create dummy agencies
+      const agency1 = await this.createAgency({
+        name: "Golden Tours",
+        username: "goldentours",
+        password: "demo123",
+        email: "info@goldentours.com",
+        phone: "+1-555-0101",
+        address: "123 Main St, New York, NY 10001",
+        contactPerson: "John Smith",
+        licenseNumber: "NY-BUS-001",
+        status: "approved",
+        userId: "agency_user_1",
+      });
+
+      const agency2 = await this.createAgency({
+        name: "Blue Sky Travel",
+        username: "bluesky",
+        password: "demo123",
+        email: "contact@bluesky.com",
+        phone: "+1-555-0102",
+        address: "456 Oak Ave, Los Angeles, CA 90001",
+        contactPerson: "Sarah Johnson",
+        licenseNumber: "CA-BUS-002",
+        status: "approved",
+        userId: "agency_user_2",
+      });
+
+      const agency3 = await this.createAgency({
+        name: "Mountain Express",
+        username: "mountain",
+        password: "demo123",
+        email: "info@mountainexpress.com",
+        phone: "+1-555-0103",
+        address: "789 Pine Rd, Denver, CO 80001",
+        contactPerson: "Mike Davis",
+        licenseNumber: "CO-BUS-003",
+        status: "pending",
+        userId: "agency_user_3",
+      });
+
+      // Create dummy buses
+      await this.createBus({
+        agencyId: agency1.id,
+        busName: "Golden Express 1",
+        busNumber: "GE-001",
+        route: "New York to Boston",
+        departureTime: "08:00",
+        arrivalTime: "12:00",
+        capacity: 45,
+        fare: 75.00,
+        amenities: ["WiFi", "AC", "USB Charging", "Reclining Seats"],
+        isActive: true,
+      });
+
+      await this.createBus({
+        agencyId: agency1.id,
+        busName: "Golden Express 2",
+        busNumber: "GE-002",
+        route: "New York to Philadelphia",
+        departureTime: "14:00",
+        arrivalTime: "17:00",
+        capacity: 50,
+        fare: 55.00,
+        amenities: ["WiFi", "AC", "Entertainment System"],
+        isActive: true,
+      });
+
+      await this.createBus({
+        agencyId: agency2.id,
+        busName: "Blue Sky Cruiser",
+        busNumber: "BS-001",
+        route: "Los Angeles to San Francisco",
+        departureTime: "06:00",
+        arrivalTime: "14:00",
+        capacity: 55,
+        fare: 95.00,
+        amenities: ["WiFi", "AC", "Meals", "Entertainment"],
+        isActive: true,
+      });
+
+      // Create dummy traveler data
+      const bus1 = await this.getBusesByAgency(agency1.id);
+      const bus2 = await this.getBusesByAgency(agency2.id);
+
+      if (bus1.length > 0) {
+        await this.createTravelerData([
+          {
+            agencyId: agency1.id,
+            busId: bus1[0].id,
+            passengerName: "Alice Johnson",
+            phoneNumber: "+1-555-1001",
+            email: "alice.johnson@email.com",
+            seatNumber: "A1",
+            ticketNumber: "TK-001",
+            journeyDate: new Date("2024-01-20"),
+            whatsappStatus: "sent",
+            couponCode: "SAVE10",
+            discount: 10.00,
+          },
+          {
+            agencyId: agency1.id,
+            busId: bus1[0].id,
+            passengerName: "Bob Smith",
+            phoneNumber: "+1-555-1002",
+            email: "bob.smith@email.com",
+            seatNumber: "B2",
+            ticketNumber: "TK-002",
+            journeyDate: new Date("2024-01-20"),
+            whatsappStatus: "sent",
+            couponCode: "WELCOME15",
+            discount: 15.00,
+          },
+        ]);
+      }
+
+      if (bus2.length > 0) {
+        await this.createTravelerData([
+          {
+            agencyId: agency2.id,
+            busId: bus2[0].id,
+            passengerName: "Carol Brown",
+            phoneNumber: "+1-555-2001",
+            email: "carol.brown@email.com",
+            seatNumber: "C3",
+            ticketNumber: "TK-003",
+            journeyDate: new Date("2024-01-21"),
+            whatsappStatus: "pending",
+            couponCode: "FAMILY20",
+            discount: 20.00,
+          },
+        ]);
+      }
+
+      console.log("Dummy data seeded successfully!");
+    } catch (error) {
+      console.error("Error seeding dummy data:", error);
+    }
+  }
+
   async getPendingAgencies(): Promise<Agency[]> {
     return await db.select().from(agencies).where(eq(agencies.status, "pending"));
   }
