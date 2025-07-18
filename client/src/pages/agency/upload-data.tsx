@@ -11,12 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import FileUpload from "@/components/ui/file-upload";
 import { Badge } from "@/components/ui/badge";
+import { Upload, Calendar, Bus, Tag, Globe } from "lucide-react";
 
 export default function UploadData() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading, user } = useAuth();
   const [selectedBusId, setSelectedBusId] = useState<string>("");
   const [travelDate, setTravelDate] = useState<string>("");
+  const [couponCode, setCouponCode] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const { data: buses, isLoading: busesLoading } = useQuery({
@@ -51,6 +53,7 @@ export default function UploadData() {
       
       setSelectedBusId("");
       setTravelDate("");
+      setCouponCode("");
       setSelectedFile(null);
       
       toast({
@@ -78,6 +81,7 @@ export default function UploadData() {
     },
   });
 
+  // Redirect to login if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       toast({
@@ -95,10 +99,10 @@ export default function UploadData() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedBusId || !travelDate || !selectedFile) {
+    if (!selectedBusId || !travelDate || !selectedFile || !couponCode) {
       toast({
         title: "Error",
-        description: "Please fill all fields and select a file",
+        description: "Please fill in all required fields",
         variant: "destructive",
       });
       return;
@@ -108,84 +112,64 @@ export default function UploadData() {
     formData.append("file", selectedFile);
     formData.append("busId", selectedBusId);
     formData.append("travelDate", travelDate);
+    formData.append("couponCode", couponCode);
 
     uploadDataMutation.mutate(formData);
   };
 
-  if (isLoading || busesLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!user?.agency || user.agency.status !== "approved") {
-    return (
-      <div className="text-center py-16">
-        <p className="text-[var(--airbnb-gray)]">
-          Your agency needs to be approved before you can upload data.
-        </p>
-      </div>
-    );
-  }
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      completed: { label: "Processed", className: "bg-green-100 text-green-800" },
-      processing: { label: "Processing", className: "bg-yellow-100 text-yellow-800" },
-      failed: { label: "Failed", className: "bg-red-100 text-red-800" },
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.processing;
-    return (
-      <Badge className={config.className}>
-        {config.label}
-      </Badge>
-    );
+  const handleFileChange = (file: File | null) => {
+    setSelectedFile(file);
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-500"></div>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-[var(--airbnb-dark)] mb-2">
-          Upload Traveler Data
-        </h2>
-        <p className="text-[var(--airbnb-gray)]">
-          Upload daily traveler information for WhatsApp automation
-        </p>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900">Upload Travelers Data</h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Upload Form */}
-        <Card className="airbnb-shadow">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-[var(--airbnb-dark)]">
-              Upload Data
+            <CardTitle className="flex items-center">
+              <Upload className="mr-2 h-5 w-5" />
+              Upload Excel/CSV File
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <Label htmlFor="bus-select" className="text-sm font-medium text-[var(--airbnb-dark)]">
+          <CardContent className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Bus Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="bus-select" className="flex items-center">
+                  <Bus className="mr-2 h-4 w-4" />
                   Select Bus
                 </Label>
                 <Select value={selectedBusId} onValueChange={setSelectedBusId}>
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Choose a bus..." />
+                  <SelectTrigger id="bus-select">
+                    <SelectValue placeholder="Choose a bus" />
                   </SelectTrigger>
                   <SelectContent>
                     {buses?.map((bus: any) => (
                       <SelectItem key={bus.id} value={bus.id.toString()}>
-                        {bus.number} ({bus.route})
+                        {bus.name} - {bus.fromLocation} to {bus.toLocation}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div>
-                <Label htmlFor="travel-date" className="text-sm font-medium text-[var(--airbnb-dark)]">
+              {/* Travel Date */}
+              <div className="space-y-2">
+                <Label htmlFor="travel-date" className="flex items-center">
+                  <Calendar className="mr-2 h-4 w-4" />
                   Travel Date
                 </Label>
                 <Input
@@ -193,87 +177,162 @@ export default function UploadData() {
                   type="date"
                   value={travelDate}
                   onChange={(e) => setTravelDate(e.target.value)}
-                  className="mt-2"
-                  required
+                  className="w-full"
                 />
               </div>
 
-              <div>
-                <Label className="text-sm font-medium text-[var(--airbnb-dark)]">
-                  Upload File
+              {/* Coupon Code */}
+              <div className="space-y-2">
+                <Label htmlFor="coupon-code" className="flex items-center">
+                  <Tag className="mr-2 h-4 w-4" />
+                  Coupon Code
                 </Label>
-                <div className="mt-2">
-                  <FileUpload onFileSelect={setSelectedFile} />
+                <Input
+                  id="coupon-code"
+                  type="text"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  placeholder="Enter coupon code (e.g., SAVE20, DISCOUNT15)"
+                  className="w-full"
+                />
+                <p className="text-sm text-gray-500">
+                  This coupon will be applied to all travelers in the uploaded file
+                </p>
+              </div>
+
+              {/* Website URL Display */}
+              {user?.agency?.website && (
+                <div className="space-y-2">
+                  <Label className="flex items-center">
+                    <Globe className="mr-2 h-4 w-4" />
+                    Coupon Website
+                  </Label>
+                  <div className="p-3 bg-gray-50 rounded-md border">
+                    <p className="text-sm text-gray-600">Travelers can use this coupon at:</p>
+                    <a 
+                      href={user.agency.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      {user.agency.website}
+                    </a>
+                  </div>
                 </div>
+              )}
+
+              {/* File Upload */}
+              <div className="space-y-2">
+                <Label>Upload File</Label>
+                <FileUpload
+                  accept=".xlsx,.xls,.csv"
+                  onFileSelect={handleFileChange}
+                  maxSize={10 * 1024 * 1024} // 10MB
+                />
+                <p className="text-sm text-gray-500">
+                  Supported formats: Excel (.xlsx, .xls) or CSV (.csv)
+                </p>
               </div>
 
-              <div className="bg-[var(--airbnb-light)] rounded-lg p-4">
-                <h4 className="font-medium text-[var(--airbnb-dark)] mb-2">
-                  Required CSV Format:
-                </h4>
-                <ul className="text-sm text-[var(--airbnb-gray)] space-y-1">
-                  <li>• Traveler Name</li>
-                  <li>• Phone Number</li>
-                  <li>• Travel Date</li>
-                  <li>• Coupon Code</li>
-                </ul>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white"
-                disabled={uploadDataMutation.isPending}
+              {/* Submit Button */}
+              <Button 
+                type="submit" 
+                className="w-full bg-red-500 hover:bg-red-600 text-white"
+                disabled={uploadDataMutation.isPending || !selectedBusId || !travelDate || !selectedFile || !couponCode}
               >
-                {uploadDataMutation.isPending ? "Uploading..." : "Upload Data & Trigger WhatsApp"}
+                {uploadDataMutation.isPending ? "Uploading..." : "Upload Data"}
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        {/* Upload History */}
-        <Card className="airbnb-shadow">
+        {/* Upload Instructions */}
+        <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-[var(--airbnb-dark)]">
-              Recent Uploads
-            </CardTitle>
+            <CardTitle>File Format Requirements</CardTitle>
           </CardHeader>
-          <CardContent>
-            {historyLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <h4 className="font-semibold">Excel/CSV Structure:</h4>
+              <div className="bg-gray-50 p-3 rounded-md text-sm">
+                <p className="font-medium">Required columns:</p>
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li><code>traveler_name</code> - Full name of the traveler</li>
+                  <li><code>phone</code> - Contact phone number</li>
+                </ul>
               </div>
-            ) : !uploadHistory || uploadHistory.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-[var(--airbnb-gray)]">No uploads yet</p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-semibold">Sample Data:</h4>
+              <div className="bg-gray-50 p-3 rounded-md text-sm">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-1">traveler_name</th>
+                      <th className="text-left p-1">phone</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="p-1">John Doe</td>
+                      <td className="p-1">+1-555-0123</td>
+                    </tr>
+                    <tr>
+                      <td className="p-1">Jane Smith</td>
+                      <td className="p-1">+1-555-0456</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {uploadHistory.slice(0, 10).map((upload: any) => (
-                  <div key={upload.id} className="border border-[var(--airbnb-border)] rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h4 className="font-medium text-[var(--airbnb-dark)]">
-                          {upload.fileName}
-                        </h4>
-                        <p className="text-sm text-[var(--airbnb-gray)]">
-                          {upload.travelerCount} travelers
-                        </p>
-                      </div>
-                      {getStatusBadge(upload.status)}
-                    </div>
-                    <div className="text-sm text-[var(--airbnb-gray)]">
-                      <div className="flex justify-between">
-                        <span>Upload Date:</span>
-                        <span>{new Date(upload.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-semibold">Notes:</h4>
+              <ul className="list-disc list-inside text-sm space-y-1">
+                <li>The coupon code will be automatically applied to all travelers</li>
+                <li>Travel date and bus selection apply to all travelers in the file</li>
+                <li>Phone numbers should include country code for WhatsApp integration</li>
+                <li>Maximum file size: 10MB</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Upload History */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Uploads</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {historyLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
+            </div>
+          ) : uploadHistory && uploadHistory.length > 0 ? (
+            <div className="space-y-2">
+              {uploadHistory.map((upload: any) => (
+                <div key={upload.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                  <div className="flex items-center space-x-3">
+                    <div>
+                      <p className="font-medium">{upload.fileName}</p>
+                      <p className="text-sm text-gray-500">
+                        {upload.travelerCount} travelers • {new Date(upload.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant={upload.status === 'completed' ? 'default' : 'secondary'}>
+                    {upload.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">No upload history found</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

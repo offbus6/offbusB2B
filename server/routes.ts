@@ -461,11 +461,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden" });
       }
 
-      const { busId, travelDate } = req.body;
+      const { busId, travelDate, couponCode } = req.body;
       const file = req.file;
 
       if (!file) {
         return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      if (!couponCode) {
+        return res.status(400).json({ message: "Coupon code is required" });
       }
 
       const bus = await storage.getBus(parseInt(busId));
@@ -486,7 +490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           travelerName: values[0]?.trim() || '',
           phone: values[1]?.trim() || '',
           travelDate: new Date(travelDate),
-          couponCode: values[3]?.trim() || '',
+          couponCode: couponCode.trim(), // Use coupon code from form data
           whatsappStatus: 'pending' as const,
         };
       }).filter((data: any) => data.travelerName && data.phone);

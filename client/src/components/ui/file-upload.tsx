@@ -1,123 +1,130 @@
-import { useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Upload, X, FileText } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState, useRef } from "react";
+import { Button } from "./button";
+import { Upload, X } from "lucide-react";
 
 interface FileUploadProps {
-  onFileSelect: (file: File) => void;
   accept?: string;
+  onFileSelect: (file: File | null) => void;
   maxSize?: number;
   className?: string;
 }
 
 export default function FileUpload({ 
+  accept = "*", 
   onFileSelect, 
-  accept = ".csv,.xlsx,.xls",
-  maxSize = 5 * 1024 * 1024, // 5MB
-  className = ""
+  maxSize = 10 * 1024 * 1024, // 10MB default
+  className = "" 
 }: FileUploadProps) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = useCallback((file: File) => {
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      handleFileSelect(files[0]);
+    }
+  };
+
+  const handleFileSelect = (file: File) => {
     if (file.size > maxSize) {
-      alert(`File size must be less than ${maxSize / (1024 * 1024)}MB`);
+      alert(`File size must be less than ${Math.round(maxSize / (1024 * 1024))}MB`);
       return;
     }
     
     setSelectedFile(file);
     onFileSelect(file);
-  }, [maxSize, onFileSelect]);
+  };
 
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileSelect(file);
     }
-  }, []);
+  };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0]);
-    }
-  }, [handleFile]);
-
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0]);
-    }
-  }, [handleFile]);
-
-  const removeFile = () => {
+  const handleRemoveFile = () => {
     setSelectedFile(null);
+    onFileSelect(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleButtonClick = () => {
+    fileInputRef.current?.click();
   };
 
   return (
-    <div className={cn("w-full", className)}>
-      <div
-        className={cn(
-          "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
-          dragActive 
-            ? "border-[var(--airbnb-primary)] bg-red-50" 
-            : "border-[var(--airbnb-border)]"
-        )}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-      >
-        {selectedFile ? (
-          <div className="flex items-center justify-center space-x-4">
-            <FileText className="w-8 h-8 text-[var(--airbnb-teal)]" />
-            <div className="flex-1 text-left">
-              <p className="text-[var(--airbnb-dark)] font-medium">{selectedFile.name}</p>
-              <p className="text-[var(--airbnb-gray)] text-sm">
-                {(selectedFile.size / 1024).toFixed(1)} KB
-              </p>
+    <div className={`w-full ${className}`}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={accept}
+        onChange={handleFileInputChange}
+        className="hidden"
+      />
+      
+      {selectedFile ? (
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Upload className="h-8 w-8 text-gray-400" />
+              <div>
+                <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
+                <p className="text-xs text-gray-500">
+                  {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                </p>
+              </div>
             </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={removeFile}
-              className="text-red-500 hover:text-red-700"
+              onClick={handleRemoveFile}
+              className="h-8 w-8 p-0"
             >
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
-        ) : (
-          <>
-            <Upload className="w-12 h-12 text-[var(--airbnb-gray)] mx-auto mb-4" />
-            <p className="text-[var(--airbnb-dark)] font-medium mb-2">
-              Drag & drop your CSV/Excel file here
-            </p>
-            <p className="text-[var(--airbnb-gray)] text-sm mb-4">
-              or click to browse files
-            </p>
-            <input
-              type="file"
-              accept={accept}
-              onChange={handleChange}
-              className="hidden"
-              id="file-upload"
-            />
-            <label htmlFor="file-upload">
-              <Button
-                type="button"
-                className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white"
-              >
-                Choose File
-              </Button>
-            </label>
-          </>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            dragActive 
+              ? "border-red-500 bg-red-50" 
+              : "border-gray-300 hover:border-gray-400"
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <p className="text-sm text-gray-600 mb-4">
+            Drag and drop your file here, or click to select
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleButtonClick}
+            className="mx-auto"
+          >
+            Select File
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
