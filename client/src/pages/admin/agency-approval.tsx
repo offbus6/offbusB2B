@@ -26,8 +26,10 @@ export default function AgencyApproval() {
       email: "info@mountainexpress.com",
       contactPerson: "Mike Wilson",
       phone: "+1-555-0103",
+      state: "Colorado",
       city: "Denver",
       website: "https://mountainexpress.com",
+      logoUrl: null,
       status: "pending",
       createdAt: new Date().toISOString(),
     },
@@ -37,8 +39,10 @@ export default function AgencyApproval() {
       email: "info@citylines.com",
       contactPerson: "Anna Davis",
       phone: "+1-555-0104",
+      state: "Illinois",
       city: "Chicago",
       website: "https://citylines.com",
+      logoUrl: null,
       status: "pending",
       createdAt: new Date().toISOString(),
     },
@@ -48,8 +52,10 @@ export default function AgencyApproval() {
       email: "contact@coastalcruise.com",
       contactPerson: "David Brown",
       phone: "+1-555-0105",
+      state: "Florida",
       city: "Miami",
       website: "https://coastalcruise.com",
+      logoUrl: null,
       status: "pending",
       createdAt: new Date().toISOString(),
     },
@@ -184,10 +190,10 @@ export default function AgencyApproval() {
                         </div>
                         <div>
                           <span className="font-medium text-[var(--airbnb-dark)]">
-                            City:
+                            Location:
                           </span>
                           <span className="text-[var(--airbnb-gray)] ml-2">
-                            {agency.city}
+                            {agency.city}, {agency.state}
                           </span>
                         </div>
                         <div>

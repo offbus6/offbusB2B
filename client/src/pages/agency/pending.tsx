@@ -63,7 +63,7 @@ export default function AgencyPending() {
                 <p><strong>Email:</strong> {agency.email}</p>
                 <p><strong>Contact:</strong> {agency.contactPerson}</p>
                 <p><strong>Phone:</strong> {agency.phone}</p>
-                <p><strong>City:</strong> {agency.city}</p>
+                <p><strong>Location:</strong> {agency.city}, {agency.state}</p>
                 <p><strong>Status:</strong> 
                   <span className={`ml-2 px-2 py-1 rounded text-sm ${
                     agency.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :

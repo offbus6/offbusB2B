@@ -15,7 +15,6 @@ import { UserPlus, ArrowLeft, Upload, ImageIcon } from "lucide-react";
 import Layout from "@/components/layout/layout";
 
 const signupSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   firstName: z.string().min(1, "First name is required"),
@@ -79,7 +78,6 @@ export default function Signup() {
   const form = useForm<SignupData>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
-      username: "",
       email: "",
       password: "",
       firstName: "",
@@ -212,24 +210,6 @@ export default function Signup() {
                     )}
                   />
                 </div>
-                
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-[var(--airbnb-dark)]">Username</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Choose a username"
-                          {...field}
-                          className="border-gray-300 focus:border-[var(--airbnb-primary)] focus:ring-[var(--airbnb-primary)]"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 
                 <FormField
                   control={form.control}

@@ -5,6 +5,7 @@ TravelFlow is a comprehensive travel agency management system built with React (
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+Authentication: Email and password only (no username field required).
 
 ## System Architecture
 
