@@ -4,6 +4,14 @@ import multer from "multer";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import { storage } from "./storage";
+
+// Simple in-memory session storage with token-based auth
+const activeSessions = new Map<string, any>();
+
+// Generate session token
+function generateSessionToken(): string {
+  return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+}
 import { insertAgencySchema, insertBusSchema, insertTravelerDataSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -16,31 +24,47 @@ const upload = multer({
 const MemoryStoreSession = MemoryStore(session);
 
 const sessionMiddleware = session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
-  resave: true, // Force save
-  saveUninitialized: true, // Save uninitialized sessions
-  rolling: true, // Reset expiration on activity
-  name: 'connect.sid', // Use default session name
+  secret: process.env.SESSION_SECRET || 'super-secret-key-for-development-only',
+  resave: false,
+  saveUninitialized: false,
+  rolling: false,
+  name: 'connect.sid',
   store: new MemoryStoreSession({
-    checkPeriod: 86400000, // prune expired entries every 24h
+    checkPeriod: 86400000,
   }),
   cookie: {
-    secure: false, // Set to true in production with HTTPS
-    httpOnly: false, // Allow client-side access for debugging
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax', // CSRF protection
-    path: '/', // Ensure cookie is available for all paths
+    secure: false,
+    httpOnly: false,
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: 'lax',
+    path: '/',
   },
 });
 
 // Custom auth middleware with debugging
 const isAuthenticated = (req: any, res: any, next: any) => {
   console.log('Auth check - Session ID:', req.sessionID);
-  console.log('Auth check - Session user:', req.session?.user ? 'exists' : 'missing');
-  console.log('Auth check - Session:', req.session);
   console.log('Auth check - Cookies:', req.headers.cookie);
   
-  if (req.session?.user) {
+  // Try to get token from cookie
+  const cookies = req.headers.cookie;
+  let sessionToken = null;
+  
+  if (cookies) {
+    const tokenMatch = cookies.match(/sessionToken=([^;]+)/);
+    if (tokenMatch) {
+      sessionToken = tokenMatch[1];
+    }
+  }
+  
+  console.log('Auth check - Session token:', sessionToken);
+  
+  // Check session from our in-memory store
+  const sessionData = sessionToken ? activeSessions.get(sessionToken) : null;
+  console.log('Auth check - Session data:', sessionData ? 'exists' : 'missing');
+  
+  if (sessionData && sessionData.user) {
+    req.user = sessionData.user;
     next();
   } else {
     res.status(401).json({ message: "Unauthorized" });
@@ -48,13 +72,16 @@ const isAuthenticated = (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Trust proxy for session cookies
+  app.set('trust proxy', 1);
+  
   // Session middleware
   app.use(sessionMiddleware);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const sessionUser = req.session.user;
+      const sessionUser = req.user;
       res.json(sessionUser);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -72,26 +99,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check for admin credentials
       if (username === 'admin' && password === 'admin123') {
         const adminUser = await storage.getOrCreateAdminUser();
-        req.session.user = {
+        
+        const userWithRole = {
           ...adminUser,
           role: 'super_admin'
         };
         
-        console.log('Admin login successful, saving session...');
+        // Generate session token
+        const sessionToken = generateSessionToken();
         
-        // Save session explicitly
-        req.session.save((err: any) => {
-          if (err) {
-            console.error("Session save error:", err);
-            return res.status(500).json({ message: "Login failed" });
-          }
-          
-          console.log('Session saved successfully');
-          res.json({
-            user: adminUser,
-            role: 'super_admin',
-            message: 'Admin login successful'
-          });
+        // Store in our in-memory session store
+        activeSessions.set(sessionToken, { user: userWithRole });
+        
+        console.log('Admin login successful, session token:', sessionToken);
+        console.log('Session stored in memory');
+        
+        // Set token as cookie
+        res.cookie('sessionToken', sessionToken, {
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+          httpOnly: false,
+          secure: false,
+          sameSite: 'lax',
+          path: '/'
+        });
+        
+        res.json({
+          user: userWithRole,
+          role: 'super_admin',
+          message: 'Admin login successful',
+          sessionToken: sessionToken
         });
         return;
       }
@@ -114,28 +150,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const agency = await storage.getAgencyByCredentials(username, password);
       if (agency) {
         const user = await storage.getUser(agency.userId);
-        req.session.user = {
+        const userWithRole = {
           ...user,
           agency,
           role: 'agency'
         };
         
-        console.log('Agency login successful, saving session...');
+        // Generate session token
+        const sessionToken = generateSessionToken();
         
-        // Save session explicitly
-        req.session.save((err: any) => {
-          if (err) {
-            console.error("Session save error:", err);
-            return res.status(500).json({ message: "Login failed" });
-          }
-          
-          console.log('Session saved successfully');
-          res.json({
-            user,
-            agency,
-            role: 'agency',
-            message: 'Agency login successful'
-          });
+        // Store in our in-memory session store
+        activeSessions.set(sessionToken, { user: userWithRole });
+        
+        console.log('Agency login successful, session token:', sessionToken);
+        console.log('Session stored in memory');
+        
+        // Set token as cookie
+        res.cookie('sessionToken', sessionToken, {
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+          httpOnly: false,
+          secure: false,
+          sameSite: 'lax',
+          path: '/'
+        });
+        
+        res.json({
+          user: userWithRole,
+          agency,
+          role: 'agency',
+          message: 'Agency login successful',
+          sessionToken: sessionToken
         });
         return;
       }
@@ -155,12 +199,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/auth/logout', (req: any, res) => {
-    req.session.destroy((err: any) => {
-      if (err) {
-        return res.status(500).json({ message: 'Logout failed' });
+    // Get session token from cookie
+    const cookies = req.headers.cookie;
+    if (cookies) {
+      const tokenMatch = cookies.match(/sessionToken=([^;]+)/);
+      if (tokenMatch) {
+        const sessionToken = tokenMatch[1];
+        // Clear from our in-memory session store
+        activeSessions.delete(sessionToken);
       }
-      res.json({ message: 'Logged out successfully' });
-    });
+    }
+    
+    // Clear cookie
+    res.clearCookie('sessionToken');
+    
+    res.json({ message: 'Logged out successfully' });
   });
 
   // Stats endpoints
