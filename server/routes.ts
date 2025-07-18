@@ -357,17 +357,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bus routes
   app.post('/api/buses', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
       const agency = await storage.getAgencyByUserId(userId);
       
       if (!agency || agency.status !== 'approved') {
         return res.status(403).json({ message: "Forbidden" });
       }
 
-      const busData = insertBusSchema.parse({
+      const busData = {
         ...req.body,
         agencyId: agency.id,
-      });
+      };
 
       const bus = await storage.createBus(busData);
       res.json(bus);
@@ -379,11 +383,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/buses', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
       const agency = await storage.getAgencyByUserId(userId);
       
       if (!agency) {
-        return res.status(403).json({ message: "Forbidden" });
+        return res.status(404).json({ message: "Agency not found" });
       }
 
       const buses = await storage.getBusesByAgency(agency.id);
