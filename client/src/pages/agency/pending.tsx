@@ -27,7 +27,7 @@ export default function AgencyPending() {
   const getStatusMessage = (status: string) => {
     switch (status) {
       case 'pending':
-        return "Your agency registration is being reviewed by our administrators. We'll notify you once it's approved.";
+        return "Your agency registration is still under approval. Please wait 24 hours for processing. To expedite your approval, please call +91 9900408888.";
       case 'approved':
         return "Congratulations! Your agency has been approved. You can now access all travel agency features.";
       case 'rejected':
@@ -55,6 +55,23 @@ export default function AgencyPending() {
             <p className="text-[var(--airbnb-gray)] mb-4">
               {getStatusMessage(agency?.status || 'pending')}
             </p>
+            
+            {agency?.status === 'pending' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-blue-800 mb-2">Need Faster Approval?</h4>
+                <p className="text-blue-700 text-sm mb-2">
+                  For urgent approval or any questions, contact our support team:
+                </p>
+                <div className="flex items-center justify-center">
+                  <Button 
+                    onClick={() => window.open('tel:+919900408888', '_blank')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    📞 Call +91 9900408888
+                  </Button>
+                </div>
+              </div>
+            )}
             
             {agency && (
               <div className="bg-[var(--airbnb-light)] p-4 rounded-lg text-left">

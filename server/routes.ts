@@ -122,7 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { email, password } = req.body;
       
-      // Check for agency credentials
+      // Check for agency credentials (allow all agencies to login regardless of approval status)
       const agency = await storage.getAgencyByCredentials(email, password);
       if (agency) {
         const user = await storage.getUser(agency.userId);

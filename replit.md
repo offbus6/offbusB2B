@@ -6,6 +6,7 @@ TravelFlow is a comprehensive travel agency management system built with React (
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 Authentication: Email and password only (no username field required).
+Agency login: Unapproved agencies can login but see pending approval page with contact information.
 
 ## System Architecture
 
@@ -111,3 +112,10 @@ Authentication: Email and password only (no username field required).
 - **Production**: Static file serving with Express
 - **Database**: Drizzle migrations and pooling
 - **Authentication**: Secure cookie configuration
+
+## Recent Changes (January 2025)
+- Updated authentication system to use email instead of username across all login forms
+- Modified backend authentication routes to handle email-based login for all user types  
+- Enhanced agency login system to allow unapproved agencies to login and see pending approval page
+- Added contact information (+91 9900408888) and 24-hour wait message for pending agencies
+- Updated pending approval page with call-to-action for faster approval process
