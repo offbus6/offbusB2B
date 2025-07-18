@@ -16,6 +16,8 @@ import UploadedData from "@/pages/agency/uploaded-data";
 import AgencyRegister from "@/pages/agency/register";
 import AgencyPending from "@/pages/agency/pending";
 import RoleSelection from "@/pages/role-selection";
+import Login from "@/pages/login";
+import Signup from "@/pages/signup";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 
@@ -34,7 +36,14 @@ function Router() {
   }
 
   if (!isAuthenticated) {
-    return <Landing />;
+    return (
+      <Switch>
+        <Route path="/login" component={Login} />
+        <Route path="/signup" component={Signup} />
+        <Route path="/" component={Landing} />
+        <Route component={NotFound} />
+      </Switch>
+    );
   }
 
   const userRole = (user as any)?.role;

@@ -28,12 +28,15 @@ export interface IStorage {
   createAgency(agency: InsertAgency): Promise<Agency>;
   getAgency(id: number): Promise<Agency | undefined>;
   getAgencyByUserId(userId: string): Promise<Agency | undefined>;
+  getAgencyByUsername(username: string): Promise<Agency | undefined>;
+  getAgencyByCredentials(username: string, password: string): Promise<Agency | undefined>;
   getPendingAgencies(): Promise<Agency[]>;
   getApprovedAgencies(): Promise<Agency[]>;
   getAllAgencies(): Promise<Agency[]>;
   updateAgencyStatus(id: number, status: string): Promise<Agency>;
   updateAgency(id: number, updates: Partial<InsertAgency>): Promise<Agency>;
   deleteAgency(id: number): Promise<void>;
+  getOrCreateAdminUser(): Promise<User>;
   
   // Bus operations
   createBus(bus: InsertBus): Promise<Bus>;
@@ -113,6 +116,35 @@ export class DatabaseStorage implements IStorage {
   async getAgencyByUserId(userId: string): Promise<Agency | undefined> {
     const [agency] = await db.select().from(agencies).where(eq(agencies.userId, userId));
     return agency;
+  }
+
+  async getAgencyByUsername(username: string): Promise<Agency | undefined> {
+    const [agency] = await db.select().from(agencies).where(eq(agencies.username, username));
+    return agency;
+  }
+
+  async getAgencyByCredentials(username: string, password: string): Promise<Agency | undefined> {
+    const [agency] = await db.select().from(agencies).where(
+      and(eq(agencies.username, username), eq(agencies.password, password))
+    );
+    return agency;
+  }
+
+  async getOrCreateAdminUser(): Promise<User> {
+    const adminId = 'admin_user';
+    let admin = await this.getUser(adminId);
+    
+    if (!admin) {
+      admin = await this.upsertUser({
+        id: adminId,
+        email: 'admin@travelflow.com',
+        firstName: 'System',
+        lastName: 'Administrator',
+        role: 'super_admin'
+      });
+    }
+    
+    return admin;
   }
 
   async getPendingAgencies(): Promise<Agency[]> {

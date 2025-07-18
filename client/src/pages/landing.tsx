@@ -1,90 +1,179 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bus, Users, MessageSquare, Shield } from "lucide-react";
+import { Bus, Users, MessageSquare, Shield, Star, CheckCircle, TrendingUp, Globe, ArrowRight, Zap } from "lucide-react";
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--airbnb-light)] to-white">
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center mb-16">
-          <h1 className="text-6xl font-bold text-[var(--airbnb-primary)] mb-4">
+    <div className="min-h-screen bg-gradient-to-br from-[var(--airbnb-light)] via-white to-blue-50">
+      {/* Hero Section */}
+      <div className="container mx-auto px-4 py-20">
+        <div className="text-center mb-20">
+          <div className="inline-block p-4 bg-[var(--airbnb-primary)]/10 rounded-full mb-6">
+            <Bus className="w-16 h-16 text-[var(--airbnb-primary)]" />
+          </div>
+          <h1 className="text-5xl md:text-7xl font-bold text-[var(--airbnb-dark)] mb-6 leading-tight">
             TravelFlow
           </h1>
-          <p className="text-xl text-[var(--airbnb-gray)] max-w-2xl mx-auto">
-            A comprehensive admin and agency management system for travel agencies with bus management, traveler data handling, and seamless communication.
+          <p className="text-xl md:text-2xl text-[var(--airbnb-gray)] mb-8 max-w-4xl mx-auto leading-relaxed">
+            The complete travel agency management platform trusted by professionals worldwide. 
+            Streamline operations, automate messaging, and grow your business.
           </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+            <Button 
+              onClick={() => window.location.href = "/login"}
+              className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-10 py-4 text-lg rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+            >
+              Sign In
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
+            <Button 
+              onClick={() => window.location.href = "/signup"}
+              variant="outline"
+              className="border-2 border-[var(--airbnb-primary)] text-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)] hover:text-white px-10 py-4 text-lg rounded-xl font-semibold transition-all"
+            >
+              Start Free Trial
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-6 text-[var(--airbnb-gray)] mb-16">
+            <div className="flex items-center gap-2">
+              <Star className="w-5 h-5 text-yellow-500 fill-current" />
+              <span className="font-medium">4.9/5 Rating</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-[var(--airbnb-primary)]" />
+              <span className="font-medium">500+ Agencies</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Globe className="w-5 h-5 text-[var(--airbnb-teal)]" />
+              <span className="font-medium">50+ Countries</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-[var(--airbnb-accent)]" />
+              <span className="font-medium">24/7 Support</span>
+            </div>
+          </div>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-          <Card className="text-center airbnb-shadow hover-lift">
-            <CardHeader>
-              <Bus className="w-12 h-12 text-[var(--airbnb-primary)] mx-auto mb-4" />
-              <CardTitle className="text-[var(--airbnb-dark)]">Bus Management</CardTitle>
+        {/* Features Section */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
+          <Card className="airbnb-shadow hover:scale-105 transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center pb-4">
+              <div className="w-16 h-16 bg-[var(--airbnb-primary)]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Bus className="w-8 h-8 text-[var(--airbnb-primary)]" />
+              </div>
+              <CardTitle className="text-[var(--airbnb-dark)] text-xl">Fleet Management</CardTitle>
             </CardHeader>
             <CardContent>
-              <CardDescription>
-                Manage your bus fleet with detailed route information, schedules, and capacity tracking.
-              </CardDescription>
+              <p className="text-[var(--airbnb-gray)] text-center leading-relaxed">
+                Manage your entire bus fleet with real-time tracking, route optimization, and maintenance scheduling
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="text-center airbnb-shadow hover-lift">
-            <CardHeader>
-              <Users className="w-12 h-12 text-[var(--airbnb-teal)] mx-auto mb-4" />
-              <CardTitle className="text-[var(--airbnb-dark)]">Traveler Data</CardTitle>
+          <Card className="airbnb-shadow hover:scale-105 transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center pb-4">
+              <div className="w-16 h-16 bg-[var(--airbnb-teal)]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-[var(--airbnb-teal)]" />
+              </div>
+              <CardTitle className="text-[var(--airbnb-dark)] text-xl">Smart Data Upload</CardTitle>
             </CardHeader>
             <CardContent>
-              <CardDescription>
-                Upload and manage traveler information with CSV/Excel support and automated processing.
-              </CardDescription>
+              <p className="text-[var(--airbnb-gray)] text-center leading-relaxed">
+                Effortlessly upload traveler data with CSV/Excel support and automated validation
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="text-center airbnb-shadow hover-lift">
-            <CardHeader>
-              <MessageSquare className="w-12 h-12 text-[var(--airbnb-orange)] mx-auto mb-4" />
-              <CardTitle className="text-[var(--airbnb-dark)]">WhatsApp Integration</CardTitle>
+          <Card className="airbnb-shadow hover:scale-105 transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center pb-4">
+              <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="w-8 h-8 text-green-500" />
+              </div>
+              <CardTitle className="text-[var(--airbnb-dark)] text-xl">WhatsApp Automation</CardTitle>
             </CardHeader>
             <CardContent>
-              <CardDescription>
-                Automated WhatsApp messaging system for customer engagement and coupon distribution.
-              </CardDescription>
+              <p className="text-[var(--airbnb-gray)] text-center leading-relaxed">
+                Send personalized WhatsApp messages automatically with smart scheduling and templates
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="text-center airbnb-shadow hover-lift">
-            <CardHeader>
-              <Shield className="w-12 h-12 text-green-500 mx-auto mb-4" />
-              <CardTitle className="text-[var(--airbnb-dark)]">Admin Control</CardTitle>
+          <Card className="airbnb-shadow hover:scale-105 transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="text-center pb-4">
+              <div className="w-16 h-16 bg-[var(--airbnb-accent)]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shield className="w-8 h-8 text-[var(--airbnb-accent)]" />
+              </div>
+              <CardTitle className="text-[var(--airbnb-dark)] text-xl">Enterprise Security</CardTitle>
             </CardHeader>
             <CardContent>
-              <CardDescription>
-                Comprehensive admin dashboard with agency approval, management, and system analytics.
-              </CardDescription>
+              <p className="text-[var(--airbnb-gray)] text-center leading-relaxed">
+                Bank-grade security with role-based access, data encryption, and compliance standards
+              </p>
             </CardContent>
           </Card>
         </div>
 
+        {/* Trust Section */}
+        <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-12 mb-20 airbnb-shadow">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-[var(--airbnb-dark)] mb-4">
+              Why Travel Agencies Trust TravelFlow
+            </h2>
+            <p className="text-[var(--airbnb-gray)] text-lg max-w-2xl mx-auto">
+              Join hundreds of successful agencies that have streamlined their operations and increased revenue
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <TrendingUp className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-[var(--airbnb-dark)] mb-2">40% Revenue Increase</h3>
+              <p className="text-[var(--airbnb-gray)]">Average revenue growth reported by our clients within 6 months</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-[var(--airbnb-dark)] mb-2">99.9% Uptime</h3>
+              <p className="text-[var(--airbnb-gray)]">Reliable platform with enterprise-grade infrastructure</p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-[var(--airbnb-dark)] mb-2">24/7 Support</h3>
+              <p className="text-[var(--airbnb-gray)]">Dedicated customer success team always ready to help</p>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA Section */}
         <div className="text-center">
-          <Button 
-            onClick={() => window.location.href = "/api/login"}
-            className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-8 py-3 text-lg rounded-lg"
-          >
-            Get Started
-          </Button>
-          <p className="text-sm text-[var(--airbnb-gray)] mt-4">
-            Choose your role after login to access the appropriate dashboard
-          </p>
-        </div>
-
-        <div className="mt-16 text-center">
-          <h2 className="text-2xl font-semibold text-[var(--airbnb-dark)] mb-8">
-            Trusted by Travel Agencies Worldwide
+          <h2 className="text-3xl md:text-4xl font-bold text-[var(--airbnb-dark)] mb-6">
+            Ready to Transform Your Travel Agency?
           </h2>
-          <div className="flex justify-center items-center space-x-8 opacity-60">
-            <div className="text-[var(--airbnb-gray)] font-medium">147+ Agencies</div>
-            <div className="text-[var(--airbnb-gray)] font-medium">1,234+ Buses</div>
-            <div className="text-[var(--airbnb-gray)] font-medium">45,678+ Messages</div>
+          <p className="text-[var(--airbnb-gray)] text-lg mb-8 max-w-2xl mx-auto">
+            Join the revolution in travel management. Start your free trial today and experience the difference.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button 
+              onClick={() => window.location.href = "/login"}
+              variant="outline"
+              className="border-[var(--airbnb-primary)] text-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)] hover:text-white px-12 py-4 text-xl rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+            >
+              Login
+            </Button>
+            <Button 
+              onClick={() => window.location.href = "/signup"}
+              className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-12 py-4 text-xl rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+            >
+              Sign Up
+              <ArrowRight className="ml-2 w-6 h-6" />
+            </Button>
           </div>
         </div>
       </div>

@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
+import session from "express-session";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertAgencySchema, insertBusSchema, insertTravelerDataSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -11,30 +11,133 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
+// Session middleware
+const sessionMiddleware = session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false, // Set to true in production with HTTPS
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  },
+});
+
+// Custom auth middleware
+const isAuthenticated = (req: any, res: any, next: any) => {
+  if (req.session?.user) {
+    next();
+  } else {
+    res.status(401).json({ message: "Unauthorized" });
+  }
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Session middleware
+  app.use(sessionMiddleware);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Check if user has an agency
-      const agency = await storage.getAgencyByUserId(userId);
-      
-      res.json({
-        ...user,
-        agency: agency || null,
-      });
+      const sessionUser = req.session.user;
+      res.json(sessionUser);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Username/Password Authentication
+  app.post('/api/auth/login', async (req: any, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      // Check for admin credentials
+      if (username === 'admin' && password === 'admin123') {
+        const adminUser = await storage.getOrCreateAdminUser();
+        req.session.user = {
+          ...adminUser,
+          role: 'super_admin'
+        };
+        res.json({
+          user: adminUser,
+          role: 'super_admin',
+          message: 'Login successful'
+        });
+        return;
+      }
+      
+      // Check for agency credentials
+      const agency = await storage.getAgencyByCredentials(username, password);
+      if (agency) {
+        const user = await storage.getUser(agency.userId);
+        req.session.user = {
+          ...user,
+          agency,
+          role: 'agency'
+        };
+        res.json({
+          user,
+          agency,
+          role: 'agency',
+          message: 'Login successful'
+        });
+        return;
+      }
+      
+      res.status(401).json({ message: 'Invalid credentials' });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.post('/api/auth/logout', (req: any, res) => {
+    req.session.destroy((err: any) => {
+      if (err) {
+        return res.status(500).json({ message: 'Logout failed' });
+      }
+      res.json({ message: 'Logged out successfully' });
+    });
+  });
+
+  app.post('/api/auth/signup', async (req, res) => {
+    try {
+      const { username, email, password, firstName, lastName, agencyName, phone, city } = req.body;
+      
+      // Check if username already exists
+      const existingAgency = await storage.getAgencyByUsername(username);
+      if (existingAgency) {
+        return res.status(400).json({ message: 'Username already exists' });
+      }
+      
+      // Create user
+      const userId = Date.now().toString(); // Simple ID generation
+      const user = await storage.upsertUser({
+        id: userId,
+        email,
+        firstName,
+        lastName,
+        role: 'agency'
+      });
+      
+      // Create agency with credentials
+      const agency = await storage.createAgency({
+        userId,
+        name: agencyName,
+        email,
+        contactPerson: `${firstName} ${lastName}`,
+        phone,
+        city,
+        username,
+        password, // In production, hash this password
+        status: 'pending'
+      });
+      
+      res.json({ message: 'Account created successfully' });
+    } catch (error) {
+      console.error("Signup error:", error);
+      res.status(500).json({ message: "Signup failed" });
     }
   });
 
