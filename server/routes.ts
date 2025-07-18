@@ -102,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Store user globally and in session
         currentUser = userWithRole;
-        sessionStore.set(req.sessionID, { user: userWithRole });
+        req.session.user = userWithRole;
         
         res.json({
           user: userWithRole,
@@ -351,6 +351,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin middleware for admin-only routes
+  const adminAuth = (req: any, res: any, next: any) => {
+    console.log('Admin auth check - session:', req.session);
+    console.log('Admin auth check - user:', req.session?.user);
+    
+    if (!req.session?.user?.role || req.session.user.role !== 'super_admin') {
+      return res.status(401).json({ message: "Admin authentication required" });
+    }
+    next();
+  };
+
+  // Admin routes for managing agencies
+  app.get('/api/admin/agencies/pending', adminAuth, async (req: any, res) => {
+    try {
+      const pendingAgencies = await storage.getPendingAgencies();
+      res.json(pendingAgencies);
+    } catch (error) {
+      console.error("Error fetching pending agencies:", error);
+      res.status(500).json({ message: "Failed to fetch pending agencies" });
+    }
+  });
+
+  app.get('/api/admin/agencies', adminAuth, async (req: any, res) => {
+    try {
+      const agencies = await storage.getAllAgencies();
+      res.json(agencies);
+    } catch (error) {
+      console.error("Error fetching agencies:", error);
+      res.status(500).json({ message: "Failed to fetch agencies" });
+    }
+  });
+
+  app.patch('/api/admin/agencies/:id/status', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      const agency = await storage.updateAgencyStatus(parseInt(id), status);
+      res.json(agency);
+    } catch (error) {
+      console.error("Error updating agency status:", error);
+      res.status(500).json({ message: "Failed to update agency status" });
+    }
+  });
+
+  app.delete('/api/admin/agencies/:id', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteAgency(parseInt(id));
+      res.json({ message: "Agency deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting agency:", error);
+      res.status(500).json({ message: "Failed to delete agency" });
+    }
+  });
+
   // Agency routes
   app.post('/api/agencies', isAuthenticated, async (req: any, res) => {
     try {
@@ -370,9 +426,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/agencies/pending', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Forbidden" });
+      // Check if user is admin (from admin credentials table)
+      if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Forbidden - Admin access required" });
       }
 
       const pendingAgencies = await storage.getPendingAgencies();
@@ -385,9 +441,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/agencies', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Forbidden" });
+      // Check if user is admin (from admin credentials table)
+      if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Forbidden - Admin access required" });
       }
 
       const agencies = await storage.getAllAgencies();
@@ -400,9 +456,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/agencies/:id/status', isAuthenticated, async (req: any, res) => {
     try {
-      const user = await storage.getUser(req.user.claims.sub);
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Forbidden" });
+      // Check if user is admin (from admin credentials table)
+      if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Forbidden - Admin access required" });
       }
 
       const { id } = req.params;

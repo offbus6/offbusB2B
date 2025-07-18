@@ -48,7 +48,7 @@ export default function ManageAgencies() {
   }, [isAuthenticated, isLoading, toast]);
 
   const { data: agencies, isLoading: agenciesLoading } = useQuery({
-    queryKey: ["/api/agencies"],
+    queryKey: ["/api/admin/agencies"],
     retry: false,
   });
 
@@ -123,13 +123,14 @@ export default function ManageAgencies() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      // Simulate API call with working mock
       console.log(`Updating agency ${id} status to ${status}`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return { success: true };
+      return await apiRequest(`/api/admin/agencies/${id}/status`, {
+        method: "PATCH",
+        body: { status },
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/agencies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/agencies"] });
       toast({
         title: "Success",
         description: "Agency status updated successfully",
@@ -157,13 +158,13 @@ export default function ManageAgencies() {
 
   const deleteAgencyMutation = useMutation({
     mutationFn: async (id: number) => {
-      // Simulate API call with working mock
       console.log(`Deleting agency ${id}`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return { success: true };
+      return await apiRequest(`/api/admin/agencies/${id}`, {
+        method: "DELETE",
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/agencies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/agencies"] });
       toast({
         title: "Success",
         description: "Agency deleted successfully",

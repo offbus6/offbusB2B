@@ -14,7 +14,7 @@ export default function AgencyApproval() {
   const { isAuthenticated, isLoading } = useAuth();
 
   const { data: pendingAgencies, isLoading: agenciesLoading, error } = useQuery({
-    queryKey: ["/api/agencies/pending"],
+    queryKey: ["/api/admin/agencies/pending"],
     retry: false,
   });
 
@@ -63,13 +63,14 @@ export default function AgencyApproval() {
 
   const approveAgencyMutation = useMutation({
     mutationFn: async (agencyId: number) => {
-      // Simulate API call with working mock
       console.log(`Approving agency ${agencyId}`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return { success: true };
+      return await apiRequest(`/api/admin/agencies/${agencyId}/status`, {
+        method: "PATCH",
+        body: { status: "approved" },
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/agencies/pending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/agencies/pending"] });
       toast({
         title: "Success",
         description: "Agency approved successfully",
@@ -87,13 +88,14 @@ export default function AgencyApproval() {
 
   const rejectAgencyMutation = useMutation({
     mutationFn: async (agencyId: number) => {
-      // Simulate API call with working mock
       console.log(`Rejecting agency ${agencyId}`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return { success: true };
+      return await apiRequest(`/api/admin/agencies/${agencyId}/status`, {
+        method: "PATCH",
+        body: { status: "rejected" },
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/agencies/pending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/agencies/pending"] });
       toast({
         title: "Success",
         description: "Agency rejected successfully",
