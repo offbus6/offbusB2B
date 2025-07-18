@@ -40,21 +40,19 @@ export default function AgencyLogin() {
     onSuccess: (data) => {
       toast({
         title: "Login Successful!",
-        description: "Welcome to your travel agency dashboard.",
+        description: "Welcome to your agency dashboard.",
       });
       
-      // Invalidate and refetch user data
+      // Force refresh user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      // Small delay to ensure session is set before navigation
-      setTimeout(() => {
-        navigate("/agency/dashboard");
-      }, 100);
+      // Navigate immediately
+      navigate("/agency/dashboard");
     },
     onError: (error: any) => {
       toast({
         title: "Login Failed",
-        description: error.message || "Invalid travel agency credentials",
+        description: "Invalid agency credentials",
         variant: "destructive",
       });
     },

@@ -39,22 +39,20 @@ export default function AdminLogin() {
     },
     onSuccess: (data) => {
       toast({
-        title: "Admin Login Successful!",
+        title: "Login Successful!",
         description: "Welcome to the admin dashboard.",
       });
       
-      // Invalidate and refetch user data
+      // Force refresh user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      // Small delay to ensure session is set before navigation
-      setTimeout(() => {
-        navigate("/admin/dashboard");
-      }, 100);
+      // Navigate immediately
+      navigate("/admin/dashboard");
     },
     onError: (error: any) => {
       toast({
-        title: "Admin Login Failed",
-        description: error.message || "Invalid admin credentials",
+        title: "Login Failed",
+        description: "Invalid admin credentials",
         variant: "destructive",
       });
     },

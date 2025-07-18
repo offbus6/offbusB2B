@@ -41,11 +41,8 @@ const sessionMiddleware = session({
   },
 });
 
-// Custom auth middleware with debugging
+// Custom auth middleware
 const isAuthenticated = (req: any, res: any, next: any) => {
-  console.log('Auth check - Session ID:', req.sessionID);
-  console.log('Auth check - Cookies:', req.headers.cookie);
-  
   // Try to get token from cookie
   const cookies = req.headers.cookie;
   let sessionToken = null;
@@ -57,11 +54,8 @@ const isAuthenticated = (req: any, res: any, next: any) => {
     }
   }
   
-  console.log('Auth check - Session token:', sessionToken);
-  
   // Check session from our in-memory store
   const sessionData = sessionToken ? activeSessions.get(sessionToken) : null;
-  console.log('Auth check - Session data:', sessionData ? 'exists' : 'missing');
   
   if (sessionData && sessionData.user) {
     req.user = sessionData.user;
@@ -94,8 +88,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username, password } = req.body;
       
-      console.log('Admin login attempt:', { username, sessionID: req.sessionID });
-      
       // Check for admin credentials
       if (username === 'admin' && password === 'admin123') {
         const adminUser = await storage.getOrCreateAdminUser();
@@ -111,9 +103,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Store in our in-memory session store
         activeSessions.set(sessionToken, { user: userWithRole });
         
-        console.log('Admin login successful, session token:', sessionToken);
-        console.log('Session stored in memory');
-        
         // Set token as cookie
         res.cookie('sessionToken', sessionToken, {
           maxAge: 24 * 60 * 60 * 1000, // 24 hours
@@ -126,8 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({
           user: userWithRole,
           role: 'super_admin',
-          message: 'Admin login successful',
-          sessionToken: sessionToken
+          message: 'Admin login successful'
         });
         return;
       }
@@ -143,8 +131,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/agency/login', async (req: any, res) => {
     try {
       const { username, password } = req.body;
-      
-      console.log('Agency login attempt:', { username, sessionID: req.sessionID });
       
       // Check for agency credentials
       const agency = await storage.getAgencyByCredentials(username, password);
@@ -162,9 +148,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Store in our in-memory session store
         activeSessions.set(sessionToken, { user: userWithRole });
         
-        console.log('Agency login successful, session token:', sessionToken);
-        console.log('Session stored in memory');
-        
         // Set token as cookie
         res.cookie('sessionToken', sessionToken, {
           maxAge: 24 * 60 * 60 * 1000, // 24 hours
@@ -178,8 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user: userWithRole,
           agency,
           role: 'agency',
-          message: 'Agency login successful',
-          sessionToken: sessionToken
+          message: 'Agency login successful'
         });
         return;
       }
