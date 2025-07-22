@@ -1030,46 +1030,57 @@ export default function AgencyDetails() {
                 </div>
               ) : (
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Bill ID</TableHead>
-                      <TableHead>Period</TableHead>
-                      <TableHead>Buses</TableHead>
-                      <TableHead>Subtotal</TableHead>
-                      <TableHead>Tax</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paymentHistory.map((payment: any) => (
-                      <TableRow key={payment.id}>
-                        <TableCell className="font-medium">{payment.billId}</TableCell>
-                        <TableCell>{payment.billingPeriod}</TableCell>
-                        <TableCell>{payment.totalBuses}</TableCell>
-                        <TableCell>₹{payment.subtotal}</TableCell>
-                        <TableCell>₹{payment.taxAmount} ({payment.taxPercentage}%)</TableCell>
-                        <TableCell className="font-semibold">₹{payment.totalAmount}</TableCell>
-                        <TableCell>{getPaymentStatusBadge(payment.paymentStatus)}</TableCell>
-                        <TableCell>{new Date(payment.dueDate).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          {payment.paymentStatus !== 'paid' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleMarkAsPaid(payment)}
-                              className="text-xs"
-                            >
-                              Mark as Paid
-                            </Button>
-                          )}
-                        </TableCell>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Period</TableHead>
+                        <TableHead>Total Buses</TableHead>
+                        <TableHead>Coupons Used</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Payment Status</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {paymentHistory.map((payment: any) => (
+                        <TableRow key={payment.id}>
+                          <TableCell className="font-medium">
+                            {payment.paymentDate 
+                              ? new Date(payment.paymentDate).toLocaleDateString()
+                              : new Date(payment.createdAt).toLocaleDateString()
+                            }
+                          </TableCell>
+                          <TableCell>{payment.billingPeriod}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Bus className="w-4 h-4" />
+                              {payment.totalBuses}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Ticket className="w-4 h-4" />
+                              {payment.couponsUsed || agencyStats?.couponsUsed || 0}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-semibold">₹{payment.totalAmount.toLocaleString()}</TableCell>
+                          <TableCell>{getPaymentStatusBadge(payment.paymentStatus)}</TableCell>
+                          <TableCell>
+                            {payment.paymentStatus !== 'paid' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleMarkAsPaid(payment)}
+                                className="text-xs"
+                              >
+                                Mark as Paid
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
               )}
             </CardContent>
           </Card>
