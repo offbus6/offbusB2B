@@ -437,18 +437,21 @@ export default function AgencyDetails() {
             </p>
           </div>
         </div>
-        <Button 
+        <button 
           onClick={handleSave}
           disabled={updateAgencyMutation.isPending || !hasUnsavedChanges}
-          className={`px-4 py-2 rounded-md font-medium transition-colors ${
-            hasUnsavedChanges 
-              ? 'bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white' 
-              : 'bg-[var(--airbnb-pink)] opacity-50 text-white cursor-not-allowed'
-          }`}
+          style={{
+            backgroundColor: '#e91e63',
+            color: 'white',
+            padding: '8px 16px',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: hasUnsavedChanges ? 'pointer' : 'not-allowed',
+            opacity: hasUnsavedChanges ? 1 : 0.6
+          }}
         >
-          <Save className="w-4 h-4 mr-2" />
-          {hasUnsavedChanges ? 'Save Changes' : 'No Changes'}
-        </Button>
+          Save Changes
+        </button>
       </div>
 
       {/* Summary Statistics */}
