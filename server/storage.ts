@@ -69,6 +69,10 @@ export interface IStorage {
   getTravelerDataByBus(busId: number): Promise<TravelerData[]>;
   updateTravelerData(id: number, updates: Partial<InsertTravelerData>): Promise<TravelerData>;
   
+  // WhatsApp opt-out operations
+  optOutTravelerFromWhatsapp(phoneNumber: string): Promise<TravelerData[]>;
+  getTravelerByPhone(phoneNumber: string): Promise<TravelerData | undefined>;
+  
   // Upload history operations
   createUploadHistory(history: InsertUploadHistory): Promise<UploadHistory>;
   getUploadHistoryByAgency(agencyId: number): Promise<UploadHistory[]>;
@@ -312,6 +316,27 @@ export class DatabaseStorage implements IStorage {
       .where(eq(travelerData.id, id))
       .returning();
     return data;
+  }
+
+  // WhatsApp opt-out operations
+  async optOutTravelerFromWhatsapp(phoneNumber: string): Promise<TravelerData[]> {
+    return await db
+      .update(travelerData)
+      .set({ 
+        whatsappOptOut: true, 
+        optOutDate: new Date(),
+        updatedAt: new Date() 
+      })
+      .where(eq(travelerData.phone, phoneNumber))
+      .returning();
+  }
+
+  async getTravelerByPhone(phoneNumber: string): Promise<TravelerData | undefined> {
+    const [traveler] = await db
+      .select()
+      .from(travelerData)
+      .where(eq(travelerData.phone, phoneNumber));
+    return traveler;
   }
 
   async createUploadHistory(history: InsertUploadHistory): Promise<UploadHistory> {

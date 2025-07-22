@@ -90,6 +90,8 @@ export const travelerData = pgTable("traveler_data", {
   whatsappStatus: varchar("whatsapp_status", { 
     enum: ["pending", "sent", "failed"] 
   }).notNull().default("pending"),
+  whatsappOptOut: boolean("whatsapp_opt_out").default(false),
+  optOutDate: timestamp("opt_out_date"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

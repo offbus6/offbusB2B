@@ -371,6 +371,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // WhatsApp webhook endpoint for incoming messages
+  app.post('/api/whatsapp/webhook', async (req: any, res) => {
+    try {
+      const { phone_number, message, timestamp } = req.body;
+      
+      // Process the incoming message
+      await whatsappService.processIncomingMessage(phone_number, message);
+      
+      res.status(200).json({ status: 'success' });
+    } catch (error) {
+      console.error("Error processing WhatsApp webhook:", error);
+      res.status(500).json({ message: "Failed to process webhook" });
+    }
+  });
+
+  // Manual opt-out endpoint
+  app.post('/api/whatsapp/opt-out', async (req: any, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      const optedOutTravelers = await storage.optOutTravelerFromWhatsapp(phoneNumber);
+      
+      res.json({ 
+        message: `Successfully opted out ${optedOutTravelers.length} travelers`,
+        count: optedOutTravelers.length 
+      });
+    } catch (error) {
+      console.error("Error processing opt-out:", error);
+      res.status(500).json({ message: "Failed to process opt-out" });
+    }
+  });
+
+  // Get opt-out status
+  app.get('/api/whatsapp/opt-out-status/:phoneNumber', isAuthenticated, async (req: any, res) => {
+    try {
+      const phoneNumber = req.params.phoneNumber;
+      const traveler = await storage.getTravelerByPhone(phoneNumber);
+      
+      if (!traveler) {
+        return res.status(404).json({ message: "Traveler not found" });
+      }
+
+      res.json({
+        phoneNumber,
+        optedOut: traveler.whatsappOptOut,
+        optOutDate: traveler.optOutDate
+      });
+    } catch (error) {
+      console.error("Error fetching opt-out status:", error);
+      res.status(500).json({ message: "Failed to fetch opt-out status" });
+    }
+  });
+
   app.post('/api/admin/whatsapp-test', isAuthenticated, async (req: any, res) => {
     try {
       const { whatsappService } = await import('./whatsapp-service');

@@ -14,7 +14,7 @@ export class WhatsappService {
    */
   private processMessageTemplate(template: string, travelerData: TravelerData, agency: any): string {
     const variables = {
-      '{{traveler_name}}': travelerData.name || 'Traveler',
+      '{{traveler_name}}': travelerData.travelerName || 'Traveler',
       '{{agency_name}}': agency?.name || 'Travel Agency',
       '{{bus_name}}': travelerData.busName || 'Bus',
       '{{route}}': travelerData.route || 'Route',
@@ -32,6 +32,9 @@ export class WhatsappService {
     Object.entries(variables).forEach(([variable, value]) => {
       processedMessage = processedMessage.replace(new RegExp(variable, 'g'), value);
     });
+
+    // Add opt-out instructions to all messages
+    processedMessage += '\n\nTo stop receiving these messages, reply with "STOP" or "UNSUBSCRIBE".';
 
     return processedMessage;
   }
@@ -115,6 +118,14 @@ export class WhatsappService {
 
       for (const message of pendingMessages) {
         try {
+          // Check if the traveler has opted out
+          const traveler = await storage.getTravelerData(message.travelerId);
+          if (traveler?.whatsappOptOut) {
+            console.log(`Traveler ${message.travelerId} has opted out, cancelling message`);
+            await storage.updateWhatsappQueueStatus(message.id, 'cancelled');
+            continue;
+          }
+
           // Here you would integrate with actual WhatsApp API
           // For now, we'll just mark as sent
           await this.sendWhatsappMessage(message.phoneNumber, message.message, config);
@@ -128,6 +139,62 @@ export class WhatsappService {
       }
     } catch (error) {
       console.error('Error processing pending messages:', error);
+    }
+  }
+
+  /**
+   * Handle opt-out request from WhatsApp webhook
+   */
+  async handleOptOutRequest(phoneNumber: string, message: string): Promise<void> {
+    try {
+      // Common opt-out keywords
+      const optOutKeywords = [
+        'stop', 'unsubscribe', 'opt out', 'remove', 'cancel',
+        'no more', 'quit', 'end', 'halt', 'pause'
+      ];
+
+      const lowerMessage = message.toLowerCase().trim();
+      const isOptOutRequest = optOutKeywords.some(keyword => 
+        lowerMessage.includes(keyword)
+      );
+
+      if (isOptOutRequest) {
+        const optedOutTravelers = await storage.optOutTravelerFromWhatsapp(phoneNumber);
+        
+        if (optedOutTravelers.length > 0) {
+          console.log(`Opted out ${optedOutTravelers.length} travelers with phone: ${phoneNumber}`);
+          
+          // Send confirmation message
+          const confirmationMessage = "You have been successfully unsubscribed from our promotional messages. You will no longer receive coupon codes or travel offers. Thank you.";
+          
+          const config = await storage.getWhatsappConfig();
+          if (config) {
+            await this.sendWhatsappMessage(phoneNumber, confirmationMessage, config);
+          }
+        } else {
+          console.log(`No travelers found with phone number: ${phoneNumber}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error handling opt-out request:', error);
+    }
+  }
+
+  /**
+   * Process incoming WhatsApp webhook messages
+   */
+  async processIncomingMessage(phoneNumber: string, message: string): Promise<void> {
+    try {
+      console.log(`Received message from ${phoneNumber}: ${message}`);
+      
+      // Handle opt-out requests
+      await this.handleOptOutRequest(phoneNumber, message);
+      
+      // You can add more message processing logic here
+      // For example, handling help requests, status inquiries, etc.
+      
+    } catch (error) {
+      console.error('Error processing incoming message:', error);
     }
   }
 
