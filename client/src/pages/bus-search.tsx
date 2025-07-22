@@ -148,11 +148,7 @@ export default function BusSearch() {
                       <div>
                         <h3 className="font-bold text-xl text-[var(--airbnb-dark)] mb-1">{bus.operator}</h3>
                         <p className="text-[var(--airbnb-gray)] text-sm mb-2">{bus.busType}</p>
-                        <div className="flex items-center">
-                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                          <span className="ml-1 text-sm font-semibold text-[var(--airbnb-dark)]">{bus.rating}</span>
-                          <span className="ml-1 text-xs text-[var(--airbnb-gray)]">({bus.reviews} reviews)</span>
-                        </div>
+                        
                       </div>
 
                       <div className="text-right">
@@ -188,32 +184,32 @@ export default function BusSearch() {
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex items-center justify-between pt-6 border-t border-[var(--airbnb-border)]">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center text-[var(--airbnb-primary)]">
-                          <Users className="w-4 h-4 mr-1" />
-                          <span className="text-sm font-semibold">{bus.seatsAvailable} seats left</span>
-                        </div>
+                    {/* Action Section */}
+                    <div className="pt-6 border-t border-[var(--airbnb-border)]">
+                      {/* Copy Coupon and Offer */}
+                      <div className="flex items-center justify-center space-x-3 mb-4">
                         <div className="bg-green-50 text-green-700 px-4 py-2 rounded-xl font-bold text-sm border border-green-200">
                           {bus.couponOffer}
                         </div>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
                         <Button 
                           onClick={() => navigator.clipboard.writeText(bus.couponOffer)}
-                          variant="outline"
-                          className="border-[var(--airbnb-primary)] text-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)] hover:text-white px-6 py-3 rounded-xl font-semibold transition-all"
+                          className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
                         >
                           Copy Coupon
                         </Button>
-                        <Button 
-                          onClick={() => handleBookNow(bus.websiteUrl, bus.operator)}
-                          className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-                        >
-                          Book Now
-                        </Button>
+                      </div>
+
+                      {/* Bottom Info */}
+                      <div className="flex items-center justify-center space-x-6 text-sm">
+                        <div className="flex items-center text-[var(--airbnb-primary)]">
+                          <Users className="w-4 h-4 mr-1" />
+                          <span className="font-semibold">{bus.seatsAvailable} seats left</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Star className="w-4 h-4 text-yellow-500 fill-current mr-1" />
+                          <span className="font-semibold text-[var(--airbnb-dark)]">{bus.rating}</span>
+                          <span className="ml-1 text-[var(--airbnb-gray)]">({bus.reviews} reviews)</span>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
