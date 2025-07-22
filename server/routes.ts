@@ -1284,6 +1284,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get specific agency details
+  app.get('/api/admin/agencies/:id', adminAuth, async (req, res) => {
+    try {
+      const agencyId = parseInt(req.params.id);
+
+      const agency = await db
+        .select({
+          id: agencies.id,
+          userId: agencies.userId,
+          name: agencies.name,
+          email: agencies.email,
+          contactPerson: agencies.contactPerson,
+          phone: agencies.phone,
+          state: agencies.state,
+          city: agencies.city,
+          website: agencies.website,
+          logoUrl: agencies.logoUrl,
+          renewalChargePerBus: agencies.renewalChargePerBus,
+          status: agencies.status,
+          createdAt: agencies.createdAt,
+        })
+        .from(agencies)
+        .where(eq(agencies.id, agencyId))
+        .limit(1);
+
+      if (agency.length === 0) {
+        return res.status(404).json({ message: 'Agency not found' });
+      }
+
+      // Get total buses for this agency - using count function properly
+      const busCountResult = await db
+        .select({ count: sql<number>`cast(count(*) as integer)` })
+        .from(buses)
+        .where(eq(buses.agencyId, agencyId));
+
+      const totalBuses = Number(busCountResult[0]?.count || 0);
+      const renewalCharge = agency[0].renewalChargePerBus || 5000;
+      const totalRenewalCharge = totalBuses * renewalCharge;
+
+      console.log('Agency details debug:', {
+        agencyId,
+        busCountResult,
+        totalBuses,
+        renewalCharge,
+        totalRenewalCharge
+      });
+
+      const result = {
+        ...agency[0],
+        totalBuses,
+        totalRenewalCharge,
+      };
+
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching agency details:', error);
+      res.status(500).json({ message: 'Failed to fetch agency details' });
+    }
+  });
+
+  // Get agency buses
+  app.get('/api/admin/agencies/:id/buses', adminAuth, async (req, res) => {
+    try {
+      const agencyId = parseInt(req.params.id);
+
+      const agencyBuses = await db.select({
+        id: buses.id,
+        registrationNumber: buses.registrationNumber,
+        routeNumber: buses.routeNumber,
+        capacity: buses.capacity,
+        vehicleType: buses.vehicleType,
+        isActive: buses.isActive,
+        createdAt: buses.createdAt,
+        updatedAt: buses.updatedAt
+      })
+        .from(buses)
+        .where(eq(buses.agencyId, agencyId))
+        .orderBy(buses.createdAt);
+
+      res.json(agencyBuses);
+    } catch (error) {
+      console.error("Error fetching agency buses:", error);
+      res.status(500).json({ message: "Failed to fetch agency buses" });
+    }
+  });
+
+  // Get agency users/travelers
+  app.get("/api/admin/agencies/:id/users", adminAuth, async (req, res) => {
+    try {
+      const agencyId = parseInt(req.params.id);
+
+      //select * from travelerData where agencyId = agencyId
+      const agencyUsers = await db.select({
+        id: agencies.id,
+        userId: agencies.userId,
+        name: agencies.name,
+        email: agencies.email,
+        contactPerson: agencies.contactPerson,
+        phone: agencies.phone,
+        state: agencies.state,
+        city: agencies.city,
+        website: agencies.website,
+        logoUrl: agencies.logoUrl,
+        renewalChargePerBus: agencies.renewalChargePerBus,
+        status: agencies.status,
+        createdAt: agencies.createdAt,
+      })
+        .from(agencies)
+        .where(eq(agencies.id, agencyId));
+
+      res.json(agencyUsers);
+    } catch (error) {
+      console.error("Error fetching agency users:", error);
+      res.status(500).json({ message: "Failed to fetch agency users" });
+    }
+  });
+
+  // Get agency statistics
+  app.get('/api/admin/agencies/:id/stats', adminAuth, async (req, res) => {
+    try {
+      const agencyId = parseInt(req.params.id);
+
+      // Get total users/travelers
+      const totalUsersResult = await db.select({ count: sql<number>`cast(count(*) as integer)` })
+        .from(agencies)
+        .where(eq(agencies.id, agencyId));
+
+      // Get total coupons
+      const totalCouponsResult = await db.select({ count: sql<number>`cast(count(*) as integer)` })
+        .from(agencies)
+        .where(eq(agencies.id, agencyId));
+
+      // Get coupons used (assuming some field tracks usage)
+      const couponsUsedResult = await db.select({ count: sql<number>`cast(count(*) as integer)` })
+        .from(agencies)
+        .where(eq(agencies.id, agencyId));
+
+      // Get messages sent
+      const messagesSentResult = await db.select({ count: sql<number>`cast(count(*) as integer)` })
+        .from(agencies)
+        .where(eq(agencies.id, agencyId));
+
+      res.json({
+        totalUsers: totalUsersResult[0]?.count || 0,
+        totalCoupons: totalCouponsResult[0]?.count || 0,
+        couponsUsed: couponsUsedResult[0]?.count || 0,
+        messagesSent: messagesSentResult[0]?.count || 0
+      });
+    } catch (error) {
+      console.error("Error fetching agency statistics:", error);
+      res.status(500).json({ message: "Failed to fetch agency statistics" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -33,7 +33,11 @@ import {
   Settings,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Users,
+  Ticket,
+  MessageCircle,
+  Route
 } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useLocation, useRoute } from "wouter";
@@ -73,6 +77,7 @@ export default function AgencyDetails() {
   const [taxConfigOpen, setTaxConfigOpen] = useState(false);
   const [newBillPeriod, setNewBillPeriod] = useState("");
   const [taxPercentage, setTaxPercentage] = useState(18);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -101,6 +106,24 @@ export default function AgencyDetails() {
     retry: false,
   });
 
+  const { data: busDetails, isLoading: busesLoading } = useQuery({
+    queryKey: [`/api/admin/agencies/${agencyId}/buses`],
+    enabled: !!agencyId,
+    retry: false,
+  });
+
+  const { data: userDetails, isLoading: usersLoading } = useQuery({
+    queryKey: [`/api/admin/agencies/${agencyId}/users`],
+    enabled: !!agencyId,
+    retry: false,
+  });
+
+  const { data: agencyStats, isLoading: statsLoading } = useQuery({
+    queryKey: [`/api/admin/agencies/${agencyId}/stats`],
+    enabled: !!agencyId,
+    retry: false,
+  });
+
   const { data: taxConfig } = useQuery({
     queryKey: ["/api/admin/tax-config"],
     retry: false,
@@ -110,6 +133,7 @@ export default function AgencyDetails() {
     if (agency) {
       setFormData(agency);
       setLogoPreview(agency.logoUrl || "");
+      setHasUnsavedChanges(false);
     }
   }, [agency]);
 
@@ -129,6 +153,7 @@ export default function AgencyDetails() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/agencies/${agencyId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/agencies"] });
+      setHasUnsavedChanges(false);
       toast({
         title: "Success",
         description: "Agency updated successfully",
@@ -253,6 +278,7 @@ export default function AgencyDetails() {
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    setHasUnsavedChanges(true);
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -264,6 +290,7 @@ export default function AgencyDetails() {
         const result = e.target?.result as string;
         setLogoPreview(result);
         setFormData(prev => ({ ...prev, logoUrl: result }));
+        setHasUnsavedChanges(true);
       };
       reader.readAsDataURL(file);
     }
@@ -325,6 +352,19 @@ export default function AgencyDetails() {
     }
   };
 
+  const getWhatsappStatusBadge = (status: string) => {
+    switch (status) {
+      case "sent":
+        return <Badge className="bg-green-100 text-green-800">Sent</Badge>;
+      case "pending":
+        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+      case "failed":
+        return <Badge className="bg-red-100 text-red-800">Failed</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
   const handleMarkAsPaid = (payment: any) => {
     setSelectedPayment(payment);
     setPaymentDialogOpen(true);
@@ -376,25 +416,86 @@ export default function AgencyDetails() {
             Back to Agencies
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-[var(--airbnb-dark)]">Agency Details</h1>
+            <h1 className="text-2xl font-bold text-[var(--airbnb-dark)]">Agency Management</h1>
             <p className="text-[var(--airbnb-gray)] mt-1">
-              Manage agency information and settings
+              Manage agency information, buses, users and billing
             </p>
           </div>
         </div>
         <Button 
           onClick={handleSave}
-          disabled={updateAgencyMutation.isPending}
-          className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white"
+          disabled={updateAgencyMutation.isPending || !hasUnsavedChanges}
+          className={`${hasUnsavedChanges 
+            ? 'bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white' 
+            : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+          }`}
         >
           <Save className="w-4 h-4 mr-2" />
-          Save Changes
+          {hasUnsavedChanges ? 'Save Changes' : 'No Changes'}
         </Button>
       </div>
 
+      {/* Summary Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-[var(--airbnb-gray)]">Total Users</p>
+                <p className="text-2xl font-bold text-[var(--airbnb-dark)]">
+                  {agencyStats?.totalUsers || 0}
+                </p>
+              </div>
+              <Users className="w-8 h-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-[var(--airbnb-gray)]">Total Coupons</p>
+                <p className="text-2xl font-bold text-[var(--airbnb-dark)]">
+                  {agencyStats?.totalCoupons || 0}
+                </p>
+              </div>
+              <Ticket className="w-8 h-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-[var(--airbnb-gray)]">Coupons Used</p>
+                <p className="text-2xl font-bold text-[var(--airbnb-dark)]">
+                  {agencyStats?.couponsUsed || 0}
+                </p>
+              </div>
+              <Receipt className="w-8 h-8 text-orange-500" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-[var(--airbnb-gray)]">Messages Sent</p>
+                <p className="text-2xl font-bold text-[var(--airbnb-dark)]">
+                  {agencyStats?.messagesSent || 0}
+                </p>
+              </div>
+              <MessageCircle className="w-8 h-8 text-purple-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="details">Agency Details</TabsTrigger>
+          <TabsTrigger value="buses">Bus Details</TabsTrigger>
+          <TabsTrigger value="users">User Details</TabsTrigger>
           <TabsTrigger value="payments">Payment History</TabsTrigger>
         </TabsList>
 
@@ -700,6 +801,146 @@ export default function AgencyDetails() {
           </div>
         </TabsContent>
 
+        <TabsContent value="buses" className="space-y-6">
+          <div>
+            <h2 className="text-xl font-semibold text-[var(--airbnb-dark)] mb-4">Bus Details</h2>
+            <Card>
+              <CardContent className="p-0">
+                {busesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--airbnb-pink)]"></div>
+                  </div>
+                ) : !busDetails || busDetails.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Bus className="w-12 h-12 text-[var(--airbnb-gray)] mx-auto mb-4" />
+                    <p className="text-[var(--airbnb-gray)]">No buses found for this agency</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Bus Number</TableHead>
+                        <TableHead>Bus Name</TableHead>
+                        <TableHead>Route</TableHead>
+                        <TableHead>Departure</TableHead>
+                        <TableHead>Arrival</TableHead>
+                        <TableHead>Bus Type</TableHead>
+                        <TableHead>Capacity</TableHead>
+                        <TableHead>Fare</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {busDetails.map((bus: any) => (
+                        <TableRow key={bus.id}>
+                          <TableCell className="font-medium">{bus.number}</TableCell>
+                          <TableCell>{bus.name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Route className="w-4 h-4" />
+                              {bus.fromLocation} → {bus.toLocation}
+                            </div>
+                          </TableCell>
+                          <TableCell>{bus.departureTime}</TableCell>
+                          <TableCell>{bus.arrivalTime}</TableCell>
+                          <TableCell>{bus.busType}</TableCell>
+                          <TableCell>{bus.capacity} seats</TableCell>
+                          <TableCell>₹{bus.fare}</TableCell>
+                          <TableCell>
+                            <Badge className="bg-green-100 text-green-800">Active</Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="users" className="space-y-6">
+          <div>
+            <h2 className="text-xl font-semibold text-[var(--airbnb-dark)] mb-4">User Details & Follow-up Schedule</h2>
+            <Card>
+              <CardContent className="p-0">
+                {usersLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--airbnb-pink)]"></div>
+                  </div>
+                ) : !userDetails || userDetails.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 text-[var(--airbnb-gray)] mx-auto mb-4" />
+                    <p className="text-[var(--airbnb-gray)]">No user data found for this agency</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Traveler Name</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Route</TableHead>
+                        <TableHead>Travel Date</TableHead>
+                        <TableHead>Coupon Code</TableHead>
+                        <TableHead>WhatsApp Status</TableHead>
+                        <TableHead>1st Message</TableHead>
+                        <TableHead>30-Day Follow-up</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {userDetails.map((user: any) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.travelerName}</TableCell>
+                          <TableCell>{user.phone}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Route className="w-4 h-4" />
+                              {user.busName}
+                            </div>
+                          </TableCell>
+                          <TableCell>{new Date(user.travelDate).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                              {user.couponCode}
+                            </span>
+                          </TableCell>
+                          <TableCell>{getWhatsappStatusBadge(user.whatsappStatus)}</TableCell>
+                          <TableCell>
+                            {user.firstMessageSent ? (
+                              <Badge className="bg-green-100 text-green-800">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Sent
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-yellow-100 text-yellow-800">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Pending
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {user.followUpSent ? (
+                              <Badge className="bg-green-100 text-green-800">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Sent
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-gray-100 text-gray-800">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Scheduled
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
         <TabsContent value="payments" className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
@@ -800,8 +1041,6 @@ export default function AgencyDetails() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        
       </Tabs>
 
       {/* Payment Update Dialog */}
