@@ -1852,55 +1852,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all user data across all agencies for admin
   app.get('/api/admin/user-data', adminAuth, async (req, res) => {
     try {
-      const userData = await db
-        .select({
-          id: travelerData.id,
-          travelerName: travelerData.travelerName,
-          phone: travelerData.phone,
-          travelDate: travelerData.travelDate,
-          couponCode: travelerData.couponCode,
-          whatsappStatus: travelerData.whatsappStatus,
-          busId: travelerData.busId,
-          agencyId: travelerData.agencyId,
-          // Bus details - matching actual schema
-          busNumber: buses.number,
-          busName: buses.name,
-          fromLocation: buses.fromLocation,
-          toLocation: buses.toLocation,
-          departureTime: buses.departureTime,
-          arrivalTime: buses.arrivalTime,
-          busType: buses.busType,
-          capacity: buses.capacity,
-          fare: buses.fare,
-          // Agency details
-          agencyName: agencies.name,
-          agencyCity: agencies.city,
-          agencyState: agencies.state,
-          agencyContactPerson: agencies.contactPerson,
-        })
+      // First, let's get the basic traveler data
+      const basicTravelerData = await db
+        .select()
         .from(travelerData)
-        .innerJoin(buses, eq(travelerData.busId, buses.id))
-        .innerJoin(agencies, eq(travelerData.agencyId, agencies.id))
         .orderBy(desc(travelerData.createdAt));
+
+      if (basicTravelerData.length === 0) {
+        // If no traveler data exists, let's check if we have any buses
+        const busCount = await db.select({ count: sql<number>`cast(count(*) as integer)` }).from(buses);
+        const agencyCount = await db.select({ count: sql<number>`cast(count(*) as integer)` }).from(agencies);
+        
+        // Return empty array with helpful debug info
+        console.log('No traveler data found. Buses:', busCount[0]?.count, 'Agencies:', agencyCount[0]?.count);
+        return res.json([]);
+      }
+
+      // Now let's try to get the joined data more carefully
+      const userData = [];
+      
+      for (const traveler of basicTravelerData) {
+        try {
+          // Get bus details safely
+          const busDetails = await db
+            .select()
+            .from(buses)
+            .where(eq(buses.id, traveler.busId))
+            .limit(1);
+
+          // Get agency details safely  
+          const agencyDetails = await db
+            .select()
+            .from(agencies)
+            .where(eq(agencies.id, traveler.agencyId))
+            .limit(1);
+
+          const bus = busDetails[0];
+          const agency = agencyDetails[0];
+
+          userData.push({
+            id: traveler.id,
+            travelerName: traveler.travelerName,
+            phone: traveler.phone,
+            travelDate: traveler.travelDate,
+            couponCode: traveler.couponCode,
+            whatsappStatus: traveler.whatsappStatus,
+            busId: traveler.busId,
+            agencyId: traveler.agencyId,
+            createdAt: traveler.createdAt,
+            // Bus details with fallbacks
+            busNumber: bus?.number || 'N/A',
+            busName: bus?.name || 'Unknown Bus',
+            fromLocation: bus?.fromLocation || 'N/A',
+            toLocation: bus?.toLocation || 'N/A',
+            departureTime: bus?.departureTime || 'N/A',
+            arrivalTime: bus?.arrivalTime || 'N/A',
+            busType: bus?.busType || 'N/A',
+            capacity: bus?.capacity || 0,
+            fare: bus?.fare || 'N/A',
+            // Agency details with fallbacks
+            agencyName: agency?.name || 'Unknown Agency',
+            agencyCity: agency?.city || 'N/A',
+            agencyState: agency?.state || 'N/A',
+            agencyContactPerson: agency?.contactPerson || 'N/A',
+          });
+        } catch (error) {
+          console.error('Error processing traveler:', traveler.id, error);
+          // Include the traveler even if bus/agency details fail
+          userData.push({
+            id: traveler.id,
+            travelerName: traveler.travelerName,
+            phone: traveler.phone,
+            travelDate: traveler.travelDate,
+            couponCode: traveler.couponCode,
+            whatsappStatus: traveler.whatsappStatus,
+            busId: traveler.busId,
+            agencyId: traveler.agencyId,
+            createdAt: traveler.createdAt,
+            busNumber: 'Error',
+            busName: 'Error loading bus details',
+            fromLocation: 'N/A',
+            toLocation: 'N/A',
+            departureTime: 'N/A',
+            arrivalTime: 'N/A',
+            busType: 'N/A',
+            capacity: 0,
+            fare: 'N/A',
+            agencyName: 'Error loading agency',
+            agencyCity: 'N/A',
+            agencyState: 'N/A',
+            agencyContactPerson: 'N/A',
+          });
+        }
+      }
 
       res.json(userData);
     } catch (error) {
       console.error("Error fetching user data:", error);
-      res.status(500).json({ message: "Failed to fetch user data" });
+      
+      // As a last resort, return basic traveler data without joins
+      try {
+        const basicData = await db.select().from(travelerData).orderBy(desc(travelerData.createdAt));
+        const processedBasicData = basicData.map(traveler => ({
+          ...traveler,
+          busNumber: 'N/A',
+          busName: 'Bus details unavailable',
+          fromLocation: 'N/A',
+          toLocation: 'N/A',
+          departureTime: 'N/A',
+          arrivalTime: 'N/A',
+          busType: 'N/A',
+          capacity: 0,
+          fare: 'N/A',
+          agencyName: 'Agency details unavailable',
+          agencyCity: 'N/A',
+          agencyState: 'N/A',
+          agencyContactPerson: 'N/A',
+        }));
+        res.json(processedBasicData);
+      } catch (finalError) {
+        console.error("Final fallback failed:", finalError);
+        res.status(500).json({ message: "Failed to fetch user data" });
+      }
     }
   });
 
-  // Generate sample traveler data for existing buses
+  // Generate sample traveler data for existing buses or create sample data
   app.post('/api/test/generate-sample-travelers', adminAuth, async (req, res) => {
     try {
       const { db } = await import('./db');
-      const { buses, travelerData } = await import('@shared/schema');
+      const { buses, travelerData, agencies } = await import('@shared/schema');
 
       // Get all buses
-      const allBuses = await db.select().from(buses);
+      let allBuses = await db.select().from(buses);
 
+      // If no buses exist, create some sample buses first
       if (allBuses.length === 0) {
-        return res.status(400).json({ message: 'No buses found' });
+        console.log('No buses found, creating sample buses first...');
+        
+        // Get agencies to create buses for
+        const allAgencies = await db.select().from(agencies);
+        if (allAgencies.length === 0) {
+          return res.status(400).json({ message: 'No agencies found. Please create agencies first.' });
+        }
+
+        // Create sample buses
+        const sampleBuses = [];
+        allAgencies.slice(0, 3).forEach((agency, index) => {
+          for (let i = 1; i <= 2; i++) {
+            sampleBuses.push({
+              agencyId: agency.id,
+              number: `${agency.name.split(' ')[0].toUpperCase()}-B${index + 1}${i}`,
+              name: `Express Route ${index + 1}-${i}`,
+              fromLocation: ['Mumbai', 'Delhi', 'Bangalore'][index % 3],
+              toLocation: ['Delhi', 'Mumbai', 'Pune'][index % 3],
+              departureTime: ['08:00 AM', '02:00 PM'][i % 2],
+              arrivalTime: ['06:00 PM', '10:00 PM'][i % 2],
+              busType: ['AC Seater', 'AC Sleeper'][i % 2],
+              capacity: 40 + (i * 5),
+              fare: `₹${500 + (i * 100)}`,
+              isActive: true,
+            });
+          }
+        });
+
+        for (const bus of sampleBuses) {
+          await db.insert(buses).values(bus).onConflictDoNothing();
+        }
+
+        // Get the buses again
+        allBuses = await db.select().from(buses);
       }
 
       const sampleTravelers = [];
@@ -1914,10 +2035,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
       
       allBuses.forEach((bus, busIndex) => {
-        const travelerCount = 8 + (busIndex % 5); // 8-12 travelers per bus
+        const travelerCount = 5 + (busIndex % 3); // 5-7 travelers per bus
         for (let i = 0; i < travelerCount; i++) {
           const baseDate = new Date();
-          const randomDays = Math.floor(Math.random() * 60) + 1; // Random date in next 60 days
+          const randomDays = Math.floor(Math.random() * 30) + 1; // Random date in next 30 days
           const travelDate = new Date(baseDate.getTime() + (randomDays * 24 * 60 * 60 * 1000));
           
           sampleTravelers.push({
@@ -1928,8 +2049,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             travelDate,
             couponCode: `SAVE${(busIndex + 1) * 50 + (i + 1)}`,
             whatsappStatus: ['pending', 'sent', 'failed'][i % 3],
-            createdAt: new Date(),
-            updatedAt: new Date(),
           });
         }
       });
@@ -1947,6 +2066,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error generating sample travelers:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Quick setup endpoint to generate all sample data
+  app.post('/api/test/quick-setup', adminAuth, async (req, res) => {
+    try {
+      const { db } = await import('./db');
+      const { agencies, buses, travelerData, users } = await import('@shared/schema');
+
+      // Check current data
+      const existingTravelers = await db.select({ count: sql<number>`cast(count(*) as integer)` }).from(travelerData);
+      const existingBuses = await db.select({ count: sql<number>`cast(count(*) as integer)` }).from(buses);
+      const existingAgencies = await db.select({ count: sql<number>`cast(count(*) as integer)` }).from(agencies);
+
+      console.log('Current data:', {
+        travelers: existingTravelers[0]?.count || 0,
+        buses: existingBuses[0]?.count || 0,
+        agencies: existingAgencies[0]?.count || 0
+      });
+
+      let results = {
+        agenciesCreated: 0,
+        busesCreated: 0,
+        travelersCreated: 0
+      };
+
+      // Create agencies if none exist
+      if ((existingAgencies[0]?.count || 0) === 0) {
+        const testUsers = [
+          { id: 'quick-user-1', email: 'quicktest1@example.com', firstName: 'Test', lastName: 'Agency1', role: 'agency' },
+          { id: 'quick-user-2', email: 'quicktest2@example.com', firstName: 'Test', lastName: 'Agency2', role: 'agency' }
+        ];
+
+        const testAgencies = [
+          {
+            userId: 'quick-user-1',
+            name: 'Quick Express Travel',
+            email: 'quicktest1@example.com',
+            contactPerson: 'Test Agency1',
+            phone: '+91-9999999991',
+            city: 'Mumbai',
+            state: 'Maharashtra',
+            status: 'approved',
+            password: 'test123',
+          },
+          {
+            userId: 'quick-user-2', 
+            name: 'Rapid Transport Co',
+            email: 'quicktest2@example.com',
+            contactPerson: 'Test Agency2',
+            phone: '+91-9999999992',
+            city: 'Delhi',
+            state: 'Delhi',
+            status: 'approved',
+            password: 'test123',
+          }
+        ];
+
+        for (const user of testUsers) {
+          await db.insert(users).values(user).onConflictDoNothing();
+        }
+
+        for (const agency of testAgencies) {
+          await db.insert(agencies).values(agency).onConflictDoNothing();
+          results.agenciesCreated++;
+        }
+      }
+
+      // Get all agencies
+      const allAgencies = await db.select().from(agencies).limit(5);
+
+      // Create buses if needed
+      if ((existingBuses[0]?.count || 0) < 5) {
+        const sampleBuses = [];
+        allAgencies.forEach((agency, index) => {
+          for (let i = 1; i <= 2; i++) {
+            sampleBuses.push({
+              agencyId: agency.id,
+              number: `QT${agency.id}-${i}`,
+              name: `Quick Route ${index + 1}-${i}`,
+              fromLocation: ['Mumbai', 'Delhi', 'Bangalore', 'Pune', 'Chennai'][index % 5],
+              toLocation: ['Delhi', 'Mumbai', 'Pune', 'Chennai', 'Kolkata'][index % 5],
+              departureTime: ['08:00 AM', '02:00 PM', '08:00 PM'][i % 3],
+              arrivalTime: ['02:00 PM', '08:00 PM', '06:00 AM'][i % 3],
+              busType: ['AC Seater', 'AC Sleeper', 'Seater'][i % 3],
+              capacity: 35 + (i * 5),
+              fare: `₹${400 + (i * 150)}`,
+              isActive: true,
+            });
+          }
+        });
+
+        for (const bus of sampleBuses) {
+          await db.insert(buses).values(bus).onConflictDoNothing();
+          results.busesCreated++;
+        }
+      }
+
+      // Get all buses
+      const allBuses = await db.select().from(buses);
+
+      // Create travelers if needed
+      if ((existingTravelers[0]?.count || 0) < 10) {
+        const travelerNames = [
+          'Amit Kumar', 'Priya Singh', 'Raj Patel', 'Sita Sharma', 'Rohit Gupta',
+          'Neha Jain', 'Vikash Yadav', 'Kavita Reddy', 'Suresh Shah', 'Pooja Agarwal'
+        ];
+
+        const sampleTravelers = [];
+        allBuses.forEach((bus, busIndex) => {
+          const travelerCount = 3; // 3 travelers per bus
+          for (let i = 0; i < travelerCount; i++) {
+            const baseDate = new Date();
+            const randomDays = Math.floor(Math.random() * 30) + 1;
+            const travelDate = new Date(baseDate.getTime() + (randomDays * 24 * 60 * 60 * 1000));
+            
+            sampleTravelers.push({
+              busId: bus.id,
+              agencyId: bus.agencyId,
+              travelerName: travelerNames[(busIndex * 3 + i) % travelerNames.length],
+              phone: `+91-${8000000000 + (busIndex * 10) + i}`,
+              travelDate,
+              couponCode: `QUICK${busIndex + 1}${i + 1}`,
+              whatsappStatus: ['pending', 'sent', 'failed'][i % 3],
+            });
+          }
+        });
+
+        for (const traveler of sampleTravelers) {
+          await db.insert(travelerData).values(traveler).onConflictDoNothing();
+          results.travelersCreated++;
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: 'Quick setup completed successfully',
+        results
+      });
+    } catch (error) {
+      console.error("Error in quick setup:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   });
