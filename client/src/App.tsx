@@ -31,6 +31,7 @@ import AdminAccounts from "@/pages/admin/accounts";
 import AdminUserData from "@/pages/admin/user-data";
 import AdminNotifications from "@/pages/admin/notifications";
 import AgencyPayments from "./pages/agency/payments";
+import BusSearch from "@/pages/bus-search";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -61,6 +62,7 @@ function Router() {
         <Route path="/admin-signup" component={AdminSignup} />
         <Route path="/agency-login" component={AgencyLogin} />
         <Route path="/signup" component={Signup} />
+        <Route path="/bus-search" component={BusSearch} />
         <Route path="/" component={Landing} />
         <Route component={NotFound} />
       </Switch>
