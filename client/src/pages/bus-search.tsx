@@ -336,9 +336,9 @@ export default function BusSearch() {
                       <div className="flex items-end">
                         <Button 
                           type="submit"
-                          className="w-full bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white h-14 text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                          className="w-full bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white h-14 text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
                         >
-                          <Search className="w-5 h-5 mr-2" />
+                          <Search className="w-4 h-4 mr-2" />
                           SEARCH BUSES
                         </Button>
                       </div>

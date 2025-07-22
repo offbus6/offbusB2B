@@ -194,9 +194,9 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-[var(--airbnb-primary)]">
+            <Link to="/" className="text-2xl font-bold text-[var(--airbnb-primary)] hover:text-[var(--airbnb-primary)]/90 transition-colors">
               TravelFlow
-            </h1>
+            </Link>
           </div>
 
           <div className="flex items-center space-x-4">
