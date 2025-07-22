@@ -85,7 +85,7 @@ export default function BusSearch() {
           <div className="bg-white border-b border-[var(--airbnb-border)]">
             <div className="container mx-auto px-6 py-8">
               <div className="bg-white rounded-2xl p-6 airbnb-shadow">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
                   <div>
                     <label className="text-sm font-semibold text-[var(--airbnb-gray)] uppercase tracking-wide mb-2 block">FROM</label>
                     <Input
@@ -113,6 +113,17 @@ export default function BusSearch() {
                       value={searchParams.departureDate}
                       onChange={(e) => setSearchParams({...searchParams, departureDate: e.target.value})}
                       className="text-lg font-medium text-[var(--airbnb-dark)] border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)] h-12"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-semibold text-[var(--airbnb-gray)] uppercase tracking-wide mb-2 block">RETURN</label>
+                    <Input
+                      type="date"
+                      value={searchParams.returnDate}
+                      onChange={(e) => setSearchParams({...searchParams, returnDate: e.target.value})}
+                      className="text-lg font-medium text-[var(--airbnb-dark)] border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)] h-12"
+                      placeholder="Optional"
                     />
                   </div>
 
@@ -255,7 +266,7 @@ export default function BusSearch() {
               <Card className="bg-white rounded-3xl p-8 airbnb-shadow border-0">
                 <CardContent className="p-0">
                   <form onSubmit={handleSearch}>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                       <div>
                         <label className="text-sm font-semibold text-[var(--airbnb-gray)] uppercase tracking-wide mb-2 block">FROM</label>
                         <div className="relative">
@@ -293,6 +304,20 @@ export default function BusSearch() {
                             value={searchParams.departureDate}
                             onChange={(e) => setSearchParams({...searchParams, departureDate: e.target.value})}
                             className="pl-10 text-lg font-medium text-[var(--airbnb-dark)] border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)] h-14 rounded-xl"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-semibold text-[var(--airbnb-gray)] uppercase tracking-wide mb-2 block">RETURN</label>
+                        <div className="relative">
+                          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--airbnb-gray)]" />
+                          <Input
+                            type="date"
+                            value={searchParams.returnDate}
+                            onChange={(e) => setSearchParams({...searchParams, returnDate: e.target.value})}
+                            className="pl-10 text-lg font-medium text-[var(--airbnb-dark)] border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)] h-14 rounded-xl"
+                            placeholder="Optional"
                           />
                         </div>
                       </div>
