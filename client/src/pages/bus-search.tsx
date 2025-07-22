@@ -256,115 +256,118 @@ export default function BusSearch() {
     <Layout variant="dashboard">
       <div className="min-h-screen bg-gradient-to-br from-[var(--airbnb-light)] via-white to-blue-50">
         <div className="container mx-auto px-4 py-12">
-          {/* Hero Section */}
-          <div className="text-center mb-12">
-            <div className="inline-block p-4 bg-[var(--airbnb-primary)]/10 rounded-full mb-6">
-              <Bus className="w-16 h-16 text-[var(--airbnb-primary)]" />
+          {/* Hero Section with Background */}
+          <div className="relative mb-12 -mx-4 px-4">
+            {/* Background Image with Overlay */}
+            <div 
+              className="relative h-96 bg-cover bg-center rounded-2xl overflow-hidden"
+              style={{
+                backgroundImage: `linear-gradient(135deg, rgba(255, 90, 95, 0.9), rgba(255, 154, 158, 0.8)), url('https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1200&h=400&fit=crop&crop=center')`
+              }}
+            >
+              {/* Content Overlay */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center text-white px-4 max-w-4xl">
+                  <div className="inline-block p-3 bg-white/20 rounded-full mb-4 backdrop-blur-sm">
+                    <Bus className="w-12 h-12 text-white" />
+                  </div>
+                  <h1 className="text-3xl md:text-5xl font-bold mb-3">
+                    India's No. 1 Travel Deals Platform
+                  </h1>
+                  <p className="text-lg md:text-xl mb-6 opacity-90">
+                    Compare prices, find exclusive offers, and save on every journey
+                  </p>
+
+                  {/* Quick Search Bar */}
+                  <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-3xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                      {/* From */}
+                      <div className="space-y-1">
+                        <Label htmlFor="quick-from" className="text-[var(--airbnb-dark)] text-sm font-medium">
+                          FROM
+                        </Label>
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--airbnb-primary)] w-4 h-4" />
+                          <Input
+                            id="quick-from"
+                            type="text"
+                            placeholder="Delhi"
+                            value={searchParams.from}
+                            onChange={(e) => setSearchParams({...searchParams, from: e.target.value})}
+                            className="pl-9 h-12 text-base border-2 border-gray-200 focus:border-[var(--airbnb-primary)] rounded-lg"
+                          />
+                        </div>
+                      </div>
+
+                      {/* To */}
+                      <div className="space-y-1">
+                        <Label htmlFor="quick-to" className="text-[var(--airbnb-dark)] text-sm font-medium">
+                          TO
+                        </Label>
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--airbnb-teal)] w-4 h-4" />
+                          <Input
+                            id="quick-to"
+                            type="text"
+                            placeholder="Mumbai"
+                            value={searchParams.to}
+                            onChange={(e) => setSearchParams({...searchParams, to: e.target.value})}
+                            className="pl-9 h-12 text-base border-2 border-gray-200 focus:border-[var(--airbnb-primary)] rounded-lg"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Date */}
+                      <div className="space-y-1">
+                        <Label htmlFor="quick-date" className="text-[var(--airbnb-dark)] text-sm font-medium">
+                          DEPARTURE
+                        </Label>
+                        <div className="relative">
+                          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--airbnb-primary)] w-4 h-4" />
+                          <Input
+                            id="quick-date"
+                            type="date"
+                            value={searchParams.departureDate}
+                            onChange={(e) => setSearchParams({...searchParams, departureDate: e.target.value})}
+                            className="pl-9 h-12 text-base border-2 border-gray-200 focus:border-[var(--airbnb-primary)] rounded-lg"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Search Button */}
+                      <div>
+                        <Button 
+                          onClick={() => setShowResults(true)}
+                          className="w-full bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white h-12 text-base font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                        >
+                          <Search className="mr-2 w-4 h-4" />
+                          SEARCH
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Quick Stats */}
+                    <div className="flex justify-center items-center space-x-8 mt-4 pt-4 border-t border-gray-100">
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-[var(--airbnb-primary)]">2000+</div>
+                        <div className="text-xs text-[var(--airbnb-gray)]">Cities</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-[var(--airbnb-primary)]">50+</div>
+                        <div className="text-xs text-[var(--airbnb-gray)]">Travel Partners</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-[var(--airbnb-primary)]">₹500</div>
+                        <div className="text-xs text-[var(--airbnb-gray)]">Avg. Savings</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold text-[var(--airbnb-dark)] mb-4">
-              Find Best Travel Deals
-            </h1>
-            <p className="text-xl text-[var(--airbnb-gray)] max-w-2xl mx-auto">
-              Discover exclusive coupons and offers from top travel platforms. Save money on your next bus journey.
-            </p>
           </div>
 
-          {/* Search Form */}
-          <div className="max-w-4xl mx-auto">
-            <Card className="airbnb-shadow">
-              <CardHeader>
-                <CardTitle className="text-2xl text-[var(--airbnb-dark)] text-center">
-                  Search for Travel Deals
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSearch} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* From */}
-                    <div className="space-y-2">
-                      <Label htmlFor="from" className="text-[var(--airbnb-dark)] font-medium">
-                        From
-                      </Label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--airbnb-primary)] w-5 h-5" />
-                        <Input
-                          id="from"
-                          type="text"
-                          placeholder="Enter departure city"
-                          value={searchParams.from}
-                          onChange={(e) => setSearchParams({...searchParams, from: e.target.value})}
-                          className="pl-10 h-12 text-lg border-2 border-gray-200 focus:border-[var(--airbnb-primary)]"
-                        />
-                      </div>
-                    </div>
-
-                    {/* To */}
-                    <div className="space-y-2">
-                      <Label htmlFor="to" className="text-[var(--airbnb-dark)] font-medium">
-                        To
-                      </Label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--airbnb-teal)] w-5 h-5" />
-                        <Input
-                          id="to"
-                          type="text"
-                          placeholder="Enter destination city"
-                          value={searchParams.to}
-                          onChange={(e) => setSearchParams({...searchParams, to: e.target.value})}
-                          className="pl-10 h-12 text-lg border-2 border-gray-200 focus:border-[var(--airbnb-primary)]"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Departure Date */}
-                    <div className="space-y-2">
-                      <Label htmlFor="departure" className="text-[var(--airbnb-dark)] font-medium">
-                        Departure Date
-                      </Label>
-                      <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--airbnb-primary)] w-5 h-5" />
-                        <Input
-                          id="departure"
-                          type="date"
-                          value={searchParams.departureDate}
-                          onChange={(e) => setSearchParams({...searchParams, departureDate: e.target.value})}
-                          className="pl-10 h-12 text-lg border-2 border-gray-200 focus:border-[var(--airbnb-primary)]"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Return Date (Optional) */}
-                    <div className="space-y-2">
-                      <Label htmlFor="return" className="text-[var(--airbnb-dark)] font-medium">
-                        Return Date (Optional)
-                      </Label>
-                      <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--airbnb-teal)] w-5 h-5" />
-                        <Input
-                          id="return"
-                          type="date"
-                          value={searchParams.returnDate}
-                          onChange={(e) => setSearchParams({...searchParams, returnDate: e.target.value})}
-                          className="pl-10 h-12 text-lg border-2 border-gray-200 focus:border-[var(--airbnb-primary)]"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Search Button */}
-                  <div className="text-center pt-4">
-                    <Button 
-                      type="submit"
-                      className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-12 py-4 text-xl rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-                    >
-                      <Search className="mr-3 w-6 h-6" />
-                      Find Deals
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
+          
 
           {/* Popular Routes */}
           <div className="mt-16 max-w-6xl mx-auto">
