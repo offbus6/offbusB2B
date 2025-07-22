@@ -238,35 +238,37 @@ export default function BusSearch() {
                       </div>
 
                       {/* Journey Details */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
-                        {/* Start Details */}
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-gray-800">{bus.departureTime}</div>
-                          <div className="text-sm text-gray-600 font-medium">Mumbai Central</div>
-                          <div className="text-xs text-gray-500">Departure</div>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                        <div className="flex items-center space-x-2">
+                          <Clock className="w-4 h-4 text-gray-500" />
+                          <div>
+                            <div className="font-semibold text-gray-800">{bus.departureTime}</div>
+                            <div className="text-xs text-gray-500">Mumbai Central</div>
+                          </div>
                         </div>
 
-                        {/* Duration */}
                         <div className="text-center">
-                          <div className="text-sm text-gray-500 mb-2">{bus.duration}</div>
-                          <div className="w-full h-px bg-gray-300 relative">
+                          <div className="text-sm text-gray-500">{bus.duration}</div>
+                          <div className="w-full h-px bg-gray-300 my-1 relative">
                             <div className="absolute inset-0 flex justify-center">
                               <Bus className="w-4 h-4 text-gray-400 bg-white px-1" />
                             </div>
                           </div>
-                          <div className="flex items-center justify-center mt-2">
-                            <Users className="w-4 h-4 text-green-600 mr-1" />
-                            <span className="text-sm text-green-600 font-semibold">
-                              {bus.seatsAvailable} seats left
-                            </span>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Clock className="w-4 h-4 text-gray-500" />
+                          <div>
+                            <div className="font-semibold text-gray-800">{bus.arrivalTime}</div>
+                            <div className="text-xs text-gray-500">Delhi</div>
                           </div>
                         </div>
 
-                        {/* Drop Details */}
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-gray-800">{bus.arrivalTime}</div>
-                          <div className="text-sm text-gray-600 font-medium">Delhi ISBT</div>
-                          <div className="text-xs text-gray-500">Arrival</div>
+                        <div className="flex items-center justify-end space-x-2">
+                          <Users className="w-4 h-4 text-green-600" />
+                          <span className="text-sm text-green-600 font-semibold">
+                            {bus.seatsAvailable} seats left
+                          </span>
                         </div>
                       </div>
 
