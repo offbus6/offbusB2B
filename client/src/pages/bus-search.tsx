@@ -34,6 +34,7 @@ export default function BusSearch() {
       fare: 1450,
       discountedFare: 1250,
       discount: "14% OFF",
+      couponOffer: "₹200 OFF",
       seatsAvailable: 28,
       rating: 4.2,
       reviews: 2847,
@@ -55,6 +56,7 @@ export default function BusSearch() {
       fare: 1650,
       discountedFare: 1350,
       discount: "18% OFF",
+      couponOffer: "15% OFF",
       seatsAvailable: 15,
       rating: 4.5,
       reviews: 1924,
@@ -76,6 +78,7 @@ export default function BusSearch() {
       fare: 1800,
       discountedFare: 1520,
       discount: "16% OFF",
+      couponOffer: "₹300 OFF",
       seatsAvailable: 22,
       rating: 4.1,
       reviews: 3156,
@@ -97,6 +100,7 @@ export default function BusSearch() {
       fare: 1300,
       discountedFare: 1050,
       discount: "19% OFF",
+      couponOffer: "20% OFF",
       seatsAvailable: 35,
       rating: 3.9,
       reviews: 1567,
@@ -270,12 +274,17 @@ export default function BusSearch() {
 
                       {/* Action Buttons */}
                       <div className="flex items-center justify-end pt-4 border-t border-gray-100">
-                        <Button 
-                          onClick={() => handleBookNow(bus.websiteUrl, bus.operator)}
-                          className="bg-green-600 hover:bg-green-700 text-white px-8 py-2 rounded-lg font-semibold"
-                        >
-                          Copy Coupon
-                        </Button>
+                        <div className="flex items-center space-x-3">
+                          <div className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-semibold">
+                            {bus.couponOffer}
+                          </div>
+                          <Button 
+                            onClick={() => handleBookNow(bus.websiteUrl, bus.operator)}
+                            className="bg-green-600 hover:bg-green-700 text-white px-8 py-2 rounded-lg font-semibold"
+                          >
+                            Copy Coupon
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
