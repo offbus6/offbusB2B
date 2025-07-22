@@ -906,7 +906,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
       
       allBuses.forEach((bus, busIndex) => {
-        const travelerCount = Math.min(10 + busIndex, travelerNames.length);
+        const travelerCount = Math.min(15 + busIndex, travelerNames.length);
         for (let i = 0; i < travelerCount; i++) {
           const baseDate = new Date();
           const randomDays = Math.floor(Math.random() * 30) + 1; // Random date in next 30 days
@@ -915,7 +915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sampleTravelers.push({
             busId: bus.id,
             agencyId: bus.agencyId,
-            travelerName: travelerNames[i],
+            travelerName: travelerNames[i % travelerNames.length],
             phone: `+91-${9000000000 + (busIndex * 1000) + i}`,
             travelDate,
             couponCode: `SAVE${(busIndex + 1) * 100 + (i + 1)}`,
@@ -1857,13 +1857,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Bus details
           busNumber: buses.registrationNumber,
           busName: buses.routeNumber,
-          fromLocation: sql<string>`'From Location'`, // Placeholder since buses table doesn't have these fields
-          toLocation: sql<string>`'To Location'`, // Placeholder since buses table doesn't have these fields
-          departureTime: sql<string>`'09:00 AM'`, // Placeholder since buses table doesn't have these fields
-          arrivalTime: sql<string>`'05:00 PM'`, // Placeholder since buses table doesn't have these fields
           busType: buses.vehicleType,
           capacity: buses.capacity,
-          fare: sql<string>`'₹500'`, // Placeholder since buses table doesn't have fare field
           // Agency details
           agencyName: agencies.name,
           agencyCity: agencies.city,
@@ -1875,10 +1870,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .innerJoin(agencies, eq(travelerData.agencyId, agencies.id))
         .orderBy(desc(travelerData.createdAt));
 
-      res.json(userData);
+      // Add default values for missing fields
+      const processedData = userData.map(user => ({
+        ...user,
+        fromLocation: 'Mumbai',
+        toLocation: 'Delhi',
+        departureTime: '09:00 AM',
+        arrivalTime: '05:00 PM',
+        fare: '₹500'
+      }));
+
+      res.json(processedData);
     } catch (error) {
       console.error("Error fetching user data:", error);
       res.status(500).json({ message: "Failed to fetch user data" });
+    }
+  });
+
+  // Generate sample traveler data for existing buses
+  app.post('/api/test/generate-sample-travelers', adminAuth, async (req, res) => {
+    try {
+      const { db } = await import('./db');
+      const { buses, travelerData } = await import('@shared/schema');
+
+      // Get all buses
+      const allBuses = await db.select().from(buses);
+
+      if (allBuses.length === 0) {
+        return res.status(400).json({ message: 'No buses found' });
+      }
+
+      const sampleTravelers = [];
+      
+      const travelerNames = [
+        'Rahul Kumar', 'Priya Sharma', 'Amit Singh', 'Sunita Patel', 'Vikas Gupta',
+        'Neha Reddy', 'Rajesh Yadav', 'Kavita Jain', 'Suresh Mehta', 'Pooja Agarwal',
+        'Manish Verma', 'Rekha Saxena', 'Deepak Tiwari', 'Sita Devi', 'Prakash Joshi',
+        'Geeta Rani', 'Ravi Chandra', 'Meera Kumari', 'Ashok Kumar', 'Vandana Singh',
+        'Kiran Patel', 'Sanjay Gupta', 'Usha Devi', 'Ramesh Singh', 'Anita Sharma'
+      ];
+      
+      allBuses.forEach((bus, busIndex) => {
+        const travelerCount = 8 + (busIndex % 5); // 8-12 travelers per bus
+        for (let i = 0; i < travelerCount; i++) {
+          const baseDate = new Date();
+          const randomDays = Math.floor(Math.random() * 60) + 1; // Random date in next 60 days
+          const travelDate = new Date(baseDate.getTime() + (randomDays * 24 * 60 * 60 * 1000));
+          
+          sampleTravelers.push({
+            busId: bus.id,
+            agencyId: bus.agencyId,
+            travelerName: travelerNames[i % travelerNames.length],
+            phone: `+91-${9000000000 + (busIndex * 100) + i}`,
+            travelDate,
+            couponCode: `SAVE${(busIndex + 1) * 50 + (i + 1)}`,
+            whatsappStatus: ['pending', 'sent', 'failed'][i % 3],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
+      });
+
+      // Insert all sample travelers
+      for (const traveler of sampleTravelers) {
+        await db.insert(travelerData).values(traveler).onConflictDoNothing();
+      }
+
+      res.json({ 
+        success: true, 
+        message: 'Sample travelers generated successfully',
+        travelersGenerated: sampleTravelers.length,
+        busesProcessed: allBuses.length
+      });
+    } catch (error) {
+      console.error("Error generating sample travelers:", error);
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 
