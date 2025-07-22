@@ -370,10 +370,9 @@ export default function AgencyDetails() {
       </div>
 
       <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="details">Agency Details</TabsTrigger>
           <TabsTrigger value="payments">Payment History</TabsTrigger>
-          <TabsTrigger value="billing">Billing & Tax</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="space-y-6">
@@ -553,7 +552,7 @@ export default function AgencyDetails() {
                 Billing Management
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <div>
                 <Label htmlFor="renewalChargePerBus">Charge Per Bus (Monthly)</Label>
                 <div className="relative">
@@ -567,9 +566,42 @@ export default function AgencyDetails() {
                   />
                 </div>
               </div>
+
+              {/* Tax Configuration */}
+              <div className="border-t pt-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Settings className="w-4 h-4" />
+                  <Label className="text-base font-medium">Tax Configuration</Label>
+                </div>
+                <div>
+                  <Label>GST Tax Rate (%)</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={taxPercentage}
+                      onChange={(e) => setTaxPercentage(parseInt(e.target.value) || 0)}
+                      min="0"
+                      max="100"
+                      className="w-24"
+                    />
+                    <Button
+                      onClick={() => updateTaxMutation.mutate(taxPercentage)}
+                      disabled={updateTaxMutation.isPending}
+                      size="sm"
+                    >
+                      Update
+                    </Button>
+                  </div>
+                  <p className="text-sm text-[var(--airbnb-gray)] mt-1">
+                    This tax rate will be applied to all new bills
+                  </p>
+                </div>
+              </div>
+
+              {/* Billing Calculator */}
               <div className="bg-[var(--airbnb-light)] p-4 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Monthly Billing Summary</span>
+                  <span className="text-sm font-medium">Monthly Billing Calculator</span>
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -580,9 +612,17 @@ export default function AgencyDetails() {
                     <span>Rate per Bus:</span>
                     <span>₹{formData.renewalChargePerBus || 5000}</span>
                   </div>
-                  <div className="border-t pt-2 flex justify-between font-semibold">
-                    <span>Total Monthly:</span>
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
                     <span>₹{(agency.totalBuses || 0) * (formData.renewalChargePerBus || 5000)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>GST ({taxPercentage}%):</span>
+                    <span>₹{calculateTaxAmount((agency.totalBuses || 0) * (formData.renewalChargePerBus || 5000), taxPercentage)}</span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between font-semibold text-base">
+                    <span>Total Payable:</span>
+                    <span>₹{((agency.totalBuses || 0) * (formData.renewalChargePerBus || 5000)) + calculateTaxAmount((agency.totalBuses || 0) * (formData.renewalChargePerBus || 5000), taxPercentage)}</span>
                   </div>
                 </div>
               </div>
@@ -727,72 +767,7 @@ export default function AgencyDetails() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="billing" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="w-5 h-5" />
-                  Tax Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Current Tax Rate (%)</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      value={taxPercentage}
-                      onChange={(e) => setTaxPercentage(parseInt(e.target.value) || 0)}
-                      min="0"
-                      max="100"
-                    />
-                    <Button
-                      onClick={() => updateTaxMutation.mutate(taxPercentage)}
-                      disabled={updateTaxMutation.isPending}
-                      size="sm"
-                    >
-                      Update
-                    </Button>
-                  </div>
-                  <p className="text-sm text-[var(--airbnb-gray)] mt-1">
-                    This tax rate will be applied to all new bills
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Billing Calculator</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Total Buses:</span>
-                    <span>{agency?.totalBuses || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Rate per Bus:</span>
-                    <span>₹{formData.renewalChargePerBus || 5000}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span>₹{(agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Tax ({taxPercentage}%):</span>
-                    <span>₹{calculateTaxAmount((agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000), taxPercentage)}</span>
-                  </div>
-                  <div className="border-t pt-2 flex justify-between font-semibold">
-                    <span>Total Payable:</span>
-                    <span>₹{((agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000)) + calculateTaxAmount((agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000), taxPercentage)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+        
       </Tabs>
 
       {/* Payment Update Dialog */}
