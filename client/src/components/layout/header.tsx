@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useLocation, Link } from "wouter";
+import { useLocation,  } from "wouter";
 import { Menu, X, Bell } from "lucide-react";
 import { useState } from "react";
 import {
@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Link } from "react-router-dom";
 
 interface HeaderProps {
   variant?: 'landing' | 'dashboard' | 'auth';
@@ -70,7 +71,7 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center">
+            <Link to="/" className="flex items-center">
               <h1 className="text-2xl font-bold text-[var(--airbnb-primary)]">
                 TravelFlow
               </h1>
@@ -107,7 +108,7 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
               <a href="#about" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
                 About
               </a>
-              <Link href="/bus-search" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
+              <Link to="/bus-search" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
                 Bus Search
               </Link>
               <a href="#contact" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
@@ -158,7 +159,7 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
                 <a href="#about" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
                   About
                 </a>
-                <Link href="/bus-search" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
+                <Link to="/bus-search" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
                   Bus Search
                 </Link>
                 <a href="#contact" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
@@ -242,7 +243,7 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
-                      <Link href="/notifications" className="text-[var(--airbnb-primary)]">
+                      <Link to="/notifications" className="text-[var(--airbnb-primary)]">
                         View all notifications
                       </Link>
                     </DropdownMenuItem>

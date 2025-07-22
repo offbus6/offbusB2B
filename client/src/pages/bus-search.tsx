@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MapPin, Calendar, Search, Bus, Clock, Star, Users, Wifi, Car, Snowflake, Coffee } from "lucide-react";
 import Layout from "@/components/layout/layout";
-import { Link } from "wouter";
+import { Link } from "react-router-dom";
 
 export default function BusSearch() {
   const [searchParams, setSearchParams] = useState({
