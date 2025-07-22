@@ -1836,6 +1836,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all user data across all agencies for admin
+  app.get('/api/admin/user-data', adminAuth, async (req, res) => {
+    try {
+      const userData = await db
+        .select({
+          id: travelerData.id,
+          travelerName: travelerData.travelerName,
+          phone: travelerData.phone,
+          travelDate: travelerData.travelDate,
+          couponCode: travelerData.couponCode,
+          whatsappStatus: travelerData.whatsappStatus,
+          busId: travelerData.busId,
+          agencyId: travelerData.agencyId,
+          // Bus details
+          busNumber: buses.number,
+          busName: buses.name,
+          fromLocation: buses.fromLocation,
+          toLocation: buses.toLocation,
+          departureTime: buses.departureTime,
+          arrivalTime: buses.arrivalTime,
+          busType: buses.busType,
+          capacity: buses.capacity,
+          fare: buses.fare,
+          // Agency details
+          agencyName: agencies.name,
+          agencyCity: agencies.city,
+          agencyState: agencies.state,
+          agencyContactPerson: agencies.contactPerson,
+        })
+        .from(travelerData)
+        .innerJoin(buses, eq(travelerData.busId, buses.id))
+        .innerJoin(agencies, eq(travelerData.agencyId, agencies.id))
+        .orderBy(desc(travelerData.createdAt));
+
+      res.json(userData);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      res.status(500).json({ message: "Failed to fetch user data" });
+    }
+  });
+
   // Generate sample payments for existing agencies
   app.post('/api/test/generate-sample-payments', adminAuth, async (req, res) => {
     try {

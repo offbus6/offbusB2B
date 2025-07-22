@@ -28,6 +28,7 @@ import AgencyLogin from "@/pages/agency-login";
 import Sidebar from "@/components/layout/sidebar";
 import Layout from "@/components/layout/layout";
 import AdminAccounts from "@/pages/admin/accounts";
+import AdminUserData from "@/pages/admin/user-data";
 import AdminNotifications from "@/pages/admin/notifications";
 import AgencyPayments from "./pages/agency/payments";
 
@@ -106,6 +107,7 @@ function Router() {
                   <Route path="/admin/whatsapp-config" component={WhatsappConfig} />
                   <Route path="/admin/profile" component={AdminProfile} />
                   <Route path="/admin/accounts" component={AdminAccounts} />
+                  <Route path="/admin/user-data" component={AdminUserData} />
                   <Route path="/admin/notifications" component={AdminNotifications} />
                 </>
               ) : (
