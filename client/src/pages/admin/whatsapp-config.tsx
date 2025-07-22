@@ -616,7 +616,7 @@ export default function WhatsappConfig() {
                       />
                     </FormControl>
                     <FormDescription className="text-xs">
-                      Use variables like {{traveler_name}}, {{agency_name}}, {{coupon_code}}, {{travel_date}}. WhatsApp messages are text-only (no subject line).
+                      Use variables like {"{"}{"{"} traveler_name {"}"}{"}"},  {"{"}{"{"} agency_name {"}"}{"}"},  {"{"}{"{"} coupon_code {"}"}{"}"},  {"{"}{"{"} travel_date {"}"}{"}"}.  WhatsApp messages are text-only (no subject line).
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
