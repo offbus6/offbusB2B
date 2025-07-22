@@ -186,29 +186,31 @@ export default function BusSearch() {
 
                     {/* Action Section */}
                     <div className="pt-6 border-t border-[var(--airbnb-border)]">
-                      {/* Copy Coupon and Offer */}
-                      <div className="flex items-center justify-center space-x-3 mb-4">
-                        <div className="bg-green-50 text-green-700 px-4 py-2 rounded-xl font-bold text-sm border border-green-200">
-                          {bus.couponOffer}
+                      <div className="flex items-center justify-between">
+                        {/* Left side - Seats and Reviews */}
+                        <div className="flex items-center space-x-6 text-sm">
+                          <div className="flex items-center text-[var(--airbnb-primary)]">
+                            <Users className="w-4 h-4 mr-1" />
+                            <span className="font-semibold">{bus.seatsAvailable} seats left</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Star className="w-4 h-4 text-yellow-500 fill-current mr-1" />
+                            <span className="font-semibold text-[var(--airbnb-dark)]">{bus.rating}</span>
+                            <span className="ml-1 text-[var(--airbnb-gray)]">({bus.reviews} reviews)</span>
+                          </div>
                         </div>
-                        <Button 
-                          onClick={() => navigator.clipboard.writeText(bus.couponOffer)}
-                          className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-                        >
-                          Copy Coupon
-                        </Button>
-                      </div>
 
-                      {/* Bottom Info */}
-                      <div className="flex items-center justify-center space-x-6 text-sm">
-                        <div className="flex items-center text-[var(--airbnb-primary)]">
-                          <Users className="w-4 h-4 mr-1" />
-                          <span className="font-semibold">{bus.seatsAvailable} seats left</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Star className="w-4 h-4 text-yellow-500 fill-current mr-1" />
-                          <span className="font-semibold text-[var(--airbnb-dark)]">{bus.rating}</span>
-                          <span className="ml-1 text-[var(--airbnb-gray)]">({bus.reviews} reviews)</span>
+                        {/* Right side - Offer and Copy Coupon */}
+                        <div className="flex items-center space-x-3">
+                          <div className="bg-green-50 text-green-700 px-4 py-2 rounded-xl font-bold text-sm border border-green-200">
+                            {bus.couponOffer}
+                          </div>
+                          <Button 
+                            onClick={() => navigator.clipboard.writeText(bus.couponOffer)}
+                            className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                          >
+                            Copy Coupon
+                          </Button>
                         </div>
                       </div>
                     </div>
