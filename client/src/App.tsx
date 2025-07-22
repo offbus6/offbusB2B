@@ -31,6 +31,13 @@ import Layout from "@/components/layout/layout";
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
 
+  // Fix dashboard scroll issue - must be at the top before any conditional returns
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      window.scrollTo(0, 0);
+    }
+  }, [isAuthenticated]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -41,13 +48,6 @@ function Router() {
       </div>
     );
   }
-
-  // Fix dashboard scroll issue - moved before conditional returns
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      window.scrollTo(0, 0);
-    }
-  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return (
