@@ -233,3 +233,43 @@ export type WhatsappTemplate = typeof whatsappTemplates.$inferSelect;
 export type InsertWhatsappTemplate = typeof whatsappTemplates.$inferInsert;
 export type WhatsappQueue = typeof whatsappQueue.$inferSelect;
 export type InsertWhatsappQueue = typeof whatsappQueue.$inferInsert;
+
+// Payment history table
+export const paymentHistory = pgTable("payment_history", {
+  id: serial("id").primaryKey(),
+  agencyId: integer("agency_id").notNull().references(() => agencies.id),
+  billId: varchar("bill_id").notNull(), // Unique bill identifier
+  billingPeriod: varchar("billing_period").notNull(), // e.g., "January 2025"
+  totalBuses: integer("total_buses").notNull(),
+  chargePerBus: integer("charge_per_bus").notNull(),
+  subtotal: integer("subtotal").notNull(), // total buses * charge per bus
+  taxPercentage: integer("tax_percentage").notNull().default(18), // GST percentage
+  taxAmount: integer("tax_amount").notNull(),
+  totalAmount: integer("total_amount").notNull(), // subtotal + tax
+  paymentStatus: varchar("payment_status", { 
+    enum: ["pending", "paid", "overdue", "partial"] 
+  }).notNull().default("pending"),
+  paymentMethod: varchar("payment_method", { 
+    enum: ["cash", "bank_transfer", "upi", "card", "cheque", "other"] 
+  }),
+  paymentDate: timestamp("payment_date"),
+  dueDate: timestamp("due_date").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Tax configuration table
+export const taxConfig = pgTable("tax_config", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull().default("GST"),
+  percentage: integer("percentage").notNull().default(18),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type PaymentHistory = typeof paymentHistory.$inferSelect;
+export type InsertPaymentHistory = typeof paymentHistory.$inferInsert;
+export type TaxConfig = typeof taxConfig.$inferSelect;
+export type InsertTaxConfig = typeof taxConfig.$inferInsert;

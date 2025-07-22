@@ -11,6 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Building2, 
   MapPin, 
@@ -24,7 +27,13 @@ import {
   IndianRupee,
   Bus,
   User,
-  CreditCard
+  CreditCard,
+  Plus,
+  Receipt,
+  Settings,
+  CheckCircle,
+  Clock,
+  AlertCircle
 } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useLocation, useRoute } from "wouter";
@@ -58,6 +67,12 @@ export default function AgencyDetails() {
   const [formData, setFormData] = useState<Partial<AgencyDetails>>({});
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>("");
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [billDialogOpen, setBillDialogOpen] = useState(false);
+  const [taxConfigOpen, setTaxConfigOpen] = useState(false);
+  const [newBillPeriod, setNewBillPeriod] = useState("");
+  const [taxPercentage, setTaxPercentage] = useState(18);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -80,12 +95,29 @@ export default function AgencyDetails() {
     retry: false,
   });
 
+  const { data: paymentHistory, isLoading: paymentsLoading } = useQuery({
+    queryKey: [`/api/admin/agencies/${agencyId}/payments`],
+    enabled: !!agencyId,
+    retry: false,
+  });
+
+  const { data: taxConfig } = useQuery({
+    queryKey: ["/api/admin/tax-config"],
+    retry: false,
+  });
+
   useEffect(() => {
     if (agency) {
       setFormData(agency);
       setLogoPreview(agency.logoUrl || "");
     }
   }, [agency]);
+
+  useEffect(() => {
+    if (taxConfig) {
+      setTaxPercentage(taxConfig.percentage || 18);
+    }
+  }, [taxConfig]);
 
   const updateAgencyMutation = useMutation({
     mutationFn: async (updates: Partial<AgencyDetails>) => {
@@ -117,6 +149,80 @@ export default function AgencyDetails() {
       toast({
         title: "Error",
         description: "Failed to update agency",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const generateBillMutation = useMutation({
+    mutationFn: async (period: string) => {
+      return await apiRequest(`/api/admin/agencies/${agencyId}/generate-bill`, {
+        method: "POST",
+        body: { period },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/agencies/${agencyId}/payments`] });
+      setBillDialogOpen(false);
+      setNewBillPeriod("");
+      toast({
+        title: "Success",
+        description: "Bill generated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to generate bill",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updatePaymentMutation = useMutation({
+    mutationFn: async ({ id, status, paymentMethod, notes }: any) => {
+      return await apiRequest(`/api/admin/payments/${id}/status`, {
+        method: "PATCH",
+        body: { status, paymentMethod, notes },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/agencies/${agencyId}/payments`] });
+      setPaymentDialogOpen(false);
+      setSelectedPayment(null);
+      toast({
+        title: "Success",
+        description: "Payment status updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update payment status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateTaxMutation = useMutation({
+    mutationFn: async (percentage: number) => {
+      return await apiRequest("/api/admin/tax-config", {
+        method: "PATCH",
+        body: { percentage },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/tax-config"] });
+      setTaxConfigOpen(false);
+      toast({
+        title: "Success",
+        description: "Tax configuration updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update tax configuration",
         variant: "destructive",
       });
     },
@@ -161,6 +267,67 @@ export default function AgencyDetails() {
     }
   };
 
+  const getPaymentStatusBadge = (status: string) => {
+    switch (status) {
+      case "paid":
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-300">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Paid
+          </Badge>
+        );
+      case "pending":
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">
+            <Clock className="w-3 h-3 mr-1" />
+            Pending
+          </Badge>
+        );
+      case "overdue":
+        return (
+          <Badge className="bg-red-100 text-red-800 border-red-300">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Overdue
+          </Badge>
+        );
+      case "partial":
+        return (
+          <Badge className="bg-orange-100 text-orange-800 border-orange-300">
+            <Clock className="w-3 h-3 mr-1" />
+            Partial
+          </Badge>
+        );
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const handleMarkAsPaid = (payment: any) => {
+    setSelectedPayment(payment);
+    setPaymentDialogOpen(true);
+  };
+
+  const handleUpdatePayment = (status: string, paymentMethod: string, notes: string) => {
+    if (selectedPayment) {
+      updatePaymentMutation.mutate({
+        id: selectedPayment.id,
+        status,
+        paymentMethod,
+        notes,
+      });
+    }
+  };
+
+  const handleGenerateBill = () => {
+    if (newBillPeriod.trim()) {
+      generateBillMutation.mutate(newBillPeriod.trim());
+    }
+  };
+
+  const calculateTaxAmount = (subtotal: number, taxPercentage: number) => {
+    return Math.round((subtotal * taxPercentage) / 100);
+  };
+
   if (isLoading || agencyLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -202,9 +369,17 @@ export default function AgencyDetails() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Details */}
-        <div className="lg:col-span-2 space-y-6">
+      <Tabs defaultValue="details" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="details">Agency Details</TabsTrigger>
+          <TabsTrigger value="payments">Payment History</TabsTrigger>
+          <TabsTrigger value="billing">Billing & Tax</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Details */}
+            <div className="lg:col-span-2 space-y-6">
           {/* Basic Information */}
           <Card>
             <CardHeader>
@@ -447,8 +622,244 @@ export default function AgencyDetails() {
               )}
             </CardContent>
           </Card>
-        </div>
-      </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="payments" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-semibold text-[var(--airbnb-dark)]">Payment History</h2>
+              <p className="text-[var(--airbnb-gray)]">Track all payments and billing records</p>
+            </div>
+            <Dialog open={billDialogOpen} onOpenChange={setBillDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Generate Bill
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Generate New Bill</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="billingPeriod">Billing Period</Label>
+                    <Input
+                      id="billingPeriod"
+                      placeholder="e.g., January 2025"
+                      value={newBillPeriod}
+                      onChange={(e) => setNewBillPeriod(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setBillDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleGenerateBill}
+                      disabled={generateBillMutation.isPending || !newBillPeriod.trim()}
+                    >
+                      {generateBillMutation.isPending ? "Generating..." : "Generate Bill"}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              {paymentsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--airbnb-pink)]"></div>
+                </div>
+              ) : !paymentHistory || paymentHistory.length === 0 ? (
+                <div className="text-center py-8">
+                  <Receipt className="w-12 h-12 text-[var(--airbnb-gray)] mx-auto mb-4" />
+                  <p className="text-[var(--airbnb-gray)]">No payment history found</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Bill ID</TableHead>
+                      <TableHead>Period</TableHead>
+                      <TableHead>Buses</TableHead>
+                      <TableHead>Subtotal</TableHead>
+                      <TableHead>Tax</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Due Date</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paymentHistory.map((payment: any) => (
+                      <TableRow key={payment.id}>
+                        <TableCell className="font-medium">{payment.billId}</TableCell>
+                        <TableCell>{payment.billingPeriod}</TableCell>
+                        <TableCell>{payment.totalBuses}</TableCell>
+                        <TableCell>₹{payment.subtotal}</TableCell>
+                        <TableCell>₹{payment.taxAmount} ({payment.taxPercentage}%)</TableCell>
+                        <TableCell className="font-semibold">₹{payment.totalAmount}</TableCell>
+                        <TableCell>{getPaymentStatusBadge(payment.paymentStatus)}</TableCell>
+                        <TableCell>{new Date(payment.dueDate).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          {payment.paymentStatus !== 'paid' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleMarkAsPaid(payment)}
+                              className="text-xs"
+                            >
+                              Mark as Paid
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="billing" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="w-5 h-5" />
+                  Tax Configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Current Tax Rate (%)</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={taxPercentage}
+                      onChange={(e) => setTaxPercentage(parseInt(e.target.value) || 0)}
+                      min="0"
+                      max="100"
+                    />
+                    <Button
+                      onClick={() => updateTaxMutation.mutate(taxPercentage)}
+                      disabled={updateTaxMutation.isPending}
+                      size="sm"
+                    >
+                      Update
+                    </Button>
+                  </div>
+                  <p className="text-sm text-[var(--airbnb-gray)] mt-1">
+                    This tax rate will be applied to all new bills
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Billing Calculator</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Total Buses:</span>
+                    <span>{agency?.totalBuses || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Rate per Bus:</span>
+                    <span>₹{formData.renewalChargePerBus || 5000}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>₹{(agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tax ({taxPercentage}%):</span>
+                    <span>₹{calculateTaxAmount((agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000), taxPercentage)}</span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between font-semibold">
+                    <span>Total Payable:</span>
+                    <span>₹{((agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000)) + calculateTaxAmount((agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000), taxPercentage)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Payment Update Dialog */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Payment Status</DialogTitle>
+          </DialogHeader>
+          {selectedPayment && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p><strong>Bill ID:</strong> {selectedPayment.billId}</p>
+                <p><strong>Period:</strong> {selectedPayment.billingPeriod}</p>
+                <p><strong>Amount:</strong> ₹{selectedPayment.totalAmount}</p>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label>Payment Method</Label>
+                  <Select onValueChange={(value) => {
+                    setSelectedPayment({...selectedPayment, paymentMethod: value});
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="upi">UPI</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                      <SelectItem value="cheque">Cheque</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label>Notes (Optional)</Label>
+                  <Textarea
+                    placeholder="Add any notes about the payment..."
+                    onChange={(e) => {
+                      setSelectedPayment({...selectedPayment, notes: e.target.value});
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => handleUpdatePayment(
+                    'paid', 
+                    selectedPayment.paymentMethod || 'cash', 
+                    selectedPayment.notes || ''
+                  )}
+                  disabled={updatePaymentMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {updatePaymentMutation.isPending ? "Updating..." : "Mark as Paid"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

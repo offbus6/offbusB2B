@@ -717,6 +717,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment history routes
+  app.get('/api/admin/agencies/:id/payments', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const payments = await storage.getPaymentHistory(parseInt(id));
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching payment history:", error);
+      res.status(500).json({ message: "Failed to fetch payment history" });
+    }
+  });
+
+  app.post('/api/admin/agencies/:id/generate-bill', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { period } = req.body;
+      
+      if (!period) {
+        return res.status(400).json({ message: "Billing period is required" });
+      }
+
+      const bill = await storage.generateMonthlyBill(parseInt(id), period);
+      res.json(bill);
+    } catch (error) {
+      console.error("Error generating bill:", error);
+      res.status(500).json({ message: "Failed to generate bill" });
+    }
+  });
+
+  app.patch('/api/admin/payments/:id/status', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status, paymentMethod, notes } = req.body;
+      
+      const paymentDate = status === 'paid' ? new Date() : undefined;
+      const updatedPayment = await storage.updatePaymentStatus(
+        parseInt(id), 
+        status, 
+        paymentMethod, 
+        paymentDate, 
+        notes
+      );
+      
+      res.json(updatedPayment);
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      res.status(500).json({ message: "Failed to update payment status" });
+    }
+  });
+
+  // Tax configuration routes
+  app.get('/api/admin/tax-config', adminAuth, async (req: any, res) => {
+    try {
+      const taxConfig = await storage.getTaxConfig();
+      res.json(taxConfig || { percentage: 18 });
+    } catch (error) {
+      console.error("Error fetching tax config:", error);
+      res.status(500).json({ message: "Failed to fetch tax config" });
+    }
+  });
+
+  app.patch('/api/admin/tax-config', adminAuth, async (req: any, res) => {
+    try {
+      const { percentage } = req.body;
+      
+      if (typeof percentage !== 'number' || percentage < 0 || percentage > 100) {
+        return res.status(400).json({ message: "Invalid tax percentage" });
+      }
+
+      const updatedConfig = await storage.updateTaxConfig(percentage);
+      res.json(updatedConfig);
+    } catch (error) {
+      console.error("Error updating tax config:", error);
+      res.status(500).json({ message: "Failed to update tax config" });
+    }
+  });
+
   // Agency routes
   app.post('/api/agencies', isAuthenticated, async (req: any, res) => {
     try {

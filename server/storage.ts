@@ -26,6 +26,12 @@ import {
   type InsertWhatsappTemplate,
   type WhatsappQueue,
   type InsertWhatsappQueue,
+  paymentHistory,
+  taxConfig,
+  type PaymentHistory,
+  type InsertPaymentHistory,
+  type TaxConfig,
+  type InsertTaxConfig,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql, ne } from "drizzle-orm";
@@ -111,6 +117,16 @@ export interface IStorage {
     sentMessages: number;
     failedMessages: number;
   }>;
+
+  // Payment history operations
+  getPaymentHistory(agencyId: number): Promise<PaymentHistory[]>;
+  createPaymentRecord(payment: InsertPaymentHistory): Promise<PaymentHistory>;
+  updatePaymentStatus(id: number, status: string, paymentMethod?: string, paymentDate?: Date, notes?: string): Promise<PaymentHistory>;
+  generateMonthlyBill(agencyId: number, period: string): Promise<PaymentHistory>;
+  
+  // Tax configuration operations
+  getTaxConfig(): Promise<TaxConfig | undefined>;
+  updateTaxConfig(percentage: number): Promise<TaxConfig>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -523,6 +539,118 @@ export class DatabaseStorage implements IStorage {
       sentMessages: stats.sentMessages,
       failedMessages: stats.failedMessages,
     };
+  }
+
+  // Payment history operations
+  async getPaymentHistory(agencyId: number): Promise<PaymentHistory[]> {
+    return await db
+      .select()
+      .from(paymentHistory)
+      .where(eq(paymentHistory.agencyId, agencyId))
+      .orderBy(desc(paymentHistory.createdAt));
+  }
+
+  async createPaymentRecord(payment: InsertPaymentHistory): Promise<PaymentHistory> {
+    const [newPayment] = await db.insert(paymentHistory).values(payment).returning();
+    return newPayment;
+  }
+
+  async updatePaymentStatus(
+    id: number, 
+    status: string, 
+    paymentMethod?: string, 
+    paymentDate?: Date, 
+    notes?: string
+  ): Promise<PaymentHistory> {
+    const updateData: any = { 
+      paymentStatus: status as any, 
+      updatedAt: new Date() 
+    };
+    
+    if (paymentMethod) updateData.paymentMethod = paymentMethod as any;
+    if (paymentDate) updateData.paymentDate = paymentDate;
+    if (notes) updateData.notes = notes;
+
+    const [updatedPayment] = await db
+      .update(paymentHistory)
+      .set(updateData)
+      .where(eq(paymentHistory.id, id))
+      .returning();
+    return updatedPayment;
+  }
+
+  async generateMonthlyBill(agencyId: number, period: string): Promise<PaymentHistory> {
+    // Get agency details and current bus count
+    const agency = await this.getAgency(agencyId);
+    if (!agency) throw new Error("Agency not found");
+
+    const [busCount] = await db
+      .select({ count: count() })
+      .from(buses)
+      .where(eq(buses.agencyId, agencyId));
+
+    const totalBuses = busCount?.count || 0;
+    const chargePerBus = agency.renewalChargePerBus || 5000;
+    const subtotal = totalBuses * chargePerBus;
+
+    // Get current tax rate
+    const taxConfig = await this.getTaxConfig();
+    const taxPercentage = taxConfig?.percentage || 18;
+    const taxAmount = Math.round((subtotal * taxPercentage) / 100);
+    const totalAmount = subtotal + taxAmount;
+
+    // Generate unique bill ID
+    const billId = `BILL-${agencyId}-${Date.now()}`;
+    
+    // Calculate due date (30 days from now)
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 30);
+
+    const paymentRecord: InsertPaymentHistory = {
+      agencyId,
+      billId,
+      billingPeriod: period,
+      totalBuses,
+      chargePerBus,
+      subtotal,
+      taxPercentage,
+      taxAmount,
+      totalAmount,
+      paymentStatus: "pending",
+      dueDate,
+    };
+
+    return await this.createPaymentRecord(paymentRecord);
+  }
+
+  // Tax configuration operations
+  async getTaxConfig(): Promise<TaxConfig | undefined> {
+    const [config] = await db
+      .select()
+      .from(taxConfig)
+      .where(eq(taxConfig.isActive, true))
+      .limit(1);
+    return config;
+  }
+
+  async updateTaxConfig(percentage: number): Promise<TaxConfig> {
+    // First, deactivate all existing configs
+    await db
+      .update(taxConfig)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(taxConfig.isActive, true));
+
+    // Create new active config
+    const [newConfig] = await db
+      .insert(taxConfig)
+      .values({
+        name: "GST",
+        percentage,
+        isActive: true,
+      })
+      .returning();
+
+    return newConfig;
   }
 }
 
