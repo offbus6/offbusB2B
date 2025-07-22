@@ -431,7 +431,7 @@ export default function AgencyDetails() {
             Back to Agencies
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-[var(--airbnb-dark)]">Agency Management</h1>
+            <h1 className="text-2xl font-bold text-[var(--airbnb-dark)]">{formData.name || 'Travel Agency'}</h1>
             <p className="text-[var(--airbnb-gray)] mt-1">
               Manage agency information, buses, users and billing
             </p>
@@ -440,10 +440,7 @@ export default function AgencyDetails() {
         <Button 
           onClick={handleSave}
           disabled={updateAgencyMutation.isPending || !hasUnsavedChanges}
-          className={`${hasUnsavedChanges 
-            ? 'bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white' 
-            : 'bg-gray-400 text-gray-600 cursor-not-allowed'
-          }`}
+          className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white disabled:bg-gray-400 disabled:text-gray-600 disabled:cursor-not-allowed"
         >
           <Save className="w-4 h-4 mr-2" />
           {hasUnsavedChanges ? 'Save Changes' : 'No Changes'}
