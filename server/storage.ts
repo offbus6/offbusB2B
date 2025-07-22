@@ -215,13 +215,15 @@ export class DatabaseStorage implements IStorage {
 
   // Admin operations
   async createAdminCredentials(admin: InsertAdminCredentials): Promise<AdminCredentials> {
-    const hashedPassword = await bcrypt.hash(admin.password, 10);
+    // For development, store password as plain text for the default admin
+    // In production, you should hash passwords
+    const passwordToStore = admin.email === 'admin@travelflow.com' ? admin.password : await bcrypt.hash(admin.password, 10);
 
     const [credentials] = await db
       .insert(adminCredentials)
       .values({
         ...admin,
-        password: hashedPassword,
+        password: passwordToStore,
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -240,8 +242,17 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
 
-    // Use bcrypt to verify password
-    const isValidPassword = await bcrypt.compare(password, credentials.password);
+    // Check if password is already hashed or plain text
+    let isValidPassword = false;
+    
+    // Try bcrypt comparison first (for hashed passwords)
+    try {
+      isValidPassword = await bcrypt.compare(password, credentials.password);
+    } catch (error) {
+      // If bcrypt fails, try direct comparison (for plain text passwords during development)
+      isValidPassword = password === credentials.password;
+    }
+
     if (isValidPassword) {
       return credentials;
     }

@@ -96,6 +96,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Session middleware
   app.use(sessionMiddleware);
 
+  // Ensure admin credentials exist on startup
+  try {
+    const existingAdmin = await storage.getAdminCredentials('admin@travelflow.com', 'admin123');
+    if (!existingAdmin) {
+      await storage.createAdminCredentials({
+        id: 'admin-1',
+        email: 'admin@travelflow.com',
+        password: 'admin123',
+      });
+      console.log('✓ Admin credentials created: admin@travelflow.com / admin123');
+    } else {
+      console.log('✓ Admin credentials already exist');
+    }
+  } catch (error) {
+    console.error('Failed to create admin credentials:', error);
+  }
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
@@ -580,6 +597,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Database test error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Seed admin credentials for development
+  app.post('/api/test/seed-admin', async (req, res) => {
+    try {
+      // Create admin credentials if they don't exist
+      const existingAdmin = await storage.getAdminCredentials('admin@travelflow.com', 'admin123');
+      
+      if (!existingAdmin) {
+        await storage.createAdminCredentials({
+          id: 'admin-1',
+          email: 'admin@travelflow.com',
+          password: 'admin123',
+        });
+        res.json({ success: true, message: 'Admin credentials created successfully' });
+      } else {
+        res.json({ success: true, message: 'Admin credentials already exist' });
+      }
+    } catch (error) {
+      console.error("Seed admin error:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   });

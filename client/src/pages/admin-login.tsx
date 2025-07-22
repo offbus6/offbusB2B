@@ -141,17 +141,17 @@ export default function AdminLogin() {
                 </form>
               </Form>
               
-              <div className="mt-4 text-center">
-                <p className="text-sm text-gray-600">
-                  Need to create an admin account?{" "}
-                  <Button 
-                    variant="link" 
-                    onClick={() => navigate("/admin-signup")}
-                    className="text-red-600 hover:text-red-700 p-0 h-auto"
-                  >
-                    Sign up here
-                  </Button>
-                </p>
+              <div className="mt-6 p-4 bg-red-50 rounded-xl border border-red-200">
+                <p className="text-xs text-red-700 mb-2 font-semibold">Admin Credentials:</p>
+                <div className="space-y-1">
+                  <p className="text-xs text-red-600">
+                    Email: <span className="font-mono bg-red-100 px-2 py-1 rounded text-red-800">admin@travelflow.com</span>
+                  </p>
+                  <p className="text-xs text-red-600">
+                    Password: <span className="font-mono bg-red-100 px-2 py-1 rounded text-red-800">admin123</span>
+                  </p>
+                </div>
+                <p className="text-xs text-red-500 mt-2 italic">Use these credentials for admin access</p>
               </div>
             </CardContent>
           </Card>
