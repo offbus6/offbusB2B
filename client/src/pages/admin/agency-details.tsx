@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -276,8 +275,11 @@ export default function AgencyDetails() {
     },
   });
 
-  const handleInputChange = (field: string, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      return newData;
+    });
     setHasUnsavedChanges(true);
   };
 
@@ -297,9 +299,22 @@ export default function AgencyDetails() {
   };
 
   const handleSave = () => {
-    if (formData) {
-      updateAgencyMutation.mutate(formData);
+    if (!hasUnsavedChanges) return;
+
+    const updates = { ...formData };
+    // Remove computed and non-updatable fields
+    delete updates.id;
+    delete updates.createdAt;
+    delete updates.updatedAt;
+    delete updates.totalBuses;
+    delete updates.totalRenewalCharge;
+
+    // Ensure numeric fields are properly typed
+    if (updates.renewalChargePerBus) {
+      updates.renewalChargePerBus = Number(updates.renewalChargePerBus);
     }
+
+    updateAgencyMutation.mutate(updates);
   };
 
   const getStatusBadge = (status: string) => {
@@ -884,7 +899,7 @@ export default function AgencyDetails() {
               <CardContent className="p-0">
                 {usersLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--airbnb-pink)]"></div>
+                    <div className="animate-spin rounded-full h-8w-8 border-b-2 border-[var(--airbnb-pink)]"></div>
                   </div>
                 ) : !userDetails || userDetails.length === 0 ? (
                   <div className="text-center py-8">
@@ -1074,7 +1089,7 @@ export default function AgencyDetails() {
                 <p><strong>Period:</strong> {selectedPayment.billingPeriod}</p>
                 <p><strong>Amount:</strong> ₹{selectedPayment.totalAmount}</p>
               </div>
-              
+
               <div className="space-y-4">
                 <div>
                   <Label>Payment Method</Label>
@@ -1094,7 +1109,7 @@ export default function AgencyDetails() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
                   <Label>Notes (Optional)</Label>
                   <Textarea
