@@ -93,6 +93,7 @@ function Router() {
                   <Route path="/admin/manage-agencies" component={ManageAgencies} />
                   <Route path="/admin/agencies/:id" component={AgencyDetails} />
                   <Route path="/admin/whatsapp-config" component={WhatsappConfig} />
+                  <Route path="/admin/profile" component={AdminProfile} />
                 </>
               ) : (
                 <>
