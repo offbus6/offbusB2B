@@ -10,7 +10,8 @@ import {
   Database,
   User,
   MessageSquare,
-  CreditCard
+  CreditCard,
+  Users
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -34,6 +35,11 @@ export default function Sidebar() {
       href: "/admin/manage-agencies", 
       icon: Building, 
       label: "Manage Agencies" 
+    },
+    { 
+      href: "/admin/user-data", 
+      icon: Users, 
+      label: "User Data" 
     },
     { 
       href: "/admin/accounts", 
