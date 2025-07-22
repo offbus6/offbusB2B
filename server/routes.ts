@@ -173,9 +173,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, password } = req.body;
       const adminId = req.user.id;
 
+      console.log('Admin profile update request:', { adminId, email, hasPassword: !!password });
+
       // Verify user is admin
       if (req.user.role !== 'super_admin') {
         return res.status(403).json({ message: 'Forbidden' });
+      }
+
+      // Validate input
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
       }
 
       // Update admin credentials
@@ -184,13 +191,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password,
       });
 
+      console.log('Admin profile updated successfully:', { adminId, email: updatedAdmin.email });
+
+      // Update session with new email
+      req.session.user.email = updatedAdmin.email;
+
       res.json({ 
         message: 'Profile updated successfully',
         email: updatedAdmin.email 
       });
     } catch (error) {
       console.error("Admin profile update error:", error);
-      res.status(500).json({ message: "Profile update failed" });
+      res.status(500).json({ message: error.message || "Profile update failed" });
     }
   });
 

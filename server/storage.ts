@@ -35,6 +35,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql, ne } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 export interface IStorage {
   // User operations
@@ -42,12 +43,12 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User>;
-  
+
   // Admin operations
   createAdminCredentials(admin: InsertAdminCredentials): Promise<AdminCredentials>;
   getAdminCredentials(email: string, password: string): Promise<AdminCredentials | undefined>;
   updateAdminCredentials(id: string, updates: Partial<InsertAdminCredentials>): Promise<AdminCredentials>;
-  
+
   // Agency operations
   createAgency(agency: InsertAgency): Promise<Agency>;
   getAgency(id: number): Promise<Agency | undefined>;
@@ -60,29 +61,29 @@ export interface IStorage {
   updateAgencyStatus(id: number, status: string): Promise<Agency>;
   updateAgency(id: number, updates: Partial<InsertAgency>): Promise<Agency>;
   deleteAgency(id: number): Promise<void>;
-  
+
   // Bus operations
   createBus(bus: InsertBus): Promise<Bus>;
   getBus(id: number): Promise<Bus | undefined>;
   getBusesByAgency(agencyId: number): Promise<Bus[]>;
   updateBus(id: number, updates: Partial<InsertBus>): Promise<Bus>;
   deleteBus(id: number): Promise<void>;
-  
+
   // Traveler data operations
   createTravelerData(data: InsertTravelerData[]): Promise<TravelerData[]>;
   getTravelerData(id: number): Promise<TravelerData | undefined>;
   getTravelerDataByAgency(agencyId: number): Promise<TravelerData[]>;
   getTravelerDataByBus(busId: number): Promise<TravelerData[]>;
   updateTravelerData(id: number, updates: Partial<InsertTravelerData>): Promise<TravelerData>;
-  
+
   // WhatsApp opt-out operations
   optOutTravelerFromWhatsapp(phoneNumber: string): Promise<TravelerData[]>;
   getTravelerByPhone(phoneNumber: string): Promise<TravelerData | undefined>;
-  
+
   // Upload history operations
   createUploadHistory(history: InsertUploadHistory): Promise<UploadHistory>;
   getUploadHistoryByAgency(agencyId: number): Promise<UploadHistory[]>;
-  
+
   // Stats operations
   getSystemStats(): Promise<{
     totalAgencies: number;
@@ -101,16 +102,16 @@ export interface IStorage {
   getWhatsappConfig(): Promise<WhatsappConfig | undefined>;
   createWhatsappConfig(config: InsertWhatsappConfig): Promise<WhatsappConfig>;
   updateWhatsappConfig(id: number, config: Partial<InsertWhatsappConfig>): Promise<WhatsappConfig>;
-  
+
   getWhatsappTemplates(): Promise<WhatsappTemplate[]>;
   createWhatsappTemplate(template: InsertWhatsappTemplate): Promise<WhatsappTemplate>;
   updateWhatsappTemplate(id: number, template: Partial<InsertWhatsappTemplate>): Promise<WhatsappTemplate>;
   deleteWhatsappTemplate(id: number): Promise<void>;
-  
+
   getWhatsappQueue(): Promise<WhatsappQueue[]>;
   createWhatsappQueue(queue: InsertWhatsappQueue): Promise<WhatsappQueue>;
   updateWhatsappQueueStatus(id: number, status: string): Promise<WhatsappQueue>;
-  
+
   getWhatsappQueueStats(): Promise<{
     totalMessages: number;
     pendingMessages: number;
@@ -123,7 +124,7 @@ export interface IStorage {
   createPaymentRecord(payment: InsertPaymentHistory): Promise<PaymentHistory>;
   updatePaymentStatus(id: number, status: string, paymentMethod?: string, paymentDate?: Date, notes?: string): Promise<PaymentHistory>;
   generateMonthlyBill(agencyId: number, period: string): Promise<PaymentHistory>;
-  
+
   // Tax configuration operations
   getTaxConfig(): Promise<TaxConfig | undefined>;
   updateTaxConfig(percentage: number): Promise<TaxConfig>;
@@ -214,9 +215,16 @@ export class DatabaseStorage implements IStorage {
 
   // Admin operations
   async createAdminCredentials(admin: InsertAdminCredentials): Promise<AdminCredentials> {
+    const hashedPassword = await bcrypt.hash(admin.password, 10);
+
     const [credentials] = await db
       .insert(adminCredentials)
-      .values(admin)
+      .values({
+        ...admin,
+        password: hashedPassword,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
       .returning();
     return credentials;
   }
@@ -225,8 +233,20 @@ export class DatabaseStorage implements IStorage {
     const [credentials] = await db
       .select()
       .from(adminCredentials)
-      .where(and(eq(adminCredentials.email, email), eq(adminCredentials.password, password)));
-    return credentials;
+      .where(eq(adminCredentials.email, email))
+      .limit(1);
+
+    if (!credentials) {
+      return undefined;
+    }
+
+    // Use bcrypt to verify password
+    const isValidPassword = await bcrypt.compare(password, credentials.password);
+    if (isValidPassword) {
+      return credentials;
+    }
+
+    return undefined;
   }
 
   async updateAdminCredentials(id: string, updates: Partial<InsertAdminCredentials>): Promise<AdminCredentials> {
@@ -566,7 +586,7 @@ export class DatabaseStorage implements IStorage {
       paymentStatus: status as any, 
       updatedAt: new Date() 
     };
-    
+
     if (paymentMethod) updateData.paymentMethod = paymentMethod as any;
     if (paymentDate) updateData.paymentDate = paymentDate;
     if (notes) updateData.notes = notes;
@@ -601,7 +621,7 @@ export class DatabaseStorage implements IStorage {
 
     // Generate unique bill ID
     const billId = `BILL-${agencyId}-${Date.now()}`;
-    
+
     // Calculate due date (30 days from now)
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 30);
