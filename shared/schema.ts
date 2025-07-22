@@ -51,6 +51,7 @@ export const agencies = pgTable("agencies", {
   logoUrl: varchar("logo_url"),
   username: varchar("username").unique(),
   password: varchar("password"),
+  renewalChargePerBus: integer("renewal_charge_per_bus").default(5000),
   status: varchar("status", { enum: ["pending", "approved", "rejected", "on_hold"] })
     .notNull()
     .default("pending"),

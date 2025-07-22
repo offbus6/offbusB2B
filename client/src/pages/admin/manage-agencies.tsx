@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useEffect } from "react";
+import { Link } from "wouter";
 
 export default function ManageAgencies() {
   const { toast } = useToast();
@@ -230,13 +231,15 @@ export default function ManageAgencies() {
                       </div>
                       <div className="flex items-center gap-2">
                         {getStatusBadge(agency.status)}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-dark)]"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
+                        <Link href={`/admin/agencies/${agency.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-dark)]"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </Link>
                         <Button
                           variant="ghost"
                           size="sm"

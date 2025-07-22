@@ -680,6 +680,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/admin/agencies/:id', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const agency = await storage.getAgencyWithDetails(parseInt(id));
+      if (!agency) {
+        return res.status(404).json({ message: "Agency not found" });
+      }
+      res.json(agency);
+    } catch (error) {
+      console.error("Error fetching agency details:", error);
+      res.status(500).json({ message: "Failed to fetch agency details" });
+    }
+  });
+
+  app.patch('/api/admin/agencies/:id/details', adminAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const agency = await storage.updateAgency(parseInt(id), updates);
+      res.json(agency);
+    } catch (error) {
+      console.error("Error updating agency details:", error);
+      res.status(500).json({ message: "Failed to update agency details" });
+    }
+  });
+
   app.delete('/api/admin/agencies/:id', adminAuth, async (req: any, res) => {
     try {
       const { id } = req.params;

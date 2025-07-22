@@ -8,7 +8,9 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AgencyApproval from "@/pages/admin/agency-approval";
-import ManageAgencies from "@/pages/admin/manage-agencies";
+import ManageAgencies from "./pages/admin/manage-agencies";
+import AgencyDetails from "./pages/admin/agency-details";
+import WhatsappConfig from "./pages/admin/whatsapp-config";
 import AdminProfile from "@/pages/admin/profile";
 import WhatsappConfig from "@/pages/admin/whatsapp-config";
 import AdminSignup from "@/pages/admin-signup";
@@ -90,7 +92,7 @@ function Router() {
                   <Route path="/admin/dashboard" component={AdminDashboard} />
                   <Route path="/admin/agency-approval" component={AgencyApproval} />
                   <Route path="/admin/manage-agencies" component={ManageAgencies} />
-                  <Route path="/admin/profile" component={AdminProfile} />
+                  <Route path="/admin/agencies/:id" component={AgencyDetails} />
                   <Route path="/admin/whatsapp-config" component={WhatsappConfig} />
                 </>
               ) : (

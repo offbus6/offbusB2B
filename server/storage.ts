@@ -161,6 +161,24 @@ export class DatabaseStorage implements IStorage {
     return agency;
   }
 
+  async getAgencyWithDetails(id: number): Promise<any> {
+    const [agency] = await db.select().from(agencies).where(eq(agencies.id, id));
+    if (!agency) return undefined;
+
+    const busCount = await db
+      .select({ count: count() })
+      .from(buses)
+      .where(eq(buses.agencyId, id));
+
+    const totalRenewalCharge = (busCount[0]?.count || 0) * (agency.renewalChargePerBus || 5000);
+
+    return {
+      ...agency,
+      totalBuses: busCount[0]?.count || 0,
+      totalRenewalCharge,
+    };
+  }
+
   async getAgencyByUserId(userId: string): Promise<Agency | undefined> {
     const [agency] = await db.select().from(agencies).where(eq(agencies.userId, userId));
     return agency;
