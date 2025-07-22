@@ -814,10 +814,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (let i = 1; i <= 3; i++) {
           testBuses.push({
             agencyId: agency.id,
-            registrationNumber: `${agency.name.split(' ')[0].toUpperCase()}-${1000 + (index * 10) + i}`,
-            routeNumber: `Route-${index + 1}-${i}`,
+            number: `${agency.name.split(' ')[0].toUpperCase()}-${1000 + (index * 10) + i}`,
+            name: `Route-${index + 1}-${i}`,
+            fromLocation: ['Mumbai', 'Delhi', 'Bangalore'][index % 3],
+            toLocation: ['Delhi', 'Mumbai', 'Pune'][index % 3],
+            departureTime: ['09:00 AM', '02:00 PM', '08:00 PM'][i % 3],
+            arrivalTime: ['05:00 PM', '10:00 PM', '06:00 AM'][i % 3],
+            busType: ['AC Seater', 'AC Sleeper', 'Seater'][i % 3],
             capacity: 40 + (i * 5),
-            vehicleType: i % 2 === 0 ? 'AC' : 'Non-AC',
+            fare: `₹${500 + (i * 100)}`,
             isActive: true,
           });
         }
@@ -1027,13 +1032,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let i = 1; i <= count; i++) {
         testBuses.push({
           agencyId,
-          registrationNumber: `TEST${agencyId}-${Date.now()}-${i}`,
-          routeNumber: `Route-${i}`,
+          number: `TEST${agencyId}-${Date.now()}-${i}`,
+          name: `Test Route ${i}`,
+          fromLocation: 'Mumbai',
+          toLocation: 'Delhi',
+          departureTime: '09:00 AM',
+          arrivalTime: '05:00 PM',
+          busType: 'AC Seater',
           capacity: 40 + (i * 5),
-          vehicleType: 'AC',
+          fare: '₹500',
           isActive: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
         });
       }
 
@@ -1854,11 +1862,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           whatsappStatus: travelerData.whatsappStatus,
           busId: travelerData.busId,
           agencyId: travelerData.agencyId,
-          // Bus details
-          busNumber: buses.registrationNumber,
-          busName: buses.routeNumber,
-          busType: buses.vehicleType,
+          // Bus details - matching actual schema
+          busNumber: buses.number,
+          busName: buses.name,
+          fromLocation: buses.fromLocation,
+          toLocation: buses.toLocation,
+          departureTime: buses.departureTime,
+          arrivalTime: buses.arrivalTime,
+          busType: buses.busType,
           capacity: buses.capacity,
+          fare: buses.fare,
           // Agency details
           agencyName: agencies.name,
           agencyCity: agencies.city,
@@ -1870,17 +1883,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .innerJoin(agencies, eq(travelerData.agencyId, agencies.id))
         .orderBy(desc(travelerData.createdAt));
 
-      // Add default values for missing fields
-      const processedData = userData.map(user => ({
-        ...user,
-        fromLocation: 'Mumbai',
-        toLocation: 'Delhi',
-        departureTime: '09:00 AM',
-        arrivalTime: '05:00 PM',
-        fare: '₹500'
-      }));
-
-      res.json(processedData);
+      res.json(userData);
     } catch (error) {
       console.error("Error fetching user data:", error);
       res.status(500).json({ message: "Failed to fetch user data" });
