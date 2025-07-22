@@ -24,8 +24,8 @@ const sessionStore = new Map<string, any>();
 import { insertAgencySchema, insertBusSchema, insertTravelerDataSchema, adminCredentials } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
-import { agencies, buses } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { agencies, buses, travelerData } from "@shared/schema";
+import { eq, sql, desc } from "drizzle-orm";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -894,20 +894,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db.insert(paymentHistory).values(payment).onConflictDoNothing();
       }
 
-      // Add sample traveler data
-      const allBuses = await db.select().from(buses).limit(9);
+      // Add comprehensive sample traveler data
+      const allBuses = await db.select().from(buses);
       const sampleTravelers = [];
       
+      const travelerNames = [
+        'Rahul Kumar', 'Priya Sharma', 'Amit Singh', 'Sunita Patel', 'Vikas Gupta',
+        'Neha Reddy', 'Rajesh Yadav', 'Kavita Jain', 'Suresh Mehta', 'Pooja Agarwal',
+        'Manish Verma', 'Rekha Saxena', 'Deepak Tiwari', 'Sita Devi', 'Prakash Joshi',
+        'Geeta Rani', 'Ravi Chandra', 'Meera Kumari', 'Ashok Kumar', 'Vandana Singh'
+      ];
+      
       allBuses.forEach((bus, busIndex) => {
-        for (let i = 1; i <= 5; i++) {
+        const travelerCount = Math.min(10 + busIndex, travelerNames.length);
+        for (let i = 0; i < travelerCount; i++) {
+          const baseDate = new Date();
+          const randomDays = Math.floor(Math.random() * 30) + 1; // Random date in next 30 days
+          const travelDate = new Date(baseDate.getTime() + (randomDays * 24 * 60 * 60 * 1000));
+          
           sampleTravelers.push({
             busId: bus.id,
             agencyId: bus.agencyId,
-            travelerName: `Traveler ${busIndex + 1}-${i}`,
-            phone: `+91-987654${String(busIndex).padStart(2, '0')}${String(i).padStart(2, '0')}`,
-            travelDate: new Date(Date.now() + (busIndex * 86400000) + (i * 3600000)), // Spread over different dates
-            couponCode: `SAVE${(busIndex + 1) * 10 + i}`,
-            whatsappStatus: ['pending', 'sent', 'delivered'][i % 3],
+            travelerName: travelerNames[i],
+            phone: `+91-${9000000000 + (busIndex * 1000) + i}`,
+            travelDate,
+            couponCode: `SAVE${(busIndex + 1) * 100 + (i + 1)}`,
+            whatsappStatus: ['pending', 'sent', 'failed'][i % 3],
+            createdAt: new Date(),
+            updatedAt: new Date(),
           });
         }
       });
@@ -1747,16 +1761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const agencyId = parseInt(req.params.id);
 
-      const agencyBuses = await db.select({
-        id: buses.id,
-        registrationNumber: buses.registrationNumber,
-        routeNumber: buses.routeNumber,
-        capacity: buses.capacity,
-        vehicleType: buses.vehicleType,
-        isActive: buses.isActive,
-        createdAt: buses.createdAt,
-        updatedAt: buses.updatedAt
-      })
+      const agencyBuses = await db.select()
         .from(buses)
         .where(eq(buses.agencyId, agencyId))
         .orderBy(buses.createdAt);
@@ -1850,15 +1855,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           busId: travelerData.busId,
           agencyId: travelerData.agencyId,
           // Bus details
-          busNumber: buses.number,
-          busName: buses.name,
-          fromLocation: buses.fromLocation,
-          toLocation: buses.toLocation,
-          departureTime: buses.departureTime,
-          arrivalTime: buses.arrivalTime,
-          busType: buses.busType,
+          busNumber: buses.registrationNumber,
+          busName: buses.routeNumber,
+          fromLocation: sql<string>`'From Location'`, // Placeholder since buses table doesn't have these fields
+          toLocation: sql<string>`'To Location'`, // Placeholder since buses table doesn't have these fields
+          departureTime: sql<string>`'09:00 AM'`, // Placeholder since buses table doesn't have these fields
+          arrivalTime: sql<string>`'05:00 PM'`, // Placeholder since buses table doesn't have these fields
+          busType: buses.vehicleType,
           capacity: buses.capacity,
-          fare: buses.fare,
+          fare: sql<string>`'₹500'`, // Placeholder since buses table doesn't have fare field
           // Agency details
           agencyName: agencies.name,
           agencyCity: agencies.city,

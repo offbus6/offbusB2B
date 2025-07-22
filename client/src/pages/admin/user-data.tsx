@@ -277,20 +277,20 @@ export default function AdminUserData() {
                       <div className="text-sm text-[var(--airbnb-dark)]">
                         <div className="flex items-center">
                           <MapPin className="w-3 h-3 mr-1 text-[var(--airbnb-gray)]" />
-                          {user.fromLocation} → {user.toLocation}
+                          {user.fromLocation || 'Not specified'} → {user.toLocation || 'Not specified'}
                         </div>
                         <div className="text-xs text-[var(--airbnb-gray)] mt-1">
-                          {user.departureTime} - {user.arrivalTime}
+                          {user.departureTime || 'N/A'} - {user.arrivalTime || 'N/A'}
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-[var(--airbnb-dark)]">
-                          {user.busNumber}
+                          {user.busNumber || user.busName || 'N/A'}
                         </div>
                         <div className="text-xs text-[var(--airbnb-gray)]">
-                          {user.busType} • {user.capacity} seats
+                          {user.busType || 'N/A'} • {user.capacity || 0} seats
                         </div>
                       </div>
                     </td>
