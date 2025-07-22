@@ -53,30 +53,38 @@ const sessionMiddleware = session({
 
 // Custom auth middleware - check session ID
 const isAuthenticated = (req: any, res: any, next: any) => {
-  console.log('Admin auth check - session:', req.session);
-  console.log('Admin auth check - user:', req.session?.user);
+  console.log('Auth check - session exists:', !!req.session);
+  console.log('Auth check - session user:', req.session?.user?.email);
 
   // Check if user is stored in session (admin login)
   if (req.session?.user) {
     req.user = req.session.user;
+    console.log('Auth successful - session user found');
     next();
-  } else {
-    // Check if session exists in our store (regular user login)
-    const sessionId = req.sessionID;
-    const sessionData = sessionStore.get(sessionId);
-
-    if (sessionData && sessionData.user) {
-      req.user = sessionData.user;
-      next();
-    } else if (currentUser) {
-      // Fallback to global user (for immediate access)
-      req.user = currentUser;
-      next();
-    } else {
-      console.log('Authentication failed - no valid session');
-      res.status(401).json({ message: "Admin authentication required" });
-    }
+    return;
   }
+
+  // Check if session exists in our store (regular user login)
+  const sessionId = req.sessionID;
+  const sessionData = sessionStore.get(sessionId);
+
+  if (sessionData && sessionData.user) {
+    req.user = sessionData.user;
+    console.log('Auth successful - session store user found');
+    next();
+    return;
+  }
+
+  // Check global user as fallback (but this should be temporary)
+  if (currentUser) {
+    req.user = currentUser;
+    console.log('Auth successful - global user fallback');
+    next();
+    return;
+  }
+
+  console.log('Authentication failed - no valid session found');
+  res.status(401).json({ message: "Authentication required" });
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -255,29 +263,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/auth/logout', (req: any, res) => {
+  // Logout handler function
+  const handleLogout = (req: any, res: any) => {
+    console.log('Logout request received');
+    
     // Clear current user and session
     currentUser = null;
 
     // Clear from session store
     const sessionId = req.sessionID;
-    sessionStore.delete(sessionId);
+    if (sessionStore.has(sessionId)) {
+      sessionStore.delete(sessionId);
+    }
 
     // Clear session data
-    req.session.user = null;
-
-    // Destroy the session completely
-    req.session.destroy((err: any) => {
-      if (err) {
-        console.error('Session destruction error:', err);
-        return res.status(500).json({ message: 'Logout failed' });
-      }
-
-      // Clear the session cookie
-      res.clearCookie('connect.sid');
+    if (req.session) {
+      req.session.user = null;
+      
+      // Destroy the session completely
+      req.session.destroy((err: any) => {
+        if (err) {
+          console.error('Session destruction error:', err);
+          // Even if session destruction fails, clear the cookie and respond
+        }
+        
+        // Clear all session-related cookies
+        res.clearCookie('connect.sid', {
+          path: '/',
+          httpOnly: false,
+          secure: false,
+          sameSite: 'lax'
+        });
+        
+        console.log('Logout successful - session cleared');
+        res.json({ message: 'Logged out successfully' });
+      });
+    } else {
+      // No session to destroy, just clear cookies
+      res.clearCookie('connect.sid', {
+        path: '/',
+        httpOnly: false,
+        secure: false,
+        sameSite: 'lax'
+      });
+      
+      console.log('Logout successful - no session to clear');
       res.json({ message: 'Logged out successfully' });
-    });
-  });
+    }
+  };
+
+  // Support both POST and GET for logout
+  app.post('/api/auth/logout', handleLogout);
+  app.get('/api/auth/logout', handleLogout);
 
   // Stats endpoints
   app.get('/api/stats/system', isAuthenticated, async (req: any, res) => {

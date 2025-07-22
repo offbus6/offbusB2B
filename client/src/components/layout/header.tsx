@@ -21,30 +21,26 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/auth/logout", {
+      const response = await fetch("/api/auth/logout", { 
         method: "POST",
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
       });
+      if (!response.ok) throw new Error("Logout failed");
+      return response.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Logged out successfully",
-        description: "You have been logged out.",
-      });
-      
-      // Clear all cached data
+      // Clear all queries from cache
       queryClient.clear();
-      
-      // Navigate to home and force reload
-      navigate("/");
-      window.location.reload();
+      // Force a hard refresh to clear any remaining state
+      window.location.href = "/";
     },
-    onError: (error: any) => {
-      toast({
-        title: "Logout failed",
-        description: error.message || "An error occurred during logout",
-        variant: "destructive",
-      });
-    },
+    onError: (error) => {
+      console.error("Logout error:", error);
+      // Even if logout fails on backend, clear frontend state
+      queryClient.clear();
+      window.location.href = "/";
+    }
   });
 
   const handleLogout = () => {
@@ -82,7 +78,7 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
                 TravelFlow
               </h1>
             </div>
-            
+
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center space-x-8">
               <a href="#features" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
@@ -98,7 +94,7 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
                 Contact
               </a>
             </nav>
-            
+
             {/* Desktop Auth Buttons */}
             <div className="hidden md:flex items-center space-x-4">
               <Button 
@@ -115,7 +111,7 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
                 Sign Up
               </Button>
             </div>
-            
+
             {/* Mobile Menu Button */}
             <button
               className="md:hidden"
@@ -128,7 +124,7 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
               )}
             </button>
           </div>
-          
+
           {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="md:hidden border-t border-[var(--airbnb-border)] py-4">
@@ -178,7 +174,7 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
               TravelFlow
             </h1>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
               <Avatar className="h-8 w-8">
@@ -196,7 +192,7 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
                 </span>
               </div>
             </div>
-            
+
             <Button 
               variant="outline" 
               size="sm"

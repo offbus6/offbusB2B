@@ -2,13 +2,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, CheckCircle, XCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function AgencyPending() {
   const { user } = useAuth();
   const agency = (user as any)?.agency;
+  const queryClient = useQueryClient();
 
-  const handleLogout = () => {
-    window.location.href = "/api/auth/logout";
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', { 
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      // Clear any cached data
+      if (queryClient) {
+        queryClient.clear();
+      }
+
+      // Always redirect, regardless of response status
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Force redirect even if logout fails
+      window.location.href = '/';
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -55,7 +75,7 @@ export default function AgencyPending() {
             <p className="text-[var(--airbnb-gray)] mb-4">
               {getStatusMessage(agency?.status || 'pending')}
             </p>
-            
+
             {agency?.status === 'pending' && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <h4 className="font-semibold text-blue-800 mb-2">Need Faster Approval?</h4>
@@ -72,7 +92,7 @@ export default function AgencyPending() {
                 </div>
               </div>
             )}
-            
+
             {agency && (
               <div className="bg-[var(--airbnb-light)] p-4 rounded-lg text-left">
                 <h3 className="font-semibold text-[var(--airbnb-dark)] mb-2">Agency Details:</h3>
