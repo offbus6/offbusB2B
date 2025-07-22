@@ -15,7 +15,7 @@ import {
 export default function Sidebar() {
   const { user } = useAuth();
   const [location] = useLocation();
-  
+
   const isSuperAdmin = user?.role === 'super_admin';
 
   const superAdminNavItems = [
@@ -83,7 +83,7 @@ export default function Sidebar() {
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.href || (location === "/" && item.href.includes("dashboard"));
-            
+
             return (
               <Link
                 key={item.href}

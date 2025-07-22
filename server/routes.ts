@@ -100,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   try {
     // First check if admin exists in database directly
     const [existingAdmin] = await db.select().from(adminCredentials).where(eq(adminCredentials.email, 'admin@travelflow.com')).limit(1);
-    
+
     if (!existingAdmin) {
       await storage.createAdminCredentials({
         id: 'admin-1',
@@ -354,14 +354,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const userRole = req.user.role;
-      
+
       let notifications = [];
-      
+
       if (userRole === 'super_admin') {
         // Admin notifications: new registrations, payment overdue, etc.
         const pendingAgencies = await storage.getPendingAgencies();
         const overduePayments = await storage.getOverduePayments();
-        
+
         // Add pending agency notifications
         pendingAgencies.forEach((agency: any) => {
           notifications.push({
@@ -374,7 +374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             relatedId: agency.id
           });
         });
-        
+
         // Add overdue payment notifications
         overduePayments.forEach((payment: any) => {
           notifications.push({
@@ -393,7 +393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (agency) {
           const paymentReminders = await storage.getPaymentReminders(agency.id);
           const renewalAlerts = await storage.getRenewalAlerts(agency.id);
-          
+
           // Add payment reminder notifications
           paymentReminders.forEach((reminder: any) => {
             notifications.push({
@@ -406,7 +406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               relatedId: reminder.id
             });
           });
-          
+
           // Add renewal alert notifications
           renewalAlerts.forEach((alert: any) => {
             notifications.push({
@@ -421,10 +421,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Sort by newest first
       notifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
+
       res.json(notifications);
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -702,7 +702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Create admin credentials if they don't exist
       const existingAdmin = await storage.getAdminCredentials('admin@travelflow.com', 'admin123');
-      
+
       if (!existingAdmin) {
         await storage.createAdminCredentials({
           id: 'admin-1',
@@ -914,7 +914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         buses: result 
       });
     } catch (error) {
-      console.error('Error adding test buses:', error);
+      console.error('Error adding test buses:', error:', error);
       res.status(500).json({ message: 'Failed to add test buses' });
     }
   });
@@ -1453,6 +1453,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching upload history:", error);
       res.status(500).json({ message: "Failed to fetch upload history" });
+    }
+  });
+
+  // Agency payment routes
+  app.get('/api/agency/payments', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const agency = await storage.getAgencyByUserId(userId);
+
+      if (!agency) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const payments = await storage.getPaymentHistory(agency.id);
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching agency payments:", error);
+      res.status(500).json({ message: "Failed to fetch agency payments" });
     }
   });
 

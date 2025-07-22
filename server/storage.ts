@@ -594,7 +594,25 @@ export class DatabaseStorage implements IStorage {
   // Payment history operations
   async getPaymentHistory(agencyId: number): Promise<PaymentHistory[]> {
     return await db
-      .select()
+      .select({
+        id: paymentHistory.id,
+        billId: paymentHistory.billId,
+        billingPeriod: paymentHistory.billingPeriod,
+        totalBuses: paymentHistory.totalBuses,
+        chargePerBus: paymentHistory.chargePerBus,
+        subtotal: paymentHistory.subtotal,
+        taxPercentage: paymentHistory.taxPercentage,
+        taxAmount: paymentHistory.taxAmount,
+        totalAmount: paymentHistory.totalAmount,
+        paymentStatus: paymentHistory.paymentStatus,
+        paymentMethod: paymentHistory.paymentMethod,
+        paymentDate: paymentHistory.paymentDate,
+        dueDate: paymentHistory.dueDate,
+        notes: paymentHistory.notes,
+        createdAt: paymentHistory.createdAt,
+        updatedAt: paymentHistory.updatedAt,
+        agencyId: paymentHistory.agencyId,
+      })
       .from(paymentHistory)
       .where(eq(paymentHistory.agencyId, agencyId))
       .orderBy(desc(paymentHistory.createdAt));
