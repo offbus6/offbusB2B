@@ -2,11 +2,19 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation, Link } from "wouter";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Bell } from "lucide-react";
 import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface HeaderProps {
   variant?: 'landing' | 'dashboard' | 'auth';
@@ -18,6 +26,15 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Fetch notifications based on user role
+  const { data: notifications = [] } = useQuery({
+    queryKey: ["/api/notifications"],
+    retry: false,
+    enabled: isAuthenticated,
+  });
+
+  const unreadCount = notifications.filter((n: any) => !n.isRead).length;
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -176,6 +193,58 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
           </div>
 
           <div className="flex items-center space-x-4">
+            {/* Notification Bell */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="relative">
+                  <Bell className="h-5 w-5 text-[var(--airbnb-gray)]" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {notifications.length === 0 ? (
+                  <DropdownMenuItem>
+                    <span className="text-[var(--airbnb-gray)]">No notifications</span>
+                  </DropdownMenuItem>
+                ) : (
+                  notifications.slice(0, 5).map((notification: any) => (
+                    <DropdownMenuItem key={notification.id} className="flex flex-col items-start p-3">
+                      <div className="flex justify-between w-full">
+                        <span className={`text-sm ${!notification.isRead ? 'font-semibold' : ''}`}>
+                          {notification.title}
+                        </span>
+                        {!notification.isRead && (
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        )}
+                      </div>
+                      <span className="text-xs text-[var(--airbnb-gray)] mt-1">
+                        {notification.message}
+                      </span>
+                      <span className="text-xs text-[var(--airbnb-gray)] mt-1">
+                        {new Date(notification.createdAt).toLocaleDateString()}
+                      </span>
+                    </DropdownMenuItem>
+                  ))
+                )}
+                {notifications.length > 5 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <Link href="/notifications" className="text-[var(--airbnb-primary)]">
+                        View all notifications
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <div className="flex items-center space-x-3">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={user?.profileImageUrl || undefined} alt="Profile" />

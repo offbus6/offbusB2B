@@ -128,6 +128,20 @@ export interface IStorage {
   // Tax configuration operations
   getTaxConfig(): Promise<TaxConfig | undefined>;
   updateTaxConfig(percentage: number): Promise<TaxConfig>;
+
+    // Notification-related operations
+  getOverduePayments(): Promise<any[]>;
+  getPaymentReminders(agencyId: number): Promise<any[]>;
+  getRenewalAlerts(agencyId: number): Promise<any[]>;
+
+    // Payment management operations
+  getAllPayments(): Promise<any[]>;
+  getPaymentStats(): Promise<{
+    totalRevenue: number;
+    paidCount: number;
+    pendingCount: number;
+    overdueCount: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -244,7 +258,7 @@ export class DatabaseStorage implements IStorage {
 
     // Check if password is already hashed or plain text
     let isValidPassword = false;
-    
+
     // For the default admin account, use direct comparison
     if (email === 'admin@travelflow.com' && password === 'admin123') {
       isValidPassword = password === credentials.password;
@@ -687,6 +701,146 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return newConfig;
+  }
+
+  async getOverduePayments() {
+    try {
+      const currentDate = new Date();
+      const overduePayments = await db
+        .select({
+          id: paymentHistory.id,
+          agencyId: paymentHistory.agencyId,
+          agencyName: agencies.name,
+          amount: paymentHistory.amount,
+          dueDate: paymentHistory.dueDate,
+          status: paymentHistory.status
+        })
+        .from(paymentHistory)
+        .innerJoin(agencies, eq(paymentHistory.agencyId, agencies.id))
+        .where(
+          and(
+            eq(paymentHistory.paymentStatus, 'pending'),
+            sql`${paymentHistory.dueDate} < ${currentDate.toISOString()}`
+          )
+        );
+
+      return overduePayments;
+    } catch (error) {
+      console.error("Error fetching overdue payments:", error);
+      return [];
+    }
+  }
+
+  async getPaymentReminders(agencyId: number) {
+    try {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 7); // 7 days reminder
+
+      const reminders = await db
+        .select({
+          id: paymentHistory.id,
+          amount: paymentHistory.amount,
+          dueDate: paymentHistory.dueDate,
+          createdAt: paymentHistory.createdAt
+        })
+        .from(paymentHistory)
+        .where(
+          and(
+            eq(paymentHistory.agencyId, agencyId),
+            eq(paymentHistory.paymentStatus, 'pending'),
+            sql`${paymentHistory.dueDate} <= ${futureDate.toISOString()}`
+          )
+        );
+
+      return reminders;
+    } catch (error) {
+      console.error("Error fetching payment reminders:", error);
+      return [];
+    }
+  }
+
+  async getRenewalAlerts(agencyId: number) {
+    try {
+      // For now, return empty array - implement when subscription expiry is tracked
+      return [];
+    } catch (error) {
+      console.error("Error fetching renewal alerts:", error);
+      return [];
+    }
+  }
+
+  async getAllPayments() {
+    try {
+      const allPayments = await db
+        .select({
+          id: paymentHistory.id,
+          agencyId: paymentHistory.agencyId,
+          agencyName: agencies.name,
+          amount: paymentHistory.amount,
+          dueDate: paymentHistory.dueDate,
+          paymentDate: paymentHistory.paymentDate,
+          status: paymentHistory.paymentStatus,
+          paymentMethod: paymentHistory.paymentMethod,
+          invoiceNumber: paymentHistory.billId,
+          notes: paymentHistory.notes,
+          createdAt: paymentHistory.createdAt
+        })
+        .from(paymentHistory)
+        .innerJoin(agencies, eq(paymentHistory.agencyId, agencies.id))
+        .orderBy(paymentHistory.createdAt);
+
+      return allPayments;
+    } catch (error) {
+      console.error("Error fetching all payments:", error);
+      return [];
+    }
+  }
+
+  async getPaymentStats() {
+    try {
+      const [totalRevenue] = await db
+        .select({ 
+          sum: sql<number>`cast(sum(${paymentHistory.amount}) as integer)` 
+        })
+        .from(paymentHistory)
+        .where(eq(paymentHistory.paymentStatus, 'paid'));
+
+      const [paidCount] = await db
+        .select({ count: sql<number>`cast(count(*) as integer)` })
+        .from(paymentHistory)
+        .where(eq(paymentHistory.paymentStatus, 'paid'));
+
+      const [pendingCount] = await db
+        .select({ count: sql<number>`cast(count(*) as integer)` })
+        .from(paymentHistory)
+        .where(eq(paymentHistory.paymentStatus, 'pending'));
+
+      const currentDate = new Date();
+      const [overdueCount] = await db
+        .select({ count: sql<number>`cast(count(*) as integer)` })
+        .from(paymentHistory)
+        .where(
+          and(
+            eq(paymentHistory.paymentStatus, 'pending'),
+            sql`${paymentHistory.dueDate} < ${currentDate.toISOString()}`
+          )
+        );
+
+      return {
+        totalRevenue: Number(totalRevenue?.sum || 0),
+        paidCount: Number(paidCount?.count || 0),
+        pendingCount: Number(pendingCount?.count || 0),
+        overdueCount: Number(overdueCount?.count || 0)
+      };
+    } catch (error) {
+      console.error("Error fetching payment stats:", error);
+      return {
+        totalRevenue: 0,
+        paidCount: 0,
+        pendingCount: 0,
+        overdueCount: 0
+      };
+    }
   }
 }
 

@@ -35,6 +35,11 @@ export default function Sidebar() {
       label: "Manage Agencies" 
     },
     { 
+      href: "/admin/accounts", 
+      icon: Database, 
+      label: "Accounts" 
+    },
+    { 
       href: "/admin/profile", 
       icon: User, 
       label: "Profile" 

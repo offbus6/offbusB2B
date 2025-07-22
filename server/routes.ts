@@ -349,6 +349,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/logout', handleLogout);
   app.get('/api/auth/logout', handleLogout);
 
+  // Notifications endpoints
+  app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.role;
+      
+      let notifications = [];
+      
+      if (userRole === 'super_admin') {
+        // Admin notifications: new registrations, payment overdue, etc.
+        const pendingAgencies = await storage.getPendingAgencies();
+        const overduePayments = await storage.getOverduePayments();
+        
+        // Add pending agency notifications
+        pendingAgencies.forEach((agency: any) => {
+          notifications.push({
+            id: `pending-${agency.id}`,
+            title: 'New Agency Registration',
+            message: `${agency.name} has registered and is awaiting approval`,
+            type: 'agency_registration',
+            isRead: false,
+            createdAt: agency.createdAt,
+            relatedId: agency.id
+          });
+        });
+        
+        // Add overdue payment notifications
+        overduePayments.forEach((payment: any) => {
+          notifications.push({
+            id: `overdue-${payment.id}`,
+            title: 'Payment Overdue',
+            message: `Payment of ₹${payment.amount} from ${payment.agencyName} is overdue`,
+            type: 'payment_overdue',
+            isRead: false,
+            createdAt: payment.dueDate,
+            relatedId: payment.id
+          });
+        });
+      } else {
+        // Agency notifications: payment reminders, renewal alerts, etc.
+        const agency = await storage.getAgencyByUserId(userId);
+        if (agency) {
+          const paymentReminders = await storage.getPaymentReminders(agency.id);
+          const renewalAlerts = await storage.getRenewalAlerts(agency.id);
+          
+          // Add payment reminder notifications
+          paymentReminders.forEach((reminder: any) => {
+            notifications.push({
+              id: `payment-${reminder.id}`,
+              title: 'Payment Reminder',
+              message: `Payment of ₹${reminder.amount} is due on ${new Date(reminder.dueDate).toLocaleDateString()}`,
+              type: 'payment_reminder',
+              isRead: false,
+              createdAt: reminder.createdAt,
+              relatedId: reminder.id
+            });
+          });
+          
+          // Add renewal alert notifications
+          renewalAlerts.forEach((alert: any) => {
+            notifications.push({
+              id: `renewal-${alert.id}`,
+              title: 'Renewal Alert',
+              message: `Your subscription expires on ${new Date(alert.expiryDate).toLocaleDateString()}`,
+              type: 'renewal_alert',
+              isRead: false,
+              createdAt: alert.createdAt,
+              relatedId: alert.id
+            });
+          });
+        }
+      }
+      
+      // Sort by newest first
+      notifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.patch('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
+    try {
+      const notificationId = req.params.id;
+      // In a real implementation, you'd update the notification status in the database
+      res.json({ message: "Notification marked as read" });
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
   // Stats endpoints
   app.get('/api/stats/system', isAuthenticated, async (req: any, res) => {
     try {
@@ -629,7 +723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/test/seed-data', async (req, res) => {
     try {
       const { db } = await import('./db');
-      const { agencies } = await import('@shared/schema');
+      const { agencies, paymentHistory } = await import('@shared/schema');
 
       // Add test agencies
       const testAgencies = [
@@ -667,6 +761,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const agency of testAgencies) {
         await db.insert(agencies).values(agency).onConflictDoNothing();
+      }
+
+      // Add test payment records
+      const existingAgencies = await db.select().from(agencies).limit(3);
+      if (existingAgencies.length > 0) {
+        const testPayments = [
+          {
+            agencyId: existingAgencies[0].id,
+            amount: 15000,
+            dueDate: new Date('2024-12-15').toISOString(),
+            status: 'paid',
+            paymentMethod: 'bank_transfer',
+            paymentDate: new Date('2024-12-10').toISOString(),
+            invoiceNumber: 'INV-2024-001',
+            notes: 'Monthly renewal payment',
+            billingPeriod: '2024-12',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            agencyId: existingAgencies[1].id,
+            amount: 25000,
+            dueDate: new Date('2025-01-15').toISOString(),
+            status: 'pending',
+            invoiceNumber: 'INV-2025-002',
+            notes: 'Monthly renewal payment',
+            billingPeriod: '2025-01',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            agencyId: existingAgencies[2].id,
+            amount: 20000,
+            dueDate: new Date('2024-12-20').toISOString(),
+            status: 'pending',
+            invoiceNumber: 'INV-2024-003',
+            notes: 'Monthly renewal payment - Overdue',
+            billingPeriod: '2024-12',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+        ];
+
+        for (const payment of testPayments) {
+          await db.insert(paymentHistory).values(payment).onConflictDoNothing();
+        }
       }
 
       res.json({ success: true, message: 'Test data seeded successfully' });
@@ -909,6 +1049,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating payment status:", error);
       res.status(500).json({ message: "Failed to update payment status" });
+    }
+  });
+
+  // Payment management routes
+  app.get('/api/admin/payments', adminAuth, async (req: any, res) => {
+    try {
+      const payments = await storage.getAllPayments();
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+      res.status(500).json({ message: "Failed to fetch payments" });
+    }
+  });
+
+  app.get('/api/admin/payment-stats', adminAuth, async (req: any, res) => {
+    try {
+      const stats = await storage.getPaymentStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching payment stats:", error);
+      res.status(500).json({ message: "Failed to fetch payment stats" });
     }
   });
 
