@@ -228,6 +228,29 @@ export default function AgencyDetails() {
     },
   });
 
+  const addTestBusesMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest(`/api/admin/agencies/${agencyId}/add-test-buses`, {
+        method: "POST",
+        body: { count: 3 },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/agencies/${agencyId}`] });
+      toast({
+        title: "Success",
+        description: "Test buses added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add test buses",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -602,11 +625,22 @@ export default function AgencyDetails() {
               <div className="bg-[var(--airbnb-light)] p-4 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Monthly Billing Calculator</span>
+                  {(agency?.totalBuses || 0) === 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => addTestBusesMutation.mutate()}
+                      disabled={addTestBusesMutation.isPending}
+                      className="text-xs"
+                    >
+                      {addTestBusesMutation.isPending ? "Adding..." : "Add Test Buses"}
+                    </Button>
+                  )}
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Total Buses:</span>
-                    <span>{agency.totalBuses}</span>
+                    <span>{agency?.totalBuses || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Rate per Bus:</span>
@@ -614,15 +648,15 @@ export default function AgencyDetails() {
                   </div>
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>₹{(agency.totalBuses || 0) * (formData.renewalChargePerBus || 5000)}</span>
+                    <span>₹{((agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000)).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>GST ({taxPercentage}%):</span>
-                    <span>₹{calculateTaxAmount((agency.totalBuses || 0) * (formData.renewalChargePerBus || 5000), taxPercentage)}</span>
+                    <span>₹{calculateTaxAmount((agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000), taxPercentage).toLocaleString()}</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between font-semibold text-base">
                     <span>Total Payable:</span>
-                    <span>₹{((agency.totalBuses || 0) * (formData.renewalChargePerBus || 5000)) + calculateTaxAmount((agency.totalBuses || 0) * (formData.renewalChargePerBus || 5000), taxPercentage)}</span>
+                    <span>₹{(((agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000)) + calculateTaxAmount((agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000), taxPercentage)).toLocaleString()}</span>
                   </div>
                 </div>
               </div>

@@ -24,6 +24,8 @@ const sessionStore = new Map<string, any>();
 import { insertAgencySchema, insertBusSchema, insertTravelerDataSchema, adminCredentials } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
+import { agencies, buses } from "@shared/schema";
+import { eq, sql } from "drizzle-orm";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -266,7 +268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Logout handler function
   const handleLogout = (req: any, res: any) => {
     console.log('Logout request received');
-    
+
     // Clear current user and session
     currentUser = null;
 
@@ -279,14 +281,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Clear session data
     if (req.session) {
       req.session.user = null;
-      
+
       // Destroy the session completely
       req.session.destroy((err: any) => {
         if (err) {
           console.error('Session destruction error:', err);
           // Even if session destruction fails, clear the cookie and respond
         }
-        
+
         // Clear all session-related cookies
         res.clearCookie('connect.sid', {
           path: '/',
@@ -294,7 +296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           secure: false,
           sameSite: 'lax'
         });
-        
+
         console.log('Logout successful - session cleared');
         res.json({ message: 'Logged out successfully' });
       });
@@ -306,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         secure: false,
         sameSite: 'lax'
       });
-      
+
       console.log('Logout successful - no session to clear');
       res.json({ message: 'Logged out successfully' });
     }
@@ -412,10 +414,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/whatsapp/webhook', async (req: any, res) => {
     try {
       const { phone_number, message, timestamp } = req.body;
-      
+
       // Process the incoming message
       await whatsappService.processIncomingMessage(phone_number, message);
-      
+
       res.status(200).json({ status: 'success' });
     } catch (error) {
       console.error("Error processing WhatsApp webhook:", error);
@@ -427,13 +429,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/whatsapp/opt-out', async (req: any, res) => {
     try {
       const { phoneNumber } = req.body;
-      
+
       if (!phoneNumber) {
         return res.status(400).json({ message: "Phone number is required" });
       }
 
       const optedOutTravelers = await storage.optOutTravelerFromWhatsapp(phoneNumber);
-      
+
       res.json({ 
         message: `Successfully opted out ${optedOutTravelers.length} travelers`,
         count: optedOutTravelers.length 
@@ -449,7 +451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const phoneNumber = req.params.phoneNumber;
       const traveler = await storage.getTravelerByPhone(phoneNumber);
-      
+
       if (!traveler) {
         return res.status(404).json({ message: "Traveler not found" });
       }
@@ -680,17 +682,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/agencies/:id', adminAuth, async (req: any, res) => {
+  // Add test buses for development/testing
+  app.post('/api/admin/agencies/:id/add-test-buses', adminAuth, async (req, res) => {
     try {
-      const { id } = req.params;
-      const agency = await storage.getAgencyWithDetails(parseInt(id));
-      if (!agency) {
-        return res.status(404).json({ message: "Agency not found" });
+      const agencyId = parseInt(req.params.id);
+      const { count = 3 } = req.body;
+
+      // Check if agency exists
+      const agency = await db
+        .select()
+        .from(agencies)
+        .where(eq(agencies.id, agencyId))
+        .limit(1);
+
+      if (agency.length === 0) {
+        return res.status(404).json({ message: 'Agency not found' });
       }
-      res.json(agency);
+
+      // Add test buses
+      const testBuses = [];
+      for (let i = 1; i <= count; i++) {
+        testBuses.push({
+          agencyId,
+          registrationNumber: `TEST${agencyId}-${Date.now()}-${i}`,
+          routeNumber: `Route-${i}`,
+          capacity: 40 + (i * 5),
+          vehicleType: 'AC',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      const result = await db.insert(buses).values(testBuses).returning();
+
+      res.json({ 
+        message: `Added ${count} test buses successfully`,
+        buses: result 
+      });
     } catch (error) {
-      console.error("Error fetching agency details:", error);
-      res.status(500).json({ message: "Failed to fetch agency details" });
+      console.error('Error adding test buses:', error);
+      res.status(500).json({ message: 'Failed to add test buses' });
+    }
+  });
+
+  // Get specific agency details
+  app.get('/api/admin/agencies/:id', adminAuth, async (req, res) => {
+    try {
+      const agencyId = parseInt(req.params.id);
+
+      const agency = await db
+        .select({
+          id: agencies.id,
+          userId: agencies.userId,
+          name: agencies.name,
+          email: agencies.email,
+          contactPerson: agencies.contactPerson,
+          phone: agencies.phone,
+          state: agencies.state,
+          city: agencies.city,
+          website: agencies.website,
+          logoUrl: agencies.logoUrl,
+          renewalChargePerBus: agencies.renewalChargePerBus,
+          status: agencies.status,
+          createdAt: agencies.createdAt,
+        })
+        .from(agencies)
+        .where(eq(agencies.id, agencyId))
+        .limit(1);
+
+      if (agency.length === 0) {
+        return res.status(404).json({ message: 'Agency not found' });
+      }
+
+      // Get total buses for this agency - using count function properly
+      const busCountResult = await db
+        .select({ count: sql<number>`cast(count(*) as integer)` })
+        .from(buses)
+        .where(eq(buses.agencyId, agencyId));
+
+      const totalBuses = Number(busCountResult[0]?.count || 0);
+      const renewalCharge = agency[0].renewalChargePerBus || 5000;
+      const totalRenewalCharge = totalBuses * renewalCharge;
+
+      console.log('Agency details debug:', {
+        agencyId,
+        busCountResult,
+        totalBuses,
+        renewalCharge,
+        totalRenewalCharge
+      });
+
+      const result = {
+        ...agency[0],
+        totalBuses,
+        totalRenewalCharge,
+      };
+
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching agency details:', error);
+      res.status(500).json({ message: 'Failed to fetch agency details' });
     }
   });
 
@@ -733,7 +825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { period } = req.body;
-      
+
       if (!period) {
         return res.status(400).json({ message: "Billing period is required" });
       }
@@ -750,7 +842,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { status, paymentMethod, notes } = req.body;
-      
+
       const paymentDate = status === 'paid' ? new Date() : undefined;
       const updatedPayment = await storage.updatePaymentStatus(
         parseInt(id), 
@@ -759,7 +851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentDate, 
         notes
       );
-      
+
       res.json(updatedPayment);
     } catch (error) {
       console.error("Error updating payment status:", error);
@@ -781,7 +873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/admin/tax-config', adminAuth, async (req: any, res) => {
     try {
       const { percentage } = req.body;
-      
+
       if (typeof percentage !== 'number' || percentage < 0 || percentage > 100) {
         return res.status(400).json({ message: "Invalid tax percentage" });
       }
@@ -1195,3 +1287,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+
+// Dummy authentication middleware for admin-only routes
+const requireAdminAuth = (req: any, res: any, next: any) => {
+    console.log('Admin auth check - session:', req.session);
+    console.log('Admin auth check - user:', req.session?.user);
+
+    // First check if user is in session (admin login)
+    if (req.session?.user) {
+      if (req.session.user.role === 'super_admin') {
+        req.user = req.session.user;
+        next();
+        return;
+      }
+    }
+
+    // Fallback to global user (for immediate access)
+    if (currentUser && currentUser.role === 'super_admin') {
+      req.user = currentUser;
+      next();
+      return;
+    }
+
+    console.log('Admin authentication failed - no valid admin session');
+    res.status(401).json({ message: "Admin authentication required" });
+  };
+
+// Dummy authentication middleware for admin-only routes
+const requireAuth = (req: any, res: any, next: any) => {
+    console.log('Admin auth check - session:', req.session);
+    console.log('Admin auth check - user:', req.session?.user);
+
+    // First check if user is in session (admin login)
+    if (req.session?.user) {
+        req.user = req.session.user;
+        next();
+        return;
+    }
+
+    // Fallback to global user (for immediate access)
+    if (currentUser) {
+      req.user = currentUser;
+      next();
+      return;
+    }
+
+    console.log(' authentication failed - no valid admin session');
+    res.status(401).json({ message: " authentication required" });
+  };
