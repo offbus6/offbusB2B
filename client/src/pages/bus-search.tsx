@@ -156,10 +156,17 @@ export default function BusSearch() {
                   <CardContent className="p-8">
                     {/* Bus Header */}
                     <div className="flex items-start justify-between mb-6">
-                      <div>
-                        <h3 className="font-bold text-xl text-[var(--airbnb-dark)] mb-1">{bus.operator}</h3>
-                        <p className="text-[var(--airbnb-gray)] text-sm mb-2">{bus.busType}</p>
+                      <div className="flex items-start space-x-4">
+                        {/* Bus Image */}
+                        <div className="w-16 h-12 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Bus className="w-8 h-6 text-[var(--airbnb-primary)]" />
+                        </div>
                         
+                        {/* Bus Details */}
+                        <div>
+                          <h3 className="font-bold text-xl text-[var(--airbnb-dark)] mb-1">{bus.operator}</h3>
+                          <p className="text-[var(--airbnb-gray)] text-sm mb-2">{bus.busType}</p>
+                        </div>
                       </div>
 
                       <div className="text-right">
