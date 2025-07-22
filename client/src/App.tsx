@@ -42,6 +42,13 @@ function Router() {
     );
   }
 
+  // Fix dashboard scroll issue - moved before conditional returns
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      window.scrollTo(0, 0);
+    }
+  }, [isAuthenticated]);
+
   if (!isAuthenticated) {
     return (
       <Switch>
@@ -55,13 +62,6 @@ function Router() {
       </Switch>
     );
   }
-
-  // Fix dashboard scroll issue
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      window.scrollTo(0, 0);
-    }
-  }, [isAuthenticated]);
 
   const userRole = (user as any)?.role;
   const isSuperAdmin = userRole === 'super_admin';
