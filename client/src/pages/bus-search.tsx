@@ -158,8 +158,12 @@ export default function BusSearch() {
                     <div className="flex items-start justify-between mb-6">
                       <div className="flex items-start space-x-4">
                         {/* Bus Image */}
-                        <div className="w-16 h-12 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Bus className="w-8 h-6 text-[var(--airbnb-primary)]" />
+                        <div className="w-16 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                          <img 
+                            src="https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=100&h=80&fit=crop&crop=center" 
+                            alt="Bus" 
+                            className="w-full h-full object-cover"
+                          />
                         </div>
                         
                         {/* Bus Details */}
