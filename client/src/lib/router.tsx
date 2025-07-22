@@ -54,7 +54,7 @@ const Router = () => {
         <Route element={<Root />} errorElement={<ErrorPage />}>
           <Route index element={<Index />} />
           <Route path="/bus/:busId" element={<BusDetails />} />
-          <Route path="/search" element={<BusSearch />} /> {/* Add the bus search route */}
+          <Route path="/bus-search" element={<BusSearch />} /> {/* Add the bus search route */}
           <Route
             path="/profile"
             element={
