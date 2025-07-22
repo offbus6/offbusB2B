@@ -107,6 +107,9 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
               <a href="#about" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
                 About
               </a>
+              <Link href="/bus-search" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
+                Bus Search
+              </Link>
               <a href="#contact" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
                 Contact
               </a>
@@ -155,6 +158,9 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
                 <a href="#about" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
                   About
                 </a>
+                <Link href="/bus-search" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
+                  Bus Search
+                </Link>
                 <a href="#contact" className="text-[var(--airbnb-gray)] hover:text-[var(--airbnb-primary)] transition-colors">
                   Contact
                 </a>
