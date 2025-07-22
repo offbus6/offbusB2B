@@ -195,17 +195,26 @@ export default function BusSearch() {
                           <Users className="w-4 h-4 mr-1" />
                           <span className="text-sm font-semibold">{bus.seatsAvailable} seats left</span>
                         </div>
-                        <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
+                        <div className="bg-green-50 text-green-700 px-4 py-2 rounded-xl font-bold text-sm border border-green-200">
                           {bus.couponOffer}
                         </div>
                       </div>
 
-                      <Button 
-                        onClick={() => handleBookNow(bus.websiteUrl, bus.operator)}
-                        className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-                      >
-                        View Details
-                      </Button>
+                      <div className="flex items-center space-x-3">
+                        <Button 
+                          onClick={() => navigator.clipboard.writeText(bus.couponOffer)}
+                          variant="outline"
+                          className="border-[var(--airbnb-primary)] text-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)] hover:text-white px-6 py-3 rounded-xl font-semibold transition-all"
+                        >
+                          Copy Coupon
+                        </Button>
+                        <Button 
+                          onClick={() => handleBookNow(bus.websiteUrl, bus.operator)}
+                          className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                        >
+                          Book Now
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
