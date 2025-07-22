@@ -827,6 +827,7 @@ export default function AgencyDetails() {
                         <TableHead>Bus Type</TableHead>
                         <TableHead>Capacity</TableHead>
                         <TableHead>Fare</TableHead>
+                        <TableHead>Amenities</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -843,11 +844,28 @@ export default function AgencyDetails() {
                           </TableCell>
                           <TableCell>{bus.departureTime}</TableCell>
                           <TableCell>{bus.arrivalTime}</TableCell>
-                          <TableCell>{bus.busType}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{bus.busType}</Badge>
+                          </TableCell>
                           <TableCell>{bus.capacity} seats</TableCell>
                           <TableCell>₹{bus.fare}</TableCell>
                           <TableCell>
-                            <Badge className="bg-green-100 text-green-800">Active</Badge>
+                            <div className="flex flex-wrap gap-1">
+                              {bus.amenities && bus.amenities.length > 0 ? (
+                                bus.amenities.map((amenity: string, index: number) => (
+                                  <Badge key={index} variant="secondary" className="text-xs">
+                                    {amenity}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-sm text-gray-500">No amenities</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={bus.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                              {bus.isActive ? "Active" : "Inactive"}
+                            </Badge>
                           </TableCell>
                         </TableRow>
                       ))}

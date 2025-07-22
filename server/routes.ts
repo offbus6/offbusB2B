@@ -1351,10 +1351,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const agencyBuses = await db.select({
         id: buses.id,
-        registrationNumber: buses.registrationNumber,
-        routeNumber: buses.routeNumber,
+        number: buses.number,
+        name: buses.name,
+        fromLocation: buses.fromLocation,
+        toLocation: buses.toLocation,
+        departureTime: buses.departureTime,
+        arrivalTime: buses.arrivalTime,
+        busType: buses.busType,
         capacity: buses.capacity,
-        vehicleType: buses.vehicleType,
+        fare: buses.fare,
+        amenities: buses.amenities,
+        imageUrl: buses.imageUrl,
         isActive: buses.isActive,
         createdAt: buses.createdAt,
         updatedAt: buses.updatedAt
