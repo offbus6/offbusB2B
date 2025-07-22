@@ -5,7 +5,7 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import { storage } from "./storage";
 import type { TravelerData } from "@shared/schema";
-import { replitUserToAdmin, replitUserToUser } from "./replitAuth";
+// import { replitUserToAdmin, replitUserToUser } from "./replitAuth";
 import { whatsappService } from "./whatsapp-service";
 
 // Simple in-memory session storage with token-based auth
@@ -751,7 +751,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ];
 
       for (const user of testUsers) {
-        await db.insert(users).values(user).onConflictDoNothing();
+        await db.insert(users).values([user]).onConflictDoNothing();
       }
 
       // Add test agencies
@@ -796,7 +796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const insertedAgencies = [];
       for (const agency of testAgencies) {
-        const result = await db.insert(agencies).values(agency).onConflictDoNothing().returning();
+        const result = await db.insert(agencies).values([agency]).onConflictDoNothing().returning();
         if (result.length > 0) {
           insertedAgencies.push(result[0]);
         }
@@ -896,7 +896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       for (const payment of testPayments) {
-        await db.insert(paymentHistory).values(payment).onConflictDoNothing();
+        await db.insert(paymentHistory).values([payment]).onConflictDoNothing();
       }
 
       // Add comprehensive sample traveler data
@@ -2296,7 +2296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Insert all sample payments
       for (const payment of samplePayments) {
-        await db.insert(paymentHistory).values(payment).onConflictDoNothing();
+        await db.insert(paymentHistory).values([payment]).onConflictDoNothing();
       }
 
       res.json({ 

@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link } from "react-router-dom";
+import { Link } from "wouter";
 
 interface HeaderProps {
   variant?: 'landing' | 'dashboard' | 'auth';
@@ -35,7 +35,7 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
     enabled: isAuthenticated,
   });
 
-  const unreadCount = notifications.filter((n: any) => !n.isRead).length;
+  const unreadCount = Array.isArray(notifications) ? notifications.filter((n: any) => !n.isRead).length : 0;
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -215,12 +215,12 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
               <DropdownMenuContent align="end" className="w-80">
                 <DropdownMenuLabel>Notifications</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {notifications.length === 0 ? (
+                {!Array.isArray(notifications) || notifications.length === 0 ? (
                   <DropdownMenuItem>
                     <span className="text-[var(--airbnb-gray)]">No notifications</span>
                   </DropdownMenuItem>
                 ) : (
-                  notifications.slice(0, 5).map((notification: any) => (
+                  (notifications as any[]).slice(0, 5).map((notification: any) => (
                     <DropdownMenuItem key={notification.id} className="flex flex-col items-start p-3">
                       <div className="flex justify-between w-full">
                         <span className={`text-sm ${!notification.isRead ? 'font-semibold' : ''}`}>
@@ -239,7 +239,7 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
                     </DropdownMenuItem>
                   ))
                 )}
-                {notifications.length > 5 && (
+                {Array.isArray(notifications) && notifications.length > 5 && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
@@ -254,17 +254,17 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
 
             <div className="flex items-center space-x-3">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.profileImageUrl || undefined} alt="Profile" />
+                <AvatarImage src={(user as any)?.profileImageUrl || undefined} alt="Profile" />
                 <AvatarFallback className="bg-[var(--airbnb-primary)] text-white">
-                  {user?.firstName?.[0] || user?.email?.[0] || 'U'}
+                  {(user as any)?.firstName?.[0] || (user as any)?.email?.[0] || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
                 <span className="text-sm font-medium text-[var(--airbnb-dark)]">
-                  {user?.firstName || user?.email}
+                  {(user as any)?.firstName || (user as any)?.email}
                 </span>
                 <span className="text-xs text-[var(--airbnb-gray)]">
-                  {user?.role === 'super_admin' ? 'Super Admin' : 'Travel Agency'}
+                  {(user as any)?.role === 'super_admin' ? 'Super Admin' : 'Travel Agency'}
                 </span>
               </div>
             </div>

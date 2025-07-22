@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MapPin, Calendar, Search, Bus, Clock, Star, Users, Wifi, Car, Snowflake, Coffee } from "lucide-react";
 import Layout from "@/components/layout/layout";
-import { Link } from "react-router-dom";
+import { Link } from "wouter";
 
 export default function BusSearch() {
   const [searchParams, setSearchParams] = useState({
@@ -107,7 +107,7 @@ export default function BusSearch() {
 
   if (showResults) {
     return (
-      <Layout variant="app">
+      <Layout variant="dashboard">
         <div className="min-h-screen bg-gradient-to-br from-[var(--airbnb-light)] via-white to-blue-50">
           <div className="container mx-auto px-4 py-8">
             {/* Search Summary */}
@@ -283,7 +283,7 @@ export default function BusSearch() {
   }
 
   return (
-    <Layout variant="app">
+    <Layout variant="dashboard">
       <div className="min-h-screen bg-gradient-to-br from-[var(--airbnb-light)] via-white to-blue-50">
         <div className="container mx-auto px-4 py-12">
           {/* Hero Section */}
