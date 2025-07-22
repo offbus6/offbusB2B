@@ -268,51 +268,13 @@ export default function BusSearch() {
                         </div>
                       </div>
 
-                      {/* Amenities */}
-                      <div className="flex items-center space-x-4 mb-4">
-                        <span className="text-sm text-gray-600">Amenities:</span>
-                        <div className="flex items-center space-x-2">
-                          {bus.amenities.slice(0, 4).map((amenity, index) => (
-                            <span key={index} className="inline-flex items-center">
-                              {amenity === "WiFi" && <Wifi className="w-4 h-4 text-blue-600" />}
-                              {amenity === "Charging Point" && <div className="w-4 h-4 bg-green-600 rounded-sm flex items-center justify-center text-white text-xs">⚡</div>}
-                              {amenity === "Blanket" && <div className="w-4 h-4 bg-purple-600 rounded-sm"></div>}
-                              {amenity === "CCTV" && <div className="w-4 h-4 bg-red-600 rounded-sm flex items-center justify-center text-white text-xs">📹</div>}
-                              {amenity === "Water Bottle" && <div className="w-4 h-4 bg-blue-400 rounded-sm"></div>}
-                              {amenity === "Snacks" && <Coffee className="w-4 h-4 text-orange-600" />}
-                              <span className="ml-1 text-xs text-gray-600">{amenity}</span>
-                            </span>
-                          ))}
-                          {bus.amenities.length > 4 && (
-                            <span className="text-xs text-blue-600">+{bus.amenities.length - 4} more</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Boarding Points */}
-                      <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-                        <span>Boarding Points: {bus.boardingPoints}</span>
-                        <span>Dropping Points: {bus.droppingPoints}</span>
-                      </div>
-
                       {/* Action Buttons */}
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                        <div className="flex space-x-3">
-                          <Button variant="outline" size="sm" className="text-red-600 border-red-600 hover:bg-red-50">
-                            View Seats
-                          </Button>
-                          <Button variant="outline" size="sm" className="text-blue-600 border-blue-600 hover:bg-blue-50">
-                            Boarding & Dropping Points
-                          </Button>
-                          <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-50">
-                            Reviews
-                          </Button>
-                        </div>
+                      <div className="flex items-center justify-end pt-4 border-t border-gray-100">
                         <Button 
                           onClick={() => handleBookNow(bus.websiteUrl, bus.operator)}
-                          className="bg-red-600 hover:bg-red-700 text-white px-8 py-2 rounded-lg font-semibold"
+                          className="bg-green-600 hover:bg-green-700 text-white px-8 py-2 rounded-lg font-semibold"
                         >
-                          Book Now
+                          Copy Coupon
                         </Button>
                       </div>
                     </div>
