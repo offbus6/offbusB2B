@@ -36,6 +36,7 @@ export default function BusSearch() {
       rating: 4.2,
       reviews: 2847,
       websiteUrl: "https://www.redbus.in",
+      imageUrl: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&h=250&fit=crop&crop=center"
     },
     {
       id: 2,
@@ -53,6 +54,7 @@ export default function BusSearch() {
       rating: 4.5,
       reviews: 1924,
       websiteUrl: "https://www.makemytrip.com",
+      imageUrl: "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=400&h=250&fit=crop&crop=center"
     },
     {
       id: 3,
@@ -70,6 +72,7 @@ export default function BusSearch() {
       rating: 4.1,
       reviews: 3156,
       websiteUrl: "https://www.goibibo.com",
+      imageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop&crop=center"
     }
   ];
 
@@ -142,78 +145,86 @@ export default function BusSearch() {
             <div className="space-y-6">
               {busResults.map((bus) => (
                 <Card key={bus.id} className="bg-white border-[var(--airbnb-border)] hover:shadow-xl transition-all duration-300 airbnb-shadow hover-lift rounded-2xl overflow-hidden">
-                  <CardContent className="p-8">
-                    {/* Bus Header */}
-                    <div className="flex items-start justify-between mb-6">
-                      <div>
-                        <h3 className="font-bold text-xl text-[var(--airbnb-dark)] mb-1">{bus.operator}</h3>
-                        <p className="text-[var(--airbnb-gray)] text-sm mb-2">{bus.busType}</p>
-                        <div className="flex items-center">
-                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                          <span className="ml-1 text-sm font-semibold text-[var(--airbnb-dark)]">{bus.rating}</span>
-                          <span className="ml-1 text-xs text-[var(--airbnb-gray)]">({bus.reviews} reviews)</span>
-                        </div>
+                  <CardContent className="p-0">
+                    <div className="flex">
+                      {/* Bus Image */}
+                      <div className="w-1/3 min-h-[200px]">
+                        <img 
+                          src={bus.imageUrl} 
+                          alt={bus.operator}
+                          className="w-full h-full object-cover rounded-l-2xl"
+                        />
                       </div>
 
-                      <div className="text-right">
-                        <div className="flex items-center justify-end mb-1">
-                          <span className="text-sm text-[var(--airbnb-gray)] line-through mr-2">₹{bus.fare}</span>
-                          <span className="text-2xl font-bold text-[var(--airbnb-dark)]">₹{bus.discountedFare}</span>
+                      {/* Bus Details */}
+                      <div className="flex-1 p-8">
+                        {/* Bus Header */}
+                        <div className="flex items-start justify-between mb-6">
+                          <div>
+                            <h3 className="font-bold text-xl text-[var(--airbnb-dark)] mb-1">{bus.operator}</h3>
+                            <p className="text-[var(--airbnb-gray)] text-sm mb-2">{bus.busType}</p>
+                            <div className="flex items-center">
+                              <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                              <span className="ml-1 text-sm font-semibold text-[var(--airbnb-dark)]">{bus.rating}</span>
+                              <span className="ml-1 text-xs text-[var(--airbnb-gray)]">({bus.reviews} reviews)</span>
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <div className="flex items-center justify-end mb-1">
+                              <span className="text-sm text-[var(--airbnb-gray)] line-through mr-2">₹{bus.fare}</span>
+                              <span className="text-2xl font-bold text-[var(--airbnb-dark)]">₹{bus.discountedFare}</span>
+                            </div>
+                            <div className="text-xs text-green-600 font-semibold bg-green-50 px-2 py-1 rounded-full">
+                              {bus.discount}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-xs text-green-600 font-semibold bg-green-50 px-2 py-1 rounded-full">
-                          {bus.discount}
-                        </div>
-                      </div>
-                    </div>
 
                     {/* Journey Details */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                      <div className="text-center">
-                        <div className="font-bold text-xl text-[var(--airbnb-dark)]">{bus.departureTime}</div>
-                        <div className="text-sm text-[var(--airbnb-gray)]">Mumbai Central</div>
-                      </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                          <div className="text-center">
+                            <div className="font-bold text-xl text-[var(--airbnb-dark)]">{bus.departureTime}</div>
+                            <div className="text-sm text-[var(--airbnb-gray)]">Mumbai Central</div>
+                          </div>
 
-                      <div className="text-center">
-                        <div className="text-sm text-[var(--airbnb-gray)] mb-2">{bus.duration}</div>
-                        <div className="flex items-center justify-center">
-                          <div className="w-full h-px bg-[var(--airbnb-border)]"></div>
-                          <Bus className="w-5 h-5 text-[var(--airbnb-primary)] mx-2" />
-                          <div className="w-full h-px bg-[var(--airbnb-border)]"></div>
+                          <div className="text-center">
+                            <div className="text-sm text-[var(--airbnb-gray)] mb-2">{bus.duration}</div>
+                            <div className="flex items-center justify-center">
+                              <div className="w-full h-px bg-[var(--airbnb-border)]"></div>
+                              <Bus className="w-5 h-5 text-[var(--airbnb-primary)] mx-2" />
+                              <div className="w-full h-px bg-[var(--airbnb-border)]"></div>
+                            </div>
+                          </div>
+
+                          <div className="text-center">
+                            <div className="font-bold text-xl text-[var(--airbnb-dark)]">{bus.arrivalTime}</div>
+                            <div className="text-sm text-[var(--airbnb-gray)]">Delhi</div>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="text-center">
-                        <div className="font-bold text-xl text-[var(--airbnb-dark)]">{bus.arrivalTime}</div>
-                        <div className="text-sm text-[var(--airbnb-gray)]">Delhi</div>
-                      </div>
-                    </div>
+                        {/* Action Section */}
+                        <div className="flex items-center justify-between pt-6 border-t border-[var(--airbnb-border)]">
+                          <div className="flex items-center space-x-4">
+                            <div className="flex items-center text-[var(--airbnb-primary)]">
+                              <Users className="w-4 h-4 mr-1" />
+                              <span className="text-sm font-semibold">{bus.seatsAvailable} seats left</span>
+                            </div>
+                            <div className="bg-green-50 text-green-700 px-4 py-2 rounded-xl font-bold text-sm border border-green-200">
+                              {bus.couponOffer}
+                            </div>
+                          </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex items-center justify-between pt-6 border-t border-[var(--airbnb-border)]">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center text-[var(--airbnb-primary)]">
-                          <Users className="w-4 h-4 mr-1" />
-                          <span className="text-sm font-semibold">{bus.seatsAvailable} seats left</span>
+                          <div className="flex items-center">
+                            <Button 
+                              onClick={() => navigator.clipboard.writeText(bus.couponOffer)}
+                              variant="outline"
+                              className="border-[var(--airbnb-primary)] text-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)] hover:text-white px-6 py-3 rounded-xl font-semibold transition-all"
+                            >
+                              Copy Coupon
+                            </Button>
+                          </div>
                         </div>
-                        <div className="bg-green-50 text-green-700 px-4 py-2 rounded-xl font-bold text-sm border border-green-200">
-                          {bus.couponOffer}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        <Button 
-                          onClick={() => navigator.clipboard.writeText(bus.couponOffer)}
-                          variant="outline"
-                          className="border-[var(--airbnb-primary)] text-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)] hover:text-white px-6 py-3 rounded-xl font-semibold transition-all"
-                        >
-                          Copy Coupon
-                        </Button>
-                        <Button 
-                          onClick={() => handleBookNow(bus.websiteUrl, bus.operator)}
-                          className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
-                        >
-                          Book Now
-                        </Button>
                       </div>
                     </div>
                   </CardContent>
