@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { theme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -275,15 +276,12 @@ export default function AgencyDetails() {
     },
   });
 
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => {
-      const newData = { ...prev, [field]: value };
-      return newData;
-    });
+  const handleInputChange = useCallback((field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
     setHasUnsavedChanges(true);
-  };
+  }, []);
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setLogoFile(file);
@@ -296,9 +294,9 @@ export default function AgencyDetails() {
       };
       reader.readAsDataURL(file);
     }
-  };
+  }, []);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!hasUnsavedChanges) return;
 
     const updates = { ...formData };
@@ -315,9 +313,9 @@ export default function AgencyDetails() {
     }
 
     updateAgencyMutation.mutate(updates);
-  };
+  }, [hasUnsavedChanges, formData, updateAgencyMutation]);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = useMemo(() => (status: string) => {
     switch (status) {
       case "approved":
         return <Badge className="bg-green-100 text-green-800 border-green-300">Approved</Badge>;
@@ -330,7 +328,7 @@ export default function AgencyDetails() {
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
-  };
+  }, []);
 
   const getPaymentStatusBadge = (status: string) => {
     switch (status) {
@@ -406,10 +404,21 @@ export default function AgencyDetails() {
     return Math.round((subtotal * taxPercentage) / 100);
   };
 
+  // Memoize calculation-heavy operations
+  const billingCalculation = useMemo(() => {
+    const totalBuses = agency?.totalBuses || 0;
+    const ratePerBus = formData.renewalChargePerBus || 5000;
+    const subtotal = totalBuses * ratePerBus;
+    const taxAmount = Math.round((subtotal * taxPercentage) / 100);
+    const total = subtotal + taxAmount;
+    
+    return { totalBuses, ratePerBus, subtotal, taxAmount, total };
+  }, [agency?.totalBuses, formData.renewalChargePerBus, taxPercentage]);
+
   if (isLoading || agencyLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--airbnb-pink)]"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: theme.colors.primary }}></div>
       </div>
     );
   }
@@ -441,16 +450,32 @@ export default function AgencyDetails() {
           onClick={handleSave}
           disabled={updateAgencyMutation.isPending || !hasUnsavedChanges}
           style={{
-            backgroundColor: '#e91e63',
-            color: 'white',
-            padding: '8px 16px',
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.white,
+            padding: `${theme.spacing.sm} ${theme.spacing.md}`,
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: theme.borderRadius.md,
             cursor: hasUnsavedChanges ? 'pointer' : 'not-allowed',
-            opacity: hasUnsavedChanges ? 1 : 0.6
+            opacity: hasUnsavedChanges ? 1 : 0.6,
+            fontWeight: '500',
+            fontSize: '14px',
+            transition: 'all 0.2s ease-in-out',
+            boxShadow: hasUnsavedChanges ? theme.shadows.sm : 'none'
+          }}
+          onMouseEnter={(e) => {
+            if (hasUnsavedChanges) {
+              e.currentTarget.style.backgroundColor = theme.colors.primaryHover;
+              e.currentTarget.style.boxShadow = theme.shadows.md;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (hasUnsavedChanges) {
+              e.currentTarget.style.backgroundColor = theme.colors.primary;
+              e.currentTarget.style.boxShadow = theme.shadows.sm;
+            }
           }}
         >
-          Save Changes
+          {updateAgencyMutation.isPending ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 
@@ -760,23 +785,23 @@ export default function AgencyDetails() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Total Buses:</span>
-                    <span>{agency?.totalBuses || 0}</span>
+                    <span>{billingCalculation.totalBuses}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Rate per Bus:</span>
-                    <span>₹{formData.renewalChargePerBus || 5000}</span>
+                    <span>₹{billingCalculation.ratePerBus.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>₹{((agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000)).toLocaleString()}</span>
+                    <span>₹{billingCalculation.subtotal.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>GST ({taxPercentage}%):</span>
-                    <span>₹{calculateTaxAmount((agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000), taxPercentage).toLocaleString()}</span>
+                    <span>₹{billingCalculation.taxAmount.toLocaleString()}</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between font-semibold text-base">
                     <span>Total Payable:</span>
-                    <span>₹{(((agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000)) + calculateTaxAmount((agency?.totalBuses || 0) * (formData.renewalChargePerBus || 5000), taxPercentage)).toLocaleString()}</span>
+                    <span>₹{billingCalculation.total.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
