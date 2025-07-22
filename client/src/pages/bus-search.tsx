@@ -119,9 +119,9 @@ export default function BusSearch() {
   if (showResults) {
     return (
       <Layout variant="dashboard">
-        <div className="min-h-screen bg-gray-50">
-          {/* RedBus-style Header with Search Bar */}
-          <div className="bg-red-600 text-white">
+        <div className="min-h-screen bg-background">
+          {/* Airbnb-style Header with Search Bar */}
+          <div className="bg-primary text-primary-foreground">
             <div className="container mx-auto px-4 py-6">
               {/* Modified Search Bar */}
               <div className="bg-white rounded-lg p-4 shadow-lg">
@@ -139,7 +139,7 @@ export default function BusSearch() {
                   </div>
 
                   <div className="flex justify-center">
-                    <ArrowLeftRight className="w-5 h-5 text-red-600" />
+                    <ArrowLeftRight className="w-5 h-5 text-primary" />
                   </div>
 
                   <div>
@@ -167,7 +167,7 @@ export default function BusSearch() {
                   </div>
 
                   <Button 
-                    className="bg-red-600 hover:bg-red-700 text-white h-12 rounded-lg font-semibold"
+                    className="h-12 rounded-lg font-semibold"
                     onClick={() => setShowResults(true)}
                   >
                     SEARCH BUSES
@@ -182,14 +182,14 @@ export default function BusSearch() {
             {/* Results Header */}
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">
+                <h1 className="text-2xl font-bold text-foreground">
                   {searchParams.from || "Mumbai"} to {searchParams.to || "Delhi"} Bus
                 </h1>
-                <p className="text-gray-600">{busResults.length} buses found</p>
+                <p className="text-muted-foreground">{busResults.length} buses found</p>
               </div>
               <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-600">Sort By:</span>
-                <select className="border rounded-lg px-3 py-1 text-sm">
+                <span className="text-sm text-muted-foreground">Sort By:</span>
+                <select className="border border-input rounded-lg px-3 py-1 text-sm">
                   <option>Departure</option>
                   <option>Duration</option>
                   <option>Arrival</option>
@@ -202,7 +202,7 @@ export default function BusSearch() {
             {/* Bus Results */}
             <div className="space-y-4">
               {busResults.map((bus) => (
-                <Card key={bus.id} className="bg-white border border-gray-200 hover:shadow-lg transition-shadow">
+                <Card key={bus.id} className="bg-card border border-border hover:shadow-lg transition-shadow airbnb-shadow hover-lift">
                   <CardContent className="p-0">
                     <div className="p-6">
                       {/* Bus Header */}
@@ -229,57 +229,57 @@ export default function BusSearch() {
                         {/* Pricing */}
                         <div className="text-right">
                           <div className="flex items-center justify-end">
-                            <span className="text-sm text-gray-500 line-through mr-2">₹{bus.fare}</span>
-                            <span className="text-2xl font-bold text-gray-800">₹{bus.discountedFare}</span>
+                            <span className="text-sm text-muted-foreground line-through mr-2">₹{bus.fare}</span>
+                            <span className="text-2xl font-bold text-foreground">₹{bus.discountedFare}</span>
                           </div>
-                          <div className="text-xs text-green-600 font-semibold">{bus.discount}</div>
+                          <div className="text-xs text-primary font-semibold">{bus.discount}</div>
                         </div>
                       </div>
 
                       {/* Journey Details */}
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                         <div className="flex items-center space-x-2">
-                          <Clock className="w-4 h-4 text-gray-500" />
+                          <Clock className="w-4 h-4 text-muted-foreground" />
                           <div>
-                            <div className="font-semibold text-gray-800">{bus.departureTime}</div>
-                            <div className="text-xs text-gray-500">Mumbai Central</div>
+                            <div className="font-semibold text-foreground">{bus.departureTime}</div>
+                            <div className="text-xs text-muted-foreground">Mumbai Central</div>
                           </div>
                         </div>
 
                         <div className="text-center">
-                          <div className="text-sm text-gray-500">{bus.duration}</div>
-                          <div className="w-full h-px bg-gray-300 my-1 relative">
+                          <div className="text-sm text-muted-foreground">{bus.duration}</div>
+                          <div className="w-full h-px bg-border my-1 relative">
                             <div className="absolute inset-0 flex justify-center">
-                              <Bus className="w-4 h-4 text-gray-400 bg-white px-1" />
+                              <Bus className="w-4 h-4 text-muted-foreground bg-background px-1" />
                             </div>
                           </div>
                         </div>
 
                         <div className="flex items-center space-x-2">
-                          <Clock className="w-4 h-4 text-gray-500" />
+                          <Clock className="w-4 h-4 text-muted-foreground" />
                           <div>
-                            <div className="font-semibold text-gray-800">{bus.arrivalTime}</div>
-                            <div className="text-xs text-gray-500">Delhi</div>
+                            <div className="font-semibold text-foreground">{bus.arrivalTime}</div>
+                            <div className="text-xs text-muted-foreground">Delhi</div>
                           </div>
                         </div>
 
                         <div className="flex items-center justify-end space-x-2">
-                          <Users className="w-4 h-4 text-green-600" />
-                          <span className="text-sm text-green-600 font-semibold">
+                          <Users className="w-4 h-4 text-primary" />
+                          <span className="text-sm text-primary font-semibold">
                             {bus.seatsAvailable} seats left
                           </span>
                         </div>
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex items-center justify-end pt-4 border-t border-gray-100">
+                      <div className="flex items-center justify-end pt-4 border-t border-border">
                         <div className="flex items-center space-x-3">
-                          <div className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-semibold">
+                          <div className="bg-accent text-accent-foreground px-3 py-1 rounded-full text-sm font-semibold">
                             {bus.couponOffer}
                           </div>
                           <Button 
                             onClick={() => handleBookNow(bus.websiteUrl, bus.operator)}
-                            className="bg-green-600 hover:bg-green-700 text-white px-8 py-2 rounded-lg font-semibold"
+                            className="px-8 py-2 rounded-lg font-semibold"
                           >
                             Copy Coupon
                           </Button>
@@ -305,16 +305,16 @@ export default function BusSearch() {
 
   return (
     <Layout variant="dashboard">
-      <div className="min-h-screen bg-gray-50">
-        {/* Hero Section - RedBus Style */}
-        <div className="bg-red-600 text-white">
+      <div className="min-h-screen bg-background">
+        {/* Hero Section - Airbnb Style */}
+        <div className="bg-primary text-primary-foreground">
           <div className="container mx-auto px-4 py-16">
             <div className="text-center mb-8">
               <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                India's No. 1 Online Bus Ticket Booking Site
+                Find Your Perfect Journey
               </h1>
               <p className="text-xl opacity-90">
-                Book bus tickets online in simple, fast & secure way
+                Discover great deals on bus tickets with trusted operators
               </p>
             </div>
 
@@ -330,7 +330,7 @@ export default function BusSearch() {
                         placeholder="Enter source city"
                         value={searchParams.from}
                         onChange={(e) => setSearchParams({...searchParams, from: e.target.value})}
-                        className="text-lg font-semibold text-gray-800 border-0 border-b-2 border-gray-200 rounded-none focus:border-red-600"
+                        className="text-lg font-semibold text-gray-800 border border-input rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
                       />
                     </div>
                   </div>
@@ -343,7 +343,7 @@ export default function BusSearch() {
                         placeholder="Enter destination city"
                         value={searchParams.to}
                         onChange={(e) => setSearchParams({...searchParams, to: e.target.value})}
-                        className="text-lg font-semibold text-gray-800 border-0 border-b-2 border-gray-200 rounded-none focus:border-red-600"
+                        className="text-lg font-semibold text-gray-800 border border-input rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
                       />
                     </div>
                   </div>
@@ -355,7 +355,7 @@ export default function BusSearch() {
                         type="date"
                         value={searchParams.departureDate}
                         onChange={(e) => setSearchParams({...searchParams, departureDate: e.target.value})}
-                        className="text-lg font-semibold text-gray-800 border-0 border-b-2 border-gray-200 rounded-none focus:border-red-600"
+                        className="text-lg font-semibold text-gray-800 border border-input rounded-lg focus:border-primary focus:ring-1 focus:ring-primary"
                       />
                     </div>
                   </div>
@@ -363,7 +363,7 @@ export default function BusSearch() {
                   <div className="flex items-end">
                     <Button 
                       onClick={() => setShowResults(true)}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white h-12 text-lg font-bold rounded-lg shadow-lg"
+                      className="w-full h-12 text-lg font-bold rounded-lg shadow-lg"
                     >
                       SEARCH BUSES
                     </Button>
@@ -375,7 +375,7 @@ export default function BusSearch() {
 
           {/* Popular Routes */}
           <div className="container mx-auto px-4 py-16">
-            <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
+            <h2 className="text-3xl font-bold text-foreground text-center mb-12">
               Popular Routes
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -389,26 +389,26 @@ export default function BusSearch() {
                 { from: "Ahmedabad", to: "Mumbai", price: "₹450" },
                 { from: "Jaipur", to: "Delhi", price: "₹350" }
               ].map((route, index) => (
-                <Card key={index} className="border border-gray-200 hover:shadow-lg transition-all cursor-pointer">
+                <Card key={index} className="border border-border hover:shadow-lg transition-all cursor-pointer hover-lift airbnb-shadow">
                   <CardContent className="p-4">
                     <div className="flex justify-between items-center">
                       <div>
-                        <h3 className="font-semibold text-gray-800">
+                        <h3 className="font-semibold text-foreground">
                           {route.from} ↔ {route.to}
                         </h3>
-                        <p className="text-red-600 font-bold text-lg">{route.price}</p>
+                        <p className="text-primary font-bold text-lg">{route.price}</p>
                       </div>
-                      <Bus className="w-8 h-8 text-gray-400" />
+                      <Bus className="w-8 h-8 text-muted-foreground" />
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            {/* Why Choose RedBus Style Section */}
-            <div className="bg-gray-100 py-16">
+            {/* Why Choose Our Platform Section */}
+            <div className="bg-muted py-16">
               <div className="container mx-auto px-4">
-                <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
+                <h2 className="text-3xl font-bold text-foreground text-center mb-12">
                   Why Choose Our Platform?
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -436,8 +436,8 @@ export default function BusSearch() {
                   ].map((feature, index) => (
                     <div key={index} className="text-center">
                       <div className="text-4xl mb-4">{feature.icon}</div>
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">{feature.title}</h3>
-                      <p className="text-gray-600">{feature.description}</p>
+                      <h3 className="text-xl font-bold text-foreground mb-2">{feature.title}</h3>
+                      <p className="text-muted-foreground">{feature.description}</p>
                     </div>
                   ))}
                 </div>
