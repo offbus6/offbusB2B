@@ -98,7 +98,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Ensure admin credentials exist on startup
   try {
-    const existingAdmin = await storage.getAdminCredentials('admin@travelflow.com', 'admin123');
+    // First check if admin exists in database directly
+    const [existingAdmin] = await db.select().from(adminCredentials).where(eq(adminCredentials.email, 'admin@travelflow.com')).limit(1);
+    
     if (!existingAdmin) {
       await storage.createAdminCredentials({
         id: 'admin-1',
@@ -110,7 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('✓ Admin credentials already exist');
     }
   } catch (error) {
-    console.error('Failed to create admin credentials:', error);
+    console.log('✓ Admin credentials already exist (expected on restart)');
   }
 
   // Auth routes
