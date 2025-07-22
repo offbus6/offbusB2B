@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { whatsappService } from "./whatsapp-service";
 
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy
@@ -70,3 +71,12 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
   });
 })();
+
+// Process WhatsApp messages every 5 minutes
+setInterval(async () => {
+  try {
+    await whatsappService.processPendingMessages();
+  } catch (error) {
+    console.error("Error processing WhatsApp messages:", error);
+  }
+}, 5 * 60 * 1000); // 5 minutes

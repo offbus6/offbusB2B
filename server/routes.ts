@@ -4,6 +4,9 @@ import multer from "multer";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import { storage } from "./storage";
+import type { TravelerData } from "@shared/schema";
+import { replitUserToAdmin, replitUserToUser } from "./replitAuth";
+import { whatsappService } from "./whatsapp-service";
 
 // Simple in-memory session storage with token-based auth
 const activeSessions = new Map<string, any>();
@@ -52,7 +55,7 @@ const sessionMiddleware = session({
 const isAuthenticated = (req: any, res: any, next: any) => {
   console.log('Admin auth check - session:', req.session);
   console.log('Admin auth check - user:', req.session?.user);
-  
+
   // Check if user is stored in session (admin login)
   if (req.session?.user) {
     req.user = req.session.user;
@@ -61,7 +64,7 @@ const isAuthenticated = (req: any, res: any, next: any) => {
     // Check if session exists in our store (regular user login)
     const sessionId = req.sessionID;
     const sessionData = sessionStore.get(sessionId);
-    
+
     if (sessionData && sessionData.user) {
       req.user = sessionData.user;
       next();
@@ -79,7 +82,7 @@ const isAuthenticated = (req: any, res: any, next: any) => {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Trust proxy for session cookies
   app.set('trust proxy', 1);
-  
+
   // Session middleware
   app.use(sessionMiddleware);
 
@@ -98,21 +101,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/admin/login', async (req: any, res) => {
     try {
       const { email, password } = req.body;
-      
+
       // Check admin credentials in database
       const adminCredentials = await storage.getAdminCredentials(email, password);
-      
+
       if (adminCredentials) {
         const userWithRole = {
           id: adminCredentials.id,
           email: adminCredentials.email,
           role: 'super_admin'
         };
-        
+
         // Store user globally and in session
         currentUser = userWithRole;
         req.session.user = userWithRole;
-        
+
         res.json({
           user: userWithRole,
           role: 'super_admin',
@@ -120,7 +123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         return;
       }
-      
+
       res.status(401).json({ message: 'Invalid admin credentials' });
     } catch (error) {
       console.error("Admin login error:", error);
@@ -132,13 +135,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/admin/signup', async (req: any, res) => {
     try {
       const { email, password } = req.body;
-      
+
       // Check if admin already exists
       const [existingAdmin] = await db.select().from(adminCredentials).limit(1);
       if (existingAdmin) {
         return res.status(400).json({ message: 'Admin already exists' });
       }
-      
+
       // Create admin credentials
       const adminId = Date.now().toString();
       const admin = await storage.createAdminCredentials({
@@ -146,7 +149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email,
         password,
       });
-      
+
       res.json({ message: 'Admin account created successfully' });
     } catch (error) {
       console.error("Admin signup error:", error);
@@ -159,18 +162,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { email, password } = req.body;
       const adminId = req.user.id;
-      
+
       // Verify user is admin
       if (req.user.role !== 'super_admin') {
         return res.status(403).json({ message: 'Forbidden' });
       }
-      
+
       // Update admin credentials
       const updatedAdmin = await storage.updateAdminCredentials(adminId, {
         email,
         password,
       });
-      
+
       res.json({ 
         message: 'Profile updated successfully',
         email: updatedAdmin.email 
@@ -187,20 +190,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, password } = req.body;
       // Check for agency credentials (allow all agencies to login regardless of approval status)
       const agency = await storage.getAgencyByCredentials(email, password);
-      
+
       if (agency) {
         const user = await storage.getUser(agency.userId);
-        
+
         const userWithRole = {
           ...user,
           agency,
           role: 'agency'
         };
-        
+
         // Store user globally and in session
         currentUser = userWithRole;
         sessionStore.set(req.sessionID, { user: userWithRole });
-        
+
         res.json({
           user: userWithRole,
           agency,
@@ -209,7 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         return;
       }
-      
+
       res.status(401).json({ message: 'Invalid agency credentials' });
     } catch (error) {
       console.error("Agency login error:", error);
@@ -221,7 +224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/login', async (req: any, res) => {
     try {
       const { email, password } = req.body;
-      
+
       // Check for agency credentials
       const agency = await storage.getAgencyByCredentials(email, password);
       if (agency) {
@@ -231,11 +234,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           agency,
           role: 'agency'
         };
-        
+
         // Store user globally and in session
         currentUser = userWithRole;
         sessionStore.set(req.sessionID, { user: userWithRole });
-        
+
         res.json({
           user: userWithRole,
           agency,
@@ -244,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         return;
       }
-      
+
       res.status(401).json({ message: 'Invalid credentials' });
     } catch (error) {
       console.error("Login error:", error);
@@ -255,21 +258,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/logout', (req: any, res) => {
     // Clear current user and session
     currentUser = null;
-    
+
     // Clear from session store
     const sessionId = req.sessionID;
     sessionStore.delete(sessionId);
-    
+
     // Clear session data
     req.session.user = null;
-    
+
     // Destroy the session completely
     req.session.destroy((err: any) => {
       if (err) {
         console.error('Session destruction error:', err);
         return res.status(500).json({ message: 'Logout failed' });
       }
-      
+
       // Clear the session cookie
       res.clearCookie('connect.sid');
       res.json({ message: 'Logged out successfully' });
@@ -302,13 +305,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const existingConfig = await storage.getWhatsappConfig();
       let config;
-      
+
       if (existingConfig) {
         config = await storage.updateWhatsappConfig(existingConfig.id, req.body);
       } else {
         config = await storage.createWhatsappConfig(req.body);
       }
-      
+
       res.json(config);
     } catch (error) {
       console.error("Error saving WhatsApp config:", error);
@@ -395,15 +398,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/signup', async (req, res) => {
     try {
       const { email, password, firstName, lastName, agencyName, phone, city, state, logoUrl } = req.body;
-      
+
       console.log('Signup request received:', { email, firstName, lastName, agencyName, phone, city, state });
-      
+
       // Check if email already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ message: 'Email already exists' });
       }
-      
+
       // Create user
       const userId = Date.now().toString(); // Simple ID generation
       const user = await storage.upsertUser({
@@ -413,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName,
         role: 'agency'
       });
-      
+
       // Create agency with credentials
       const agency = await storage.createAgency({
         userId,
@@ -427,7 +430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password, // In production, hash this password
         status: 'pending'
       });
-      
+
       console.log('Agency created successfully:', agency);
       res.json({ message: 'Account created successfully' });
     } catch (error) {
@@ -441,7 +444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const { role } = req.body;
-      
+
       if (!role || !['super_admin', 'agency'].includes(role)) {
         return res.status(400).json({ message: "Invalid role" });
       }
@@ -478,7 +481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { db } = await import('./db');
       const { agencies } = await import('@shared/schema');
-      
+
       // Add test agencies
       const testAgencies = [
         {
@@ -528,7 +531,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const adminAuth = (req: any, res: any, next: any) => {
     console.log('Admin auth check - session:', req.session);
     console.log('Admin auth check - user:', req.session?.user);
-    
+
     // First check if user is in session (admin login)
     if (req.session?.user) {
       if (req.session.user.role === 'super_admin') {
@@ -537,14 +540,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
     }
-    
+
     // Fallback to global user (for immediate access)
     if (currentUser && currentUser.role === 'super_admin') {
       req.user = currentUser;
       next();
       return;
     }
-    
+
     console.log('Admin authentication failed - no valid admin session');
     res.status(401).json({ message: "Admin authentication required" });
   };
@@ -716,9 +719,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      
+
       const agency = await storage.getAgencyByUserId(userId);
-      
+
       if (!agency || agency.status !== 'approved') {
         return res.status(403).json({ message: "Forbidden" });
       }
@@ -742,9 +745,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      
+
       const agency = await storage.getAgencyByUserId(userId);
-      
+
       if (!agency) {
         return res.status(404).json({ message: "Agency not found" });
       }
@@ -761,14 +764,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const agency = await storage.getAgencyByUserId(userId);
-      
+
       if (!agency) {
         return res.status(403).json({ message: "Forbidden" });
       }
 
       const { id } = req.params;
       const bus = await storage.getBus(parseInt(id));
-      
+
       if (!bus || bus.agencyId !== agency.id) {
         return res.status(404).json({ message: "Bus not found" });
       }
@@ -786,14 +789,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const agency = await storage.getAgencyByUserId(userId);
-      
+
       if (!agency) {
         return res.status(403).json({ message: "Forbidden" });
       }
 
       const { id } = req.params;
       const bus = await storage.getBus(parseInt(id));
-      
+
       if (!bus || bus.agencyId !== agency.id) {
         return res.status(404).json({ message: "Bus not found" });
       }
@@ -813,9 +816,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      
+
       const agency = await storage.getAgencyByUserId(userId);
-      
+
       if (!agency || agency.status !== 'approved') {
         return res.status(403).json({ message: "Forbidden" });
       }
@@ -840,7 +843,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const csvData = file.buffer.toString('utf8');
       const lines = csvData.split('\n').filter((line: string) => line.trim());
       const headers = lines[0].split(',');
-      
+
       const travelerDataList = lines.slice(1).map((line: string) => {
         const values = line.split(',');
         return {
@@ -855,7 +858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).filter((data: any) => data.travelerName && data.phone);
 
       const insertedData = await storage.createTravelerData(travelerDataList);
-      
+
       // Create upload history
       await storage.createUploadHistory({
         agencyId: agency.id,
@@ -864,6 +867,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         travelerCount: insertedData.length,
         status: 'completed',
       });
+
+      // Schedule WhatsApp messages for all uploaded travelers
+      try {
+        await whatsappService.scheduleMessagesForUpload(agency.id, parseInt(busId));
+        console.log(`WhatsApp messages scheduled for ${insertedData.length} travelers`);
+      } catch (error) {
+        console.error("Error scheduling WhatsApp messages:", error);
+      }
 
       res.json({ 
         message: "Data uploaded successfully", 
@@ -882,12 +893,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      
+
       const agency = await storage.getAgencyByUserId(userId);
-      
+
       if (!agency) {
-        return res.status(403).json({ message: "Forbidden" });
-      }
+        return res.status(403).json({ message: "Forbidden" });      }
 
       const data = await storage.getTravelerDataByAgency(agency.id);
       res.json(data);
@@ -903,9 +913,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      
+
       const agency = await storage.getAgencyByUserId(userId);
-      
+
       if (!agency) {
         return res.status(403).json({ message: "Forbidden" });
       }
@@ -928,9 +938,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      
+
       const agency = await storage.getAgencyByUserId(userId);
-      
+
       if (!agency) {
         return res.status(403).json({ message: "Forbidden" });
       }
@@ -950,7 +960,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      
+
       const user = await storage.getUser(userId);
       if (user?.role !== 'super_admin') {
         return res.status(403).json({ message: "Forbidden" });
@@ -970,9 +980,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      
+
       const agency = await storage.getAgencyByUserId(userId);
-      
+
       if (!agency) {
         return res.status(403).json({ message: "Forbidden" });
       }
