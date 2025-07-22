@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -373,80 +372,80 @@ export default function BusSearch() {
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Popular Routes */}
-        <div className="container mx-auto px-4 py-16">
-          <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
-            Popular Routes
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {[
-              { from: "Mumbai", to: "Delhi", price: "₹1,200" },
-              { from: "Delhi", to: "Manali", price: "₹800" },
-              { from: "Bangalore", to: "Goa", price: "₹600" },
-              { from: "Chennai", to: "Bangalore", price: "₹400" },
-              { from: "Hyderabad", to: "Mumbai", price: "₹900" },
-              { from: "Pune", to: "Mumbai", price: "₹300" },
-              { from: "Ahmedabad", to: "Mumbai", price: "₹450" },
-              { from: "Jaipur", to: "Delhi", price: "₹350" }
-            ].map((route, index) => (
-              <Card key={index} className="border border-gray-200 hover:shadow-lg transition-all cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-semibold text-gray-800">
-                        {route.from} ↔ {route.to}
-                      </h3>
-                      <p className="text-red-600 font-bold text-lg">{route.price}</p>
-                    </div>
-                    <Bus className="w-8 h-8 text-gray-400" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Why Choose RedBus Style Section */}
-        <div className="bg-gray-100 py-16">
-          <div className="container mx-auto px-4">
+          {/* Popular Routes */}
+          <div className="container mx-auto px-4 py-16">
             <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
-              Why Choose Our Platform?
+              Popular Routes
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {[
-                {
-                  icon: "🚌",
-                  title: "2000+ Cities",
-                  description: "Connecting cities across India"
-                },
-                {
-                  icon: "🎫",
-                  title: "50+ Operators",
-                  description: "Trusted bus operators nationwide"
-                },
-                {
-                  icon: "💰",
-                  title: "Best Deals",
-                  description: "Guaranteed lowest prices"
-                },
-                {
-                  icon: "🔒",
-                  title: "Secure Booking",
-                  description: "100% safe and secure payments"
-                }
-              ].map((feature, index) => (
-                <div key={index} className="text-center">
-                  <div className="text-4xl mb-4">{feature.icon}</div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">{feature.title}</h3>
-                  <p className="text-gray-600">{feature.description}</p>
-                </div>
+                { from: "Mumbai", to: "Delhi", price: "₹1,200" },
+                { from: "Delhi", to: "Manali", price: "₹800" },
+                { from: "Bangalore", to: "Goa", price: "₹600" },
+                { from: "Chennai", to: "Bangalore", price: "₹400" },
+                { from: "Hyderabad", to: "Mumbai", price: "₹900" },
+                { from: "Pune", to: "Mumbai", price: "₹300" },
+                { from: "Ahmedabad", to: "Mumbai", price: "₹450" },
+                { from: "Jaipur", to: "Delhi", price: "₹350" }
+              ].map((route, index) => (
+                <Card key={index} className="border border-gray-200 hover:shadow-lg transition-all cursor-pointer">
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="font-semibold text-gray-800">
+                          {route.from} ↔ {route.to}
+                        </h3>
+                        <p className="text-red-600 font-bold text-lg">{route.price}</p>
+                      </div>
+                      <Bus className="w-8 h-8 text-gray-400" />
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
+            </div>
+
+            {/* Why Choose RedBus Style Section */}
+            <div className="bg-gray-100 py-16">
+              <div className="container mx-auto px-4">
+                <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
+                  Why Choose Our Platform?
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                  {[
+                    {
+                      icon: "🚌",
+                      title: "2000+ Cities",
+                      description: "Connecting cities across India"
+                    },
+                    {
+                      icon: "🎫",
+                      title: "50+ Operators",
+                      description: "Trusted bus operators nationwide"
+                    },
+                    {
+                      icon: "💰",
+                      title: "Best Deals",
+                      description: "Guaranteed lowest prices"
+                    },
+                    {
+                      icon: "🔒",
+                      title: "Secure Booking",
+                      description: "100% safe and secure payments"
+                    }
+                  ].map((feature, index) => (
+                    <div key={index} className="text-center">
+                      <div className="text-4xl mb-4">{feature.icon}</div>
+                      <h3 className="text-xl font-bold text-gray-800 mb-2">{feature.title}</h3>
+                      <p className="text-gray-600">{feature.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </Layout>
-  );
+      </Layout>
+    );
+  }
 }
