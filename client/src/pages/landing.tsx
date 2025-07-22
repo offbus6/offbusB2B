@@ -23,7 +23,7 @@ export default function Landing() {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
             <Button 
-              onClick={() => window.location.href = "/search"}
+              onClick={() => window.location.href = "/bus-search"}
               className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-10 py-4 text-lg rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
             >
               Search Buses
