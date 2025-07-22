@@ -23,18 +23,18 @@ export default function Landing() {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
             <Button 
-              onClick={() => window.location.href = "/agency-login"}
+              onClick={() => window.location.href = "/search"}
               className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-10 py-4 text-lg rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
             >
-              Travel Agency Login
+              Search Buses
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
             <Button 
-              onClick={() => window.location.href = "/signup"}
+              onClick={() => window.location.href = "/agency-login"}
               variant="outline"
               className="border-2 border-[var(--airbnb-primary)] text-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)] hover:text-white px-10 py-4 text-lg rounded-xl font-semibold transition-all"
             >
-              Start Free Trial
+              Travel Agency Login
             </Button>
           </div>
 

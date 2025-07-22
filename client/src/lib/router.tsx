@@ -33,6 +33,7 @@ import { Authenticated } from "@refinedev/core";
 import { useAuth } from "@refinedev/core";
 import BusDetails from "@/pages/bus-details";
 import BookingDetails from "@/pages/booking-details";
+import BusSearch from "@/pages/bus-search"; //Import BusSearch Component
 
 const Router = () => {
   const { auth } = useAuth();
@@ -53,6 +54,7 @@ const Router = () => {
         <Route element={<Root />} errorElement={<ErrorPage />}>
           <Route index element={<Index />} />
           <Route path="/bus/:busId" element={<BusDetails />} />
+          <Route path="/search" element={<BusSearch />} /> {/* Add the bus search route */}
           <Route
             path="/profile"
             element={
