@@ -99,7 +99,7 @@ export default function AdminDashboard() {
                 <p className="text-[var(--airbnb-gray)] text-sm">2 hours ago</p>
               </div>
             </div>
-            
+
             <div className="flex items-center py-4 border-b border-[var(--airbnb-border)]">
               <div className="w-10 h-10 bg-teal-50 rounded-full flex items-center justify-center">
                 <Upload className="w-5 h-5 text-[var(--airbnb-teal)]" />
@@ -111,7 +111,7 @@ export default function AdminDashboard() {
                 <p className="text-[var(--airbnb-gray)] text-sm">4 hours ago</p>
               </div>
             </div>
-            
+
             <div className="flex items-center py-4">
               <div className="w-10 h-10 bg-orange-50 rounded-full flex items-center justify-center">
                 <Mail className="w-5 h-5 text-[var(--airbnb-orange)]" />

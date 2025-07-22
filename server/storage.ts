@@ -729,9 +729,9 @@ export class DatabaseStorage implements IStorage {
           id: paymentHistory.id,
           agencyId: paymentHistory.agencyId,
           agencyName: agencies.name,
-          amount: paymentHistory.amount,
+          amount: paymentHistory.totalAmount,
           dueDate: paymentHistory.dueDate,
-          status: paymentHistory.status
+          status: paymentHistory.paymentStatus
         })
         .from(paymentHistory)
         .innerJoin(agencies, eq(paymentHistory.agencyId, agencies.id))
@@ -757,7 +757,7 @@ export class DatabaseStorage implements IStorage {
       const reminders = await db
         .select({
           id: paymentHistory.id,
-          amount: paymentHistory.amount,
+          amount: paymentHistory.totalAmount,
           dueDate: paymentHistory.dueDate,
           createdAt: paymentHistory.createdAt
         })
@@ -794,7 +794,7 @@ export class DatabaseStorage implements IStorage {
           id: paymentHistory.id,
           agencyId: paymentHistory.agencyId,
           agencyName: agencies.name,
-          amount: paymentHistory.amount,
+          amount: paymentHistory.totalAmount,
           dueDate: paymentHistory.dueDate,
           paymentDate: paymentHistory.paymentDate,
           status: paymentHistory.paymentStatus,
@@ -818,7 +818,7 @@ export class DatabaseStorage implements IStorage {
     try {
       const [totalRevenue] = await db
         .select({ 
-          sum: sql<number>`cast(sum(${paymentHistory.amount}) as integer)` 
+          sum: sql<number>`cast(sum(${paymentHistory.totalAmount}) as integer)` 
         })
         .from(paymentHistory)
         .where(eq(paymentHistory.paymentStatus, 'paid'));

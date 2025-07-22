@@ -723,93 +723,209 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/test/seed-data', async (req, res) => {
     try {
       const { db } = await import('./db');
-      const { agencies, paymentHistory } = await import('@shared/schema');
+      const { agencies, paymentHistory, buses, users, travelerData } = await import('@shared/schema');
+
+      // Add test users first
+      const testUsers = [
+        {
+          id: 'test-user-1',
+          email: 'info@goldenexpress.com',
+          firstName: 'John',
+          lastName: 'Smith',
+          role: 'agency'
+        },
+        {
+          id: 'test-user-2',
+          email: 'contact@bluesky.com',
+          firstName: 'Sarah',
+          lastName: 'Johnson',
+          role: 'agency'
+        },
+        {
+          id: 'test-user-3',
+          email: 'hello@mountainview.com',
+          firstName: 'Mike',
+          lastName: 'Wilson',
+          role: 'agency'
+        }
+      ];
+
+      for (const user of testUsers) {
+        await db.insert(users).values(user).onConflictDoNothing();
+      }
 
       // Add test agencies
       const testAgencies = [
         {
-          userId: 'test1',
+          userId: 'test-user-1',
           name: 'Golden Express Travel',
           email: 'info@goldenexpress.com',
           contactPerson: 'John Smith',
-          phone: '+1-555-0101',
+          phone: '+91-9876543210',
           city: 'Mumbai',
-          status: 'pending',
+          state: 'Maharashtra',
+          status: 'approved',
           password: 'password123',
+          renewalChargePerBus: 5000,
         },
         {
-          userId: 'test2',
+          userId: 'test-user-2',
           name: 'Blue Sky Transport',
           email: 'contact@bluesky.com',
           contactPerson: 'Sarah Johnson',
-          phone: '+1-555-0102',
+          phone: '+91-9876543211',
           city: 'Delhi',
-          status: 'pending',
+          state: 'Delhi',
+          status: 'approved',
           password: 'password123',
+          renewalChargePerBus: 6000,
         },
         {
-          userId: 'test3',
+          userId: 'test-user-3',
           name: 'Mountain View Travels',
           email: 'hello@mountainview.com',
           contactPerson: 'Mike Wilson',
-          phone: '+1-555-0103',
+          phone: '+91-9876543212',
           city: 'Bangalore',
+          state: 'Karnataka',
           status: 'approved',
           password: 'password123',
+          renewalChargePerBus: 5500,
         }
       ];
 
+      const insertedAgencies = [];
       for (const agency of testAgencies) {
-        await db.insert(agencies).values(agency).onConflictDoNothing();
-      }
-
-      // Add test payment records
-      const existingAgencies = await db.select().from(agencies).limit(3);
-      if (existingAgencies.length > 0) {
-        const testPayments = [
-          {
-            agencyId: existingAgencies[0].id,
-            amount: 15000,
-            dueDate: new Date('2024-12-15').toISOString(),
-            status: 'paid',
-            paymentMethod: 'bank_transfer',
-            paymentDate: new Date('2024-12-10').toISOString(),
-            invoiceNumber: 'INV-2024-001',
-            notes: 'Monthly renewal payment',
-            billingPeriod: '2024-12',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            agencyId: existingAgencies[1].id,
-            amount: 25000,
-            dueDate: new Date('2025-01-15').toISOString(),
-            status: 'pending',
-            invoiceNumber: 'INV-2025-002',
-            notes: 'Monthly renewal payment',
-            billingPeriod: '2025-01',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            agencyId: existingAgencies[2].id,
-            amount: 20000,
-            dueDate: new Date('2024-12-20').toISOString(),
-            status: 'pending',
-            invoiceNumber: 'INV-2024-003',
-            notes: 'Monthly renewal payment - Overdue',
-            billingPeriod: '2024-12',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-        ];
-
-        for (const payment of testPayments) {
-          await db.insert(paymentHistory).values(payment).onConflictDoNothing();
+        const result = await db.insert(agencies).values(agency).onConflictDoNothing().returning();
+        if (result.length > 0) {
+          insertedAgencies.push(result[0]);
         }
       }
 
-      res.json({ success: true, message: 'Test data seeded successfully' });
+      // Get existing agencies if new ones weren't inserted
+      if (insertedAgencies.length === 0) {
+        const existingAgencies = await db.select().from(agencies).limit(3);
+        insertedAgencies.push(...existingAgencies);
+      }
+
+      // Add test buses for each agency
+      const testBuses = [];
+      insertedAgencies.forEach((agency, index) => {
+        for (let i = 1; i <= 3; i++) {
+          testBuses.push({
+            agencyId: agency.id,
+            registrationNumber: `${agency.name.split(' ')[0].toUpperCase()}-${1000 + (index * 10) + i}`,
+            routeNumber: `Route-${index + 1}-${i}`,
+            capacity: 40 + (i * 5),
+            vehicleType: i % 2 === 0 ? 'AC' : 'Non-AC',
+            isActive: true,
+          });
+        }
+      });
+
+      for (const bus of testBuses) {
+        await db.insert(buses).values(bus).onConflictDoNothing();
+      }
+
+      // Add comprehensive test payment records
+      const testPayments = [];
+      insertedAgencies.forEach((agency, index) => {
+        const busCount = 3; // Each agency has 3 buses
+        const chargePerBus = agency.renewalChargePerBus || 5000;
+        const subtotal = busCount * chargePerBus;
+        const taxPercentage = 18;
+        const taxAmount = Math.round((subtotal * taxPercentage) / 100);
+        const totalAmount = subtotal + taxAmount;
+
+        // Paid payment (last month)
+        testPayments.push({
+          agencyId: agency.id,
+          billId: `BILL-${agency.id}-${Date.now() - 86400000}`,
+          billingPeriod: '2024-11',
+          totalBuses: busCount,
+          chargePerBus,
+          subtotal,
+          taxPercentage,
+          taxAmount,
+          totalAmount,
+          paymentStatus: 'paid',
+          paymentMethod: 'bank_transfer',
+          paymentDate: new Date('2024-11-25'),
+          dueDate: new Date('2024-12-01'),
+          notes: 'Monthly renewal payment - November 2024',
+        });
+
+        // Pending payment (current month)
+        testPayments.push({
+          agencyId: agency.id,
+          billId: `BILL-${agency.id}-${Date.now()}`,
+          billingPeriod: '2024-12',
+          totalBuses: busCount,
+          chargePerBus,
+          subtotal,
+          taxPercentage,
+          taxAmount,
+          totalAmount,
+          paymentStatus: 'pending',
+          dueDate: new Date('2025-01-15'),
+          notes: 'Monthly renewal payment - December 2024',
+        });
+
+        // Overdue payment for first agency
+        if (index === 0) {
+          testPayments.push({
+            agencyId: agency.id,
+            billId: `BILL-${agency.id}-${Date.now() - 172800000}`,
+            billingPeriod: '2024-10',
+            totalBuses: busCount,
+            chargePerBus,
+            subtotal,
+            taxPercentage,
+            taxAmount,
+            totalAmount,
+            paymentStatus: 'pending',
+            dueDate: new Date('2024-12-20'), // Past due date
+            notes: 'Monthly renewal payment - October 2024 (OVERDUE)',
+          });
+        }
+      });
+
+      for (const payment of testPayments) {
+        await db.insert(paymentHistory).values(payment).onConflictDoNothing();
+      }
+
+      // Add sample traveler data
+      const allBuses = await db.select().from(buses).limit(9);
+      const sampleTravelers = [];
+      
+      allBuses.forEach((bus, busIndex) => {
+        for (let i = 1; i <= 5; i++) {
+          sampleTravelers.push({
+            busId: bus.id,
+            agencyId: bus.agencyId,
+            travelerName: `Traveler ${busIndex + 1}-${i}`,
+            phone: `+91-987654${String(busIndex).padStart(2, '0')}${String(i).padStart(2, '0')}`,
+            travelDate: new Date(Date.now() + (busIndex * 86400000) + (i * 3600000)), // Spread over different dates
+            couponCode: `SAVE${(busIndex + 1) * 10 + i}`,
+            whatsappStatus: ['pending', 'sent', 'delivered'][i % 3],
+          });
+        }
+      });
+
+      for (const traveler of sampleTravelers) {
+        await db.insert(travelerData).values(traveler).onConflictDoNothing();
+      }
+
+      res.json({ 
+        success: true, 
+        message: 'Comprehensive test data seeded successfully',
+        details: {
+          agencies: insertedAgencies.length,
+          buses: testBuses.length,
+          payments: testPayments.length,
+          travelers: sampleTravelers.length
+        }
+      });
     } catch (error) {
       console.error("Seed data error:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -1494,26 +1610,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payments = await storage.getPaymentHistory(agency.id);
       
       const totalOutstanding = payments
-        .filter(p => p.status === 'pending' || p.status === 'overdue')
-        .reduce((sum, p) => sum + p.amount, 0);
+        .filter(p => p.paymentStatus === 'pending' || p.paymentStatus === 'overdue')
+        .reduce((sum, p) => sum + p.totalAmount, 0);
       
       const totalPaid = payments
-        .filter(p => p.status === 'paid')
-        .reduce((sum, p) => sum + p.amount, 0);
+        .filter(p => p.paymentStatus === 'paid')
+        .reduce((sum, p) => sum + p.totalAmount, 0);
       
       const overdueAmount = payments
-        .filter(p => p.status === 'overdue')
-        .reduce((sum, p) => sum + p.amount, 0);
+        .filter(p => p.paymentStatus === 'overdue')
+        .reduce((sum, p) => sum + p.totalAmount, 0);
       
       const nextPayment = payments
-        .filter(p => p.status === 'pending')
+        .filter(p => p.paymentStatus === 'pending')
         .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
 
       const stats = {
         totalOutstanding,
         totalPaid,
         overdueAmount,
-        nextDueAmount: nextPayment?.amount || 0,
+        nextDueAmount: nextPayment?.totalAmount || 0,
         nextDueDate: nextPayment?.dueDate
       };
 
@@ -1717,6 +1833,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching agency statistics:", error);
       res.status(500).json({ message: "Failed to fetch agency statistics" });
+    }
+  });
+
+  // Generate sample payments for existing agencies
+  app.post('/api/test/generate-sample-payments', adminAuth, async (req, res) => {
+    try {
+      const { db } = await import('./db');
+      const { agencies, buses, paymentHistory } = await import('@shared/schema');
+
+      // Get all approved agencies
+      const allAgencies = await db.select().from(agencies).where(eq(agencies.status, 'approved'));
+
+      if (allAgencies.length === 0) {
+        return res.status(400).json({ message: 'No approved agencies found' });
+      }
+
+      const samplePayments = [];
+
+      for (const agency of allAgencies) {
+        // Get bus count for this agency
+        const [busCount] = await db
+          .select({ count: sql<number>`cast(count(*) as integer)` })
+          .from(buses)
+          .where(eq(buses.agencyId, agency.id));
+
+        const totalBuses = Number(busCount?.count || 1);
+        const chargePerBus = agency.renewalChargePerBus || 5000;
+        const subtotal = totalBuses * chargePerBus;
+        const taxPercentage = 18;
+        const taxAmount = Math.round((subtotal * taxPercentage) / 100);
+        const totalAmount = subtotal + taxAmount;
+
+        // Paid payment (last month)
+        samplePayments.push({
+          agencyId: agency.id,
+          billId: `BILL-${agency.id}-${Date.now() - 86400000}`,
+          billingPeriod: '2024-11',
+          totalBuses,
+          chargePerBus,
+          subtotal,
+          taxPercentage,
+          taxAmount,
+          totalAmount,
+          paymentStatus: 'paid',
+          paymentMethod: 'bank_transfer',
+          paymentDate: new Date('2024-11-25'),
+          dueDate: new Date('2024-12-01'),
+          notes: 'Monthly renewal payment - November 2024',
+        });
+
+        // Pending payment (current month)
+        samplePayments.push({
+          agencyId: agency.id,
+          billId: `BILL-${agency.id}-${Date.now()}`,
+          billingPeriod: '2024-12',
+          totalBuses,
+          chargePerBus,
+          subtotal,
+          taxPercentage,
+          taxAmount,
+          totalAmount,
+          paymentStatus: 'pending',
+          dueDate: new Date('2025-01-15'),
+          notes: 'Monthly renewal payment - December 2024',
+        });
+
+        // Some agencies get overdue payments
+        if (agency.id % 2 === 0) {
+          samplePayments.push({
+            agencyId: agency.id,
+            billId: `BILL-${agency.id}-${Date.now() - 172800000}`,
+            billingPeriod: '2024-10',
+            totalBuses,
+            chargePerBus,
+            subtotal,
+            taxPercentage,
+            taxAmount,
+            totalAmount,
+            paymentStatus: 'pending',
+            dueDate: new Date('2024-12-20'), // Past due date
+            notes: 'Monthly renewal payment - October 2024 (OVERDUE)',
+          });
+        }
+      }
+
+      // Insert all sample payments
+      for (const payment of samplePayments) {
+        await db.insert(paymentHistory).values(payment).onConflictDoNothing();
+      }
+
+      res.json({ 
+        success: true, 
+        message: 'Sample payments generated successfully',
+        paymentsGenerated: samplePayments.length,
+        agenciesProcessed: allAgencies.length
+      });
+    } catch (error) {
+      console.error("Error generating sample payments:", error);
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 
