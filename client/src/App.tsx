@@ -12,7 +12,6 @@ import ManageAgencies from "./pages/admin/manage-agencies";
 import AgencyDetails from "./pages/admin/agency-details";
 import WhatsappConfig from "./pages/admin/whatsapp-config";
 import AdminProfile from "@/pages/admin/profile";
-import WhatsappConfig from "@/pages/admin/whatsapp-config";
 import AdminSignup from "@/pages/admin-signup";
 import AgencyDashboard from "@/pages/agency/dashboard";
 import BusManagement from "@/pages/agency/bus-management";
