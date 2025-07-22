@@ -9,7 +9,8 @@ import {
   Upload, 
   Database,
   User,
-  MessageSquare 
+  MessageSquare,
+  CreditCard
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -71,6 +72,11 @@ export default function Sidebar() {
       href: "/agency/uploaded-data", 
       icon: Database, 
       label: "Uploaded Data" 
+    },
+    { 
+      href: "/agency/payments",
+      icon: CreditCard,
+      label: "Payments"
     },
   ];
 

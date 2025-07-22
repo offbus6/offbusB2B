@@ -349,3 +349,387 @@ export default function AgencyPayments() {
     </div>
   );
 }
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CalendarIcon, CreditCard, Download, Filter, Search, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { format } from "date-fns";
+import * as XLSX from 'xlsx';
+
+interface Payment {
+  id: number;
+  agencyId: number;
+  amount: number;
+  dueDate: string;
+  status: 'pending' | 'paid' | 'overdue';
+  paymentMethod?: string;
+  paymentDate?: string;
+  invoiceNumber: string;
+  notes?: string;
+  billingPeriod: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface PaymentStats {
+  totalOutstanding: number;
+  totalPaid: number;
+  overdueAmount: number;
+  nextDueAmount: number;
+  nextDueDate?: string;
+}
+
+export default function Payments() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [periodFilter, setPeriodFilter] = useState<string>("all");
+
+  // Fetch payment data
+  const { data: payments = [], isLoading: paymentsLoading } = useQuery<Payment[]>({
+    queryKey: ['/api/agency/payments'],
+    queryFn: async () => {
+      const response = await fetch('/api/agency/payments');
+      if (!response.ok) {
+        throw new Error('Failed to fetch payments');
+      }
+      return response.json();
+    }
+  });
+
+  // Fetch payment stats
+  const { data: paymentStats } = useQuery<PaymentStats>({
+    queryKey: ['/api/agency/payment-stats'],
+    queryFn: async () => {
+      const response = await fetch('/api/agency/payment-stats');
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment stats');
+      }
+      return response.json();
+    }
+  });
+
+  // Filter and search payments
+  const filteredPayments = useMemo(() => {
+    return payments.filter((payment) => {
+      const matchesSearch = payment.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           payment.billingPeriod.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           payment.notes?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === "all" || payment.status === statusFilter;
+      
+      const matchesPeriod = periodFilter === "all" || payment.billingPeriod.includes(periodFilter);
+      
+      return matchesSearch && matchesStatus && matchesPeriod;
+    });
+  }, [payments, searchTerm, statusFilter, periodFilter]);
+
+  // Get next payment due
+  const nextPaymentDue = useMemo(() => {
+    const pendingPayments = payments.filter(p => p.status === 'pending');
+    if (pendingPayments.length === 0) return null;
+    
+    return pendingPayments.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
+  }, [payments]);
+
+  // Export to Excel
+  const exportToExcel = () => {
+    const exportData = filteredPayments.map((payment) => ({
+      'Invoice Number': payment.invoiceNumber,
+      'Amount': `₹${payment.amount.toLocaleString()}`,
+      'Due Date': format(new Date(payment.dueDate), 'dd/MM/yyyy'),
+      'Status': payment.status.toUpperCase(),
+      'Billing Period': payment.billingPeriod,
+      'Payment Date': payment.paymentDate ? format(new Date(payment.paymentDate), 'dd/MM/yyyy') : 'N/A',
+      'Payment Method': payment.paymentMethod || 'N/A',
+      'Notes': payment.notes || 'N/A'
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Payment History');
+
+    // Auto-size columns
+    const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+      wch: Math.max(key.length, 15)
+    }));
+    worksheet['!cols'] = colWidths;
+
+    // Export file
+    XLSX.writeFile(workbook, `payment-history-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'paid': return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'overdue': return <AlertCircle className="w-4 h-4 text-red-500" />;
+      default: return <Clock className="w-4 h-4 text-yellow-500" />;
+    }
+  };
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'paid': return 'default';
+      case 'overdue': return 'destructive';
+      default: return 'secondary';
+    }
+  };
+
+  const handlePayment = (paymentId: number) => {
+    // This would typically open a payment gateway or redirect to payment page
+    console.log('Processing payment for ID:', paymentId);
+    // For now, we'll just show an alert
+    alert('Payment gateway integration would be implemented here');
+  };
+
+  if (paymentsLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Payments</h1>
+          <p className="text-gray-600 mt-1">Manage your subscription payments and billing history</p>
+        </div>
+      </div>
+
+      {/* Payment Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Outstanding Amount</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              ₹{paymentStats?.totalOutstanding?.toLocaleString() || '0'}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Total Paid</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              ₹{paymentStats?.totalPaid?.toLocaleString() || '0'}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Overdue Amount</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">
+              ₹{paymentStats?.overdueAmount?.toLocaleString() || '0'}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Next Payment</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              ₹{paymentStats?.nextDueAmount?.toLocaleString() || '0'}
+            </div>
+            {paymentStats?.nextDueDate && (
+              <p className="text-sm text-gray-500 mt-1">
+                Due: {format(new Date(paymentStats.nextDueDate), 'dd MMM yyyy')}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Next Payment Due */}
+      {nextPaymentDue && (
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5" />
+                  Payment Due
+                </CardTitle>
+                <CardDescription>
+                  Your next payment is due soon
+                </CardDescription>
+              </div>
+              <Button onClick={() => handlePayment(nextPaymentDue.id)} className="bg-blue-600 hover:bg-blue-700">
+                Pay Now
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Amount Due</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  ₹{nextPaymentDue.amount.toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Due Date</p>
+                <p className="text-lg font-semibold flex items-center gap-2">
+                  <CalendarIcon className="w-4 h-4" />
+                  {format(new Date(nextPaymentDue.dueDate), 'dd MMM yyyy')}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Invoice Number</p>
+                <p className="text-lg font-semibold">{nextPaymentDue.invoiceNumber}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Payment History */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Payment History</CardTitle>
+              <CardDescription>View and manage your payment history</CardDescription>
+            </div>
+            <Button onClick={exportToExcel} variant="outline" className="flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              Export Excel
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search invoices, periods, or notes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={periodFilter} onValueChange={setPeriodFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filter by period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Periods</SelectItem>
+                <SelectItem value="2024">2024</SelectItem>
+                <SelectItem value="2023">2023</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Payment Table */}
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Invoice</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Due Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Period</TableHead>
+                  <TableHead>Payment Date</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredPayments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      No payment records found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredPayments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium">
+                        {payment.invoiceNumber}
+                      </TableCell>
+                      <TableCell className="font-semibold">
+                        ₹{payment.amount.toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(payment.dueDate), 'dd MMM yyyy')}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(payment.status)}
+                          <Badge variant={getStatusBadgeVariant(payment.status)}>
+                            {payment.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>{payment.billingPeriod}</TableCell>
+                      <TableCell>
+                        {payment.paymentDate 
+                          ? format(new Date(payment.paymentDate), 'dd MMM yyyy')
+                          : '-'
+                        }
+                      </TableCell>
+                      <TableCell>
+                        {payment.status === 'pending' && (
+                          <Button 
+                            size="sm" 
+                            onClick={() => handlePayment(payment.id)}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            Pay Now
+                          </Button>
+                        )}
+                        {payment.status === 'paid' && (
+                          <Button size="sm" variant="outline">
+                            Receipt
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination could be added here for large datasets */}
+          {filteredPayments.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <p className="text-sm text-gray-600">
+                Showing {filteredPayments.length} of {payments.length} payments
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

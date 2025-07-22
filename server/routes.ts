@@ -1478,6 +1478,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/agency/payment-stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const agency = await storage.getAgencyByUserId(userId);
+
+      if (!agency) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const payments = await storage.getPaymentHistory(agency.id);
+      
+      const totalOutstanding = payments
+        .filter(p => p.status === 'pending' || p.status === 'overdue')
+        .reduce((sum, p) => sum + p.amount, 0);
+      
+      const totalPaid = payments
+        .filter(p => p.status === 'paid')
+        .reduce((sum, p) => sum + p.amount, 0);
+      
+      const overdueAmount = payments
+        .filter(p => p.status === 'overdue')
+        .reduce((sum, p) => sum + p.amount, 0);
+      
+      const nextPayment = payments
+        .filter(p => p.status === 'pending')
+        .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
+
+      const stats = {
+        totalOutstanding,
+        totalPaid,
+        overdueAmount,
+        nextDueAmount: nextPayment?.amount || 0,
+        nextDueDate: nextPayment?.dueDate
+      };
+
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching agency payment stats:", error);
+      res.status(500).json({ message: "Failed to fetch agency payment stats" });
+    }
+  });
+
   // Stats routes
   app.get('/api/stats/system', isAuthenticated, async (req: any, res) => {
     try {
@@ -1587,17 +1633,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const agencyBuses = await db.select({
         id: buses.id,
-        number: buses.number,
-        name: buses.name,
-        fromLocation: buses.fromLocation,
-        toLocation: buses.toLocation,
-        departureTime: buses.departureTime,
-        arrivalTime: buses.arrivalTime,
-        busType: buses.busType,
+        registrationNumber: buses.registrationNumber,
+        routeNumber: buses.routeNumber,
         capacity: buses.capacity,
-        fare: buses.fare,
-        amenities: buses.amenities,
-        imageUrl: buses.imageUrl,
+        vehicleType: buses.vehicleType,
         isActive: buses.isActive,
         createdAt: buses.createdAt,
         updatedAt: buses.updatedAt
