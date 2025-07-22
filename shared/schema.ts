@@ -193,7 +193,6 @@ export const whatsappTemplates = pgTable("whatsapp_templates", {
   id: serial("id").primaryKey(),
   name: varchar("name").notNull(),
   dayTrigger: integer("day_trigger").notNull(), // 30, 60, 90, etc.
-  subject: varchar("subject").notNull(),
   message: text("message").notNull(),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),

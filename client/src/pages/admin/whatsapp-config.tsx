@@ -30,7 +30,6 @@ const whatsappConfigSchema = z.object({
 const templateSchema = z.object({
   name: z.string().min(1, "Template name is required"),
   dayTrigger: z.number().min(1, "Day trigger must be at least 1"),
-  subject: z.string().min(1, "Subject is required"),
   message: z.string().min(1, "Message is required"),
   isActive: z.boolean().default(true),
 });
@@ -61,7 +60,6 @@ export default function WhatsappConfig() {
     defaultValues: {
       name: "",
       dayTrigger: 30,
-      subject: "",
       message: "",
       isActive: true,
     },
@@ -112,7 +110,7 @@ export default function WhatsappConfig() {
         ? `/api/admin/whatsapp-templates/${editingTemplate.id}`
         : "/api/admin/whatsapp-templates";
       const method = editingTemplate ? "PATCH" : "POST";
-      
+
       await apiRequest(url, {
         method,
         body: data,
@@ -190,7 +188,12 @@ export default function WhatsappConfig() {
 
   const handleEditTemplate = (template: any) => {
     setEditingTemplate(template);
-    templateForm.reset(template);
+    templateForm.reset({
+      name: template.name,
+      dayTrigger: template.dayTrigger,
+      message: template.message,
+      isActive: template.isActive,
+    });
     setIsTemplateDialogOpen(true);
   };
 
@@ -558,6 +561,9 @@ export default function WhatsappConfig() {
             <DialogTitle>
               {editingTemplate ? 'Edit Template' : 'Create New Template'}
             </DialogTitle>
+            <DialogDescription>
+                    Create automated WhatsApp message templates. WhatsApp messages only contain text content (no subject line like emails).
+                  </DialogDescription>
           </DialogHeader>
           <Form {...templateForm}>
             <form onSubmit={templateForm.handleSubmit(onTemplateSubmit)} className="space-y-4">
@@ -598,31 +604,20 @@ export default function WhatsappConfig() {
 
               <FormField
                 control={templateForm.control}
-                name="subject"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subject</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Follow-up message from {{agency_name}}" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={templateForm.control}
                 name="message"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Message</FormLabel>
+                    <FormLabel>WhatsApp Message Content</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Hi {{traveler_name}}, Hope you enjoyed your travel with {{agency_name}}..."
+                        placeholder="Enter your WhatsApp message content..."
                         rows={6}
                         {...field}
                       />
                     </FormControl>
+                    <FormDescription className="text-xs">
+                      Use variables like {{traveler_name}}, {{agency_name}}, {{coupon_code}}, {{travel_date}}. WhatsApp messages are text-only (no subject line).
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
