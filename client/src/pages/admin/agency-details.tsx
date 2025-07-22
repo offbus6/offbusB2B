@@ -440,7 +440,11 @@ export default function AgencyDetails() {
         <Button 
           onClick={handleSave}
           disabled={updateAgencyMutation.isPending || !hasUnsavedChanges}
-          className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white disabled:bg-gray-400 disabled:text-gray-600 disabled:cursor-not-allowed"
+          className={`px-4 py-2 rounded-md font-medium transition-colors ${
+            hasUnsavedChanges 
+              ? 'bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white' 
+              : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+          }`}
         >
           <Save className="w-4 h-4 mr-2" />
           {hasUnsavedChanges ? 'Save Changes' : 'No Changes'}
