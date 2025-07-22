@@ -145,3 +145,13 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - Admin can configure API credentials for multiple providers (Business API, Twilio, MessageBird)
 - Added message queue management and delivery status tracking
 - Integrated test message functionality for API validation
+- **FIXED: Application startup and routing issues (July 22, 2025)**
+- Resolved react-router-dom conflicts by ensuring consistent use of wouter for routing
+- Fixed TypeScript errors in header component with proper type casting for user and notifications
+- Added missing /bus-search route to public routing configuration
+- **TRANSFORMED: Bus search into travel coupon aggregator (July 22, 2025)**
+- Converted bus search page from seat selection to coupon/deal aggregator
+- Added real travel platform deals (RedBus, MakeMyTrip, Goibibo, Paytm, etc.)
+- Implemented price comparison with original vs discounted prices
+- Added external redirect functionality to partner travel websites
+- Shows coupon codes, terms, validity, and savings calculations

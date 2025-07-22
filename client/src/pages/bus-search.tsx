@@ -1,12 +1,10 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MapPin, Calendar, Search, Bus, Clock, Star, Users, Wifi, Car, Snowflake, Coffee } from "lucide-react";
+import { MapPin, Calendar, Search, Bus, ExternalLink, Tag, Clock, Star } from "lucide-react";
 import Layout from "@/components/layout/layout";
-import { Link } from "wouter";
 
 export default function BusSearch() {
   const [searchParams, setSearchParams] = useState({
@@ -22,88 +20,103 @@ export default function BusSearch() {
     setShowResults(true);
   };
 
-  const sampleBuses = [
+  const travelDeals = [
     {
       id: 1,
-      name: "Volvo Multi-Axle AC Sleeper",
-      operator: "TravelFlow Express",
-      from: searchParams.from || "Mumbai",
-      to: searchParams.to || "Delhi",
-      departureTime: "08:00 PM",
-      arrivalTime: "10:30 AM",
-      duration: "14h 30m",
-      fare: 1450,
-      rating: 4.5,
-      seats: 32,
-      amenities: ["AC", "WiFi", "Blanket", "Water Bottle", "Charging Point"]
+      operator: "RedBus",
+      logoUrl: "https://images.unsplash.com/photo-1570125909517-53cb21c89ff2?w=100&h=100&fit=crop&crop=center",
+      offer: "₹200 OFF",
+      discount: "20% OFF",
+      description: "Book any bus journey above ₹1000",
+      code: "REDBUS200",
+      originalPrice: 1450,
+      discountedPrice: 1250,
+      validTill: "31 Dec 2025",
+      terms: "Valid on all routes • Maximum discount ₹200 • Valid till 31st Dec",
+      websiteUrl: "https://www.redbus.in",
+      color: "bg-red-500"
     },
     {
       id: 2,
-      name: "Mercedes Multi-Axle AC Seater",
-      operator: "RedBus Travels",
-      from: searchParams.from || "Mumbai",
-      to: searchParams.to || "Delhi",
-      departureTime: "06:30 AM",
-      arrivalTime: "06:00 PM",
-      duration: "11h 30m",
-      fare: 950,
-      rating: 4.2,
-      seats: 45,
-      amenities: ["AC", "WiFi", "Water Bottle", "Charging Point"]
+      operator: "AbhiBus",
+      logoUrl: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=100&h=100&fit=crop&crop=center",
+      offer: "₹150 OFF",
+      discount: "15% OFF",
+      description: "First time users get extra savings",
+      code: "ABHIBUS150",
+      originalPrice: 950,
+      discountedPrice: 800,
+      validTill: "15 Jan 2025",
+      terms: "Valid for new users • Maximum discount ₹150 • Valid on AC buses",
+      websiteUrl: "https://www.abhibus.com",
+      color: "bg-blue-500"
     },
     {
       id: 3,
-      name: "Scania AC Sleeper",
-      operator: "Highway Express",
-      from: searchParams.from || "Mumbai",
-      to: searchParams.to || "Delhi",
-      departureTime: "09:45 PM",
-      arrivalTime: "12:15 PM",
-      duration: "14h 30m",
-      fare: 1650,
-      rating: 4.7,
-      seats: 28,
-      amenities: ["AC", "WiFi", "Blanket", "Meals", "Water Bottle", "Charging Point"]
+      operator: "MakeMyTrip",
+      logoUrl: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=100&h=100&fit=crop&crop=center",
+      offer: "₹300 OFF",
+      discount: "25% OFF",
+      description: "Premium bus bookings with luxury amenities",
+      code: "MMT300",
+      originalPrice: 1650,
+      discountedPrice: 1350,
+      validTill: "28 Feb 2025",
+      terms: "Valid on Volvo & Mercedes buses • Maximum discount ₹300 • Weekend special",
+      websiteUrl: "https://www.makemytrip.com",
+      color: "bg-orange-500"
     },
     {
       id: 4,
-      name: "Tata AC Semi Sleeper",
-      operator: "Swift Travels",
-      from: searchParams.from || "Mumbai",
-      to: searchParams.to || "Delhi",
-      departureTime: "11:00 PM",
-      arrivalTime: "01:30 PM",
-      duration: "14h 30m",
-      fare: 1200,
-      rating: 4.0,
-      seats: 38,
-      amenities: ["AC", "Blanket", "Water Bottle", "Charging Point"]
+      operator: "Goibibo",
+      logoUrl: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=100&h=100&fit=crop&crop=center",
+      offer: "₹100 OFF",
+      discount: "10% OFF",
+      description: "Round trip bookings save more",
+      code: "GOIBIBO100",
+      originalPrice: 1200,
+      discountedPrice: 1100,
+      validTill: "20 Jan 2025",
+      terms: "Valid on round trip bookings • Maximum discount ₹100 • All routes",
+      websiteUrl: "https://www.goibibo.com",
+      color: "bg-green-500"
+    },
+    {
+      id: 5,
+      operator: "Paytm",
+      logoUrl: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=100&h=100&fit=crop&crop=center",
+      offer: "₹250 OFF",
+      discount: "20% OFF",
+      description: "Pay with Paytm wallet for instant discount",
+      code: "PAYTM250",
+      originalPrice: 1300,
+      discountedPrice: 1050,
+      validTill: "10 Feb 2025",
+      terms: "Valid with Paytm wallet payment • Maximum discount ₹250 • All operators",
+      websiteUrl: "https://paytm.com/bus-booking",
+      color: "bg-blue-600"
+    },
+    {
+      id: 6,
+      operator: "Yatra",
+      logoUrl: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=100&h=100&fit=crop&crop=center",
+      offer: "₹180 OFF",
+      discount: "18% OFF",
+      description: "Corporate bookings get special rates",
+      code: "YATRA180",
+      originalPrice: 1100,
+      discountedPrice: 920,
+      validTill: "25 Jan 2025",
+      terms: "Valid for corporate bookings • Maximum discount ₹180 • AC Sleeper only",
+      websiteUrl: "https://www.yatra.com",
+      color: "bg-purple-500"
     }
   ];
 
-  const couponOffers = [
-    {
-      code: "FIRST100",
-      title: "First Time User",
-      discount: "₹100 OFF",
-      description: "Valid on bookings above ₹500",
-      color: "bg-gradient-to-r from-green-400 to-green-600"
-    },
-    {
-      code: "WEEKEND50",
-      title: "Weekend Special",
-      discount: "₹50 OFF",
-      description: "Valid on weekend bookings",
-      color: "bg-gradient-to-r from-blue-400 to-blue-600"
-    },
-    {
-      code: "SAVE200",
-      title: "Super Saver",
-      discount: "₹200 OFF",
-      description: "Valid on bookings above ₹1000",
-      color: "bg-gradient-to-r from-purple-400 to-purple-600"
-    }
-  ];
+  const handleRedirect = (websiteUrl: string, code: string) => {
+    // Open the travel website in a new tab
+    window.open(websiteUrl, '_blank');
+  };
 
   if (showResults) {
     return (
@@ -135,147 +148,104 @@ export default function BusSearch() {
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {/* Bus Results */}
-              <div className="lg:col-span-3 space-y-4">
-                <h2 className="text-2xl font-bold text-[var(--airbnb-dark)] mb-4">
-                  {sampleBuses.length} buses found
-                </h2>
-                
-                {sampleBuses.map((bus) => (
-                  <Card key={bus.id} className="airbnb-shadow hover:shadow-lg transition-all duration-300">
-                    <CardContent className="p-6">
-                      <div className="grid grid-cols-12 gap-4 items-center">
-                        {/* Bus Info */}
-                        <div className="col-span-12 md:col-span-3">
-                          <h3 className="font-semibold text-[var(--airbnb-dark)] text-lg mb-1">
-                            {bus.name}
-                          </h3>
-                          <p className="text-[var(--airbnb-gray)] text-sm mb-2">{bus.operator}</p>
-                          <div className="flex items-center space-x-2">
-                            <div className="flex items-center">
-                              <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                              <span className="text-sm font-medium ml-1">{bus.rating}</span>
-                            </div>
-                            <div className="flex items-center text-[var(--airbnb-gray)] text-sm">
-                              <Users className="w-4 h-4 mr-1" />
-                              {bus.seats} seats
-                            </div>
-                          </div>
-                        </div>
+            {/* Header */}
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-[var(--airbnb-dark)] mb-2">
+                Best Travel Deals & Coupons
+              </h1>
+              <p className="text-[var(--airbnb-gray)] text-lg">
+                Save money on your bus bookings with exclusive offers from top travel platforms
+              </p>
+            </div>
 
-                        {/* Route & Timing */}
-                        <div className="col-span-12 md:col-span-4">
-                          <div className="flex items-center justify-between">
-                            <div className="text-center">
-                              <div className="text-xl font-bold text-[var(--airbnb-dark)]">
-                                {bus.departureTime}
-                              </div>
-                              <div className="text-sm text-[var(--airbnb-gray)]">
-                                {bus.from}
-                              </div>
-                            </div>
-                            <div className="flex flex-col items-center px-4">
-                              <div className="text-xs text-[var(--airbnb-gray)] mb-1">
-                                {bus.duration}
-                              </div>
-                              <div className="w-16 h-px bg-[var(--airbnb-gray)] relative">
-                                <div className="absolute -right-1 -top-1 w-2 h-2 bg-[var(--airbnb-primary)] rounded-full"></div>
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-xl font-bold text-[var(--airbnb-dark)]">
-                                {bus.arrivalTime}
-                              </div>
-                              <div className="text-sm text-[var(--airbnb-gray)]">
-                                {bus.to}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Amenities */}
-                        <div className="col-span-12 md:col-span-3">
-                          <div className="flex flex-wrap gap-1 mb-3">
-                            {bus.amenities.slice(0, 4).map((amenity) => (
-                              <span 
-                                key={amenity}
-                                className="inline-flex items-center px-2 py-1 bg-[var(--airbnb-light)] text-[var(--airbnb-primary)] text-xs rounded-full"
-                              >
-                                {amenity === "AC" && <Snowflake className="w-3 h-3 mr-1" />}
-                                {amenity === "WiFi" && <Wifi className="w-3 h-3 mr-1" />}
-                                {amenity === "Charging Point" && <Car className="w-3 h-3 mr-1" />}
-                                {amenity === "Meals" && <Coffee className="w-3 h-3 mr-1" />}
-                                {amenity}
-                              </span>
-                            ))}
-                            {bus.amenities.length > 4 && (
-                              <span className="text-xs text-[var(--airbnb-gray)]">
-                                +{bus.amenities.length - 4} more
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Price & Book */}
-                        <div className="col-span-12 md:col-span-2 text-right">
-                          <div className="text-2xl font-bold text-[var(--airbnb-dark)] mb-2">
-                            ₹{bus.fare}
-                          </div>
-                          <Button className="w-full bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white">
-                            Select Seats
-                          </Button>
+            {/* Travel Deals Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {travelDeals.map((deal) => (
+                <Card key={deal.id} className="airbnb-shadow hover:shadow-lg transition-all duration-300">
+                  <CardContent className="p-6">
+                    {/* Header with Logo and Operator */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <img 
+                          src={deal.logoUrl} 
+                          alt={deal.operator}
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
+                        <div>
+                          <h3 className="font-bold text-lg text-[var(--airbnb-dark)]">{deal.operator}</h3>
+                          <p className="text-sm text-[var(--airbnb-gray)]">{deal.description}</p>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      <div className={`${deal.color} text-white px-3 py-1 rounded-full text-sm font-bold`}>
+                        {deal.discount}
+                      </div>
+                    </div>
 
-              {/* Coupons Sidebar */}
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold text-[var(--airbnb-dark)]">Available Offers</h3>
-                
-                {couponOffers.map((offer, index) => (
-                  <Card key={index} className="overflow-hidden airbnb-shadow">
-                    <div className={`${offer.color} p-4 text-white`}>
+                    {/* Offer Details */}
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-bold text-lg">{offer.discount}</h4>
-                        <div className="bg-white/20 px-2 py-1 rounded text-xs">
-                          {offer.code}
+                        <div className="flex items-center space-x-2">
+                          <Tag className="w-4 h-4 text-[var(--airbnb-primary)]" />
+                          <span className="font-mono font-bold text-[var(--airbnb-primary)]">{deal.code}</span>
                         </div>
+                        <span className="text-2xl font-bold text-green-600">{deal.offer}</span>
                       </div>
-                      <h5 className="font-semibold mb-1">{offer.title}</h5>
-                      <p className="text-xs opacity-90">{offer.description}</p>
+                      
+                      {/* Price Comparison */}
+                      <div className="flex items-center space-x-3 mb-2">
+                        <span className="text-sm text-[var(--airbnb-gray)]">Sample Price:</span>
+                        <span className="text-lg text-gray-500 line-through">₹{deal.originalPrice}</span>
+                        <span className="text-lg font-bold text-green-600">₹{deal.discountedPrice}</span>
+                        <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">
+                          Save ₹{deal.originalPrice - deal.discountedPrice}
+                        </span>
+                      </div>
                     </div>
-                    <CardContent className="p-4">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full text-[var(--airbnb-primary)] border-[var(--airbnb-primary)]"
-                      >
-                        Apply Code
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
 
-                {/* Customer Support */}
-                <Card className="airbnb-shadow">
-                  <CardHeader>
-                    <CardTitle className="text-lg text-[var(--airbnb-dark)]">Need Help?</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="text-sm text-[var(--airbnb-gray)]">
-                      Our travel experts are here to assist you 24/7
+                    {/* Terms and Validity */}
+                    <div className="text-xs text-[var(--airbnb-gray)] mb-4">
+                      <p className="mb-1">📅 Valid till: {deal.validTill}</p>
+                      <p>{deal.terms}</p>
                     </div>
-                    <Button variant="outline" className="w-full">
-                      Contact Support
+
+                    {/* Action Button */}
+                    <Button 
+                      onClick={() => handleRedirect(deal.websiteUrl, deal.code)}
+                      className="w-full bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white flex items-center justify-center space-x-2"
+                    >
+                      <span>Book Now on {deal.operator}</span>
+                      <ExternalLink className="w-4 h-4" />
                     </Button>
                   </CardContent>
                 </Card>
-              </div>
+              ))}
             </div>
+
+            {/* Additional Info */}
+            <Card className="airbnb-shadow mt-8">
+              <CardContent className="p-6">
+                <div className="text-center">
+                  <h3 className="text-xl font-bold text-[var(--airbnb-dark)] mb-2">How it Works</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                    <div className="text-center">
+                      <div className="w-12 h-12 bg-[var(--airbnb-primary)] text-white rounded-full flex items-center justify-center mx-auto mb-2">1</div>
+                      <h4 className="font-semibold">Choose Your Deal</h4>
+                      <p className="text-sm text-[var(--airbnb-gray)]">Select the best offer for your journey</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="w-12 h-12 bg-[var(--airbnb-primary)] text-white rounded-full flex items-center justify-center mx-auto mb-2">2</div>
+                      <h4 className="font-semibold">Visit Partner Site</h4>
+                      <p className="text-sm text-[var(--airbnb-gray)]">Click to redirect to the travel platform</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="w-12 h-12 bg-[var(--airbnb-primary)] text-white rounded-full flex items-center justify-center mx-auto mb-2">3</div>
+                      <h4 className="font-semibold">Apply & Save</h4>
+                      <p className="text-sm text-[var(--airbnb-gray)]">Use the coupon code and enjoy savings</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </Layout>
@@ -292,10 +262,10 @@ export default function BusSearch() {
               <Bus className="w-16 h-16 text-[var(--airbnb-primary)]" />
             </div>
             <h1 className="text-4xl md:text-6xl font-bold text-[var(--airbnb-dark)] mb-4">
-              Book Your Bus Journey
+              Find Best Travel Deals
             </h1>
             <p className="text-xl text-[var(--airbnb-gray)] max-w-2xl mx-auto">
-              Travel comfortably across India with our premium bus services. Safe, reliable, and affordable.
+              Discover exclusive coupons and offers from top travel platforms. Save money on your next bus journey.
             </p>
           </div>
 
@@ -304,7 +274,7 @@ export default function BusSearch() {
             <Card className="airbnb-shadow">
               <CardHeader>
                 <CardTitle className="text-2xl text-[var(--airbnb-dark)] text-center">
-                  Find Your Perfect Bus
+                  Search for Travel Deals
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -388,7 +358,7 @@ export default function BusSearch() {
                       className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white px-12 py-4 text-xl rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
                     >
                       <Search className="mr-3 w-6 h-6" />
-                      Search Buses
+                      Find Deals
                     </Button>
                   </div>
                 </form>
@@ -436,7 +406,7 @@ export default function BusSearch() {
                         setShowResults(true);
                       }}
                     >
-                      Select Route
+                      Find Deals
                     </Button>
                   </CardContent>
                 </Card>
