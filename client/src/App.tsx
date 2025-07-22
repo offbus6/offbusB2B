@@ -29,11 +29,7 @@ import Sidebar from "@/components/layout/sidebar";
 import Layout from "@/components/layout/layout";
 import AdminAccounts from "@/pages/admin/accounts";
 import AdminNotifications from "@/pages/admin/notifications";
-import AgencyBusManagement from "./pages/agency/bus-management";
-import AgencyUploadData from "./pages/agency/upload-data";
-import AgencyUploadedData from "./pages/agency/uploaded-data";
 import AgencyPayments from "./pages/agency/payments";
-import AgencyPending from "./pages/agency/pending";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();

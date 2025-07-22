@@ -914,7 +914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         buses: result 
       });
     } catch (error) {
-      console.error('Error adding test buses:', error:', error);
+      console.error('Error adding test buses:', error);
       res.status(500).json({ message: 'Failed to add test buses' });
     }
   });
