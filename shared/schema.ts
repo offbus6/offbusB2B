@@ -168,9 +168,10 @@ export type User = typeof users.$inferSelect;
 
 // Admin credentials table
 export const adminCredentials = pgTable("admin_credentials", {
-  id: varchar("id").primaryKey().notNull(),
+  id: serial("id").primaryKey(),
   email: varchar("email").notNull().unique(),
   password: varchar("password").notNull(),
+  name: varchar("name").notNull().default("Admin"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

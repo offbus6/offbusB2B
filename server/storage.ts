@@ -47,7 +47,7 @@ export interface IStorage {
   // Admin operations
   createAdminCredentials(admin: InsertAdminCredentials): Promise<AdminCredentials>;
   getAdminCredentials(email: string, password: string): Promise<AdminCredentials | undefined>;
-  updateAdminCredentials(id: string, updates: Partial<InsertAdminCredentials>): Promise<AdminCredentials>;
+  updateAdminCredentials(id: number, updates: Partial<InsertAdminCredentials>): Promise<AdminCredentials>;
   checkAdminExists(): Promise<boolean>;
 
   // Agency operations

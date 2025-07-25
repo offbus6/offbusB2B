@@ -2,11 +2,15 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { whatsappService } from "./whatsapp-service";
+import { getSession } from "./replitAuth";
 
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Add session middleware
+app.use(getSession());
 
 app.use((req, res, next) => {
   const start = Date.now();
