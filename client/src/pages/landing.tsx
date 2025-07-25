@@ -14,7 +14,7 @@ export default function Landing() {
             <Bus className="w-16 h-16 text-[var(--airbnb-primary)]" />
           </div>
           <h1 className="text-5xl md:text-7xl font-bold text-[var(--airbnb-dark)] mb-6 leading-tight">
-            TravelFlow
+            Off Bus
           </h1>
           <p className="text-xl md:text-2xl text-[var(--airbnb-gray)] mb-8 max-w-4xl mx-auto leading-relaxed">
             The complete travel agency management platform trusted by professionals worldwide. 
