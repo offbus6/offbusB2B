@@ -6,6 +6,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import crypto from "crypto";
 import { storage } from "./storage";
 
 if (!process.env.REPLIT_DOMAINS) {
@@ -46,7 +47,7 @@ export function getSession() {
       domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined
     },
     genid: () => {
-      return require('crypto').randomBytes(16).toString('hex');
+      return crypto.randomBytes(16).toString('hex');
     }
   });
 }

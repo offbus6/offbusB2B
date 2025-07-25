@@ -307,13 +307,13 @@ export class DatabaseStorage implements IStorage {
     return agency;
   }
 
-  async getAgencyByCredentials(email: string, password: string): Promise<Agency | null> {
+  async getAgencyByCredentials(email: string, password: string): Promise<Agency | undefined> {
     try {
       // Input validation
       if (!validateEmail(email) || !password) {
         // Still perform hash operation to prevent timing attacks
         await bcrypt.compare("dummy", "$2b$12$dummy.hash.to.prevent.timing.attacks");
-        return null;
+        return undefined;
       }
 
       const sanitizedEmail = validator.normalizeEmail(email) || email;
@@ -330,7 +330,7 @@ export class DatabaseStorage implements IStorage {
         : await bcrypt.compare(password, "$2b$12$dummy.hash.to.prevent.timing.attacks");
 
       if (!agency || !agency.password || !isValidPassword) {
-        return null;
+        return undefined;
       }
 
       return agency;
@@ -338,7 +338,7 @@ export class DatabaseStorage implements IStorage {
       console.error("Agency authentication error:", error);
       // Still perform dummy hash to maintain consistent timing
       await bcrypt.compare("dummy", "$2b$12$dummy.hash.to.prevent.timing.attacks");
-      return null;
+      return undefined;
     }
   }
 
@@ -365,7 +365,6 @@ export class DatabaseStorage implements IStorage {
     const [credentials] = await db
       .insert(adminCredentials)
       .values({
-        id: crypto.randomUUID(),
         email: sanitizedEmail,
         name: sanitizedName,
         password: passwordToStore,
@@ -376,13 +375,13 @@ export class DatabaseStorage implements IStorage {
     return credentials;
   }
 
-  async getAdminCredentials(email: string, password: string): Promise<AdminCredentials | null> {
+  async getAdminCredentials(email: string, password: string): Promise<AdminCredentials | undefined> {
     try {
       // Input validation
       if (!validateEmail(email) || !password) {
         // Still perform hash operation to prevent timing attacks
         await bcrypt.compare("dummy", "$2b$12$dummy.hash.to.prevent.timing.attacks");
-        return null;
+        return undefined;
       }
 
       const sanitizedEmail = validator.normalizeEmail(email) || email;
@@ -399,7 +398,7 @@ export class DatabaseStorage implements IStorage {
         : await bcrypt.compare(password, "$2b$12$dummy.hash.to.prevent.timing.attacks");
 
       if (!admin || !isValidPassword) {
-        return null;
+        return undefined;
       }
 
       return admin;
@@ -407,7 +406,7 @@ export class DatabaseStorage implements IStorage {
       console.error("Authentication error:", error);
       // Still perform dummy hash to maintain consistent timing
       await bcrypt.compare("dummy", "$2b$12$dummy.hash.to.prevent.timing.attacks");
-      return null;
+      return undefined;
     }
   }
 
@@ -748,7 +747,6 @@ export class DatabaseStorage implements IStorage {
         totalMessages: count(),
         pendingMessages: count(sql`case when status = 'pending' then 1 end`),
         sentMessages: count(sql`case when status = 'sent' then 1 end`),
-        failedMessages: count(sql`case when status = 'sent' then 1 end`),
         failedMessages: count(sql`case when status = 'failed' then 1 end`),
       })
       .from(whatsappQueue);
