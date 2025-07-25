@@ -3,13 +3,33 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { whatsappService } from "./whatsapp-service";
 import { getSession } from "./replitAuth";
+import helmet from "helmet";
+import cors from "cors";
 
 const app = express();
-app.set('trust proxy', 1); // Trust first proxy
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 
-// Add session middleware
+// Security configurations
+app.set('trust proxy', 1); // Trust first proxy
+app.disable('x-powered-by'); // Hide Express.js signature
+
+// CORS configuration
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? [process.env.FRONTEND_URL || 'https://your-domain.com']
+    : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  maxAge: 86400 // 24 hours
+};
+
+app.use(cors(corsOptions));
+
+// Body parsing with size limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// Add session middleware with secure configuration
 app.use(getSession());
 
 app.use((req, res, next) => {

@@ -4,102 +4,222 @@ import bcrypt from "bcryptjs";
 import multer from "multer";
 import XLSX from "xlsx";
 import { z } from "zod";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import validator from "validator";
 import { insertAgencySchema, insertBusSchema, insertTravelerDataSchema } from "@shared/schema";
 
-// Configure multer for file uploads
-const upload = multer({ 
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+// Rate limiting configurations
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
+  message: { message: "Too many authentication attempts, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per window
+  message: { message: "Too many requests, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Configure multer for file uploads with security
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { 
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    files: 1 // Only allow 1 file at a time
+  },
+  fileFilter: (req, file, cb) => {
+    // Only allow specific file types
+    const allowedMimes = [
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/csv'
+    ];
+    
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only Excel and CSV files are allowed.'));
+    }
+  }
+});
+
+// Input sanitization helper
+function sanitizeInput(input: any): string {
+  if (typeof input !== 'string') return '';
+  return validator.escape(input.trim());
+}
+
 export function registerRoutes(app: Express) {
-  // Auth routes
-  app.post("/api/auth/admin/login", async (req: Request, res: Response) => {
+  // Apply security middleware
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false
+  }));
+  
+  // Apply general rate limiting
+  app.use('/api', generalLimiter);
+
+  // Auth routes with specific rate limiting
+  app.post("/api/auth/admin/login", authLimiter, async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
       
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
+      // Input validation
+      if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+        return res.status(400).json({ message: "Invalid credentials format" });
       }
 
-      const admin = await storage.getAdminCredentials(email, password);
+      // Sanitize email
+      const sanitizedEmail = validator.normalizeEmail(email);
+      if (!sanitizedEmail || !validator.isEmail(sanitizedEmail)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+
+      const admin = await storage.getAdminCredentials(sanitizedEmail, password);
       if (!admin) {
-        return res.status(401).json({ message: "Invalid email or password" });
+        // Generic error message to prevent user enumeration
+        return res.status(401).json({ message: "Authentication failed" });
       }
 
-      // Set session
-      (req.session as any).user = {
-        id: admin.id,
-        email: admin.email,
-        role: "super_admin"
-      };
+      // Regenerate session to prevent session fixation
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ message: "Authentication failed" });
+        }
 
-      res.json({ 
-        message: "Login successful",
-        user: {
+        // Set session with minimal information
+        (req.session as any).user = {
           id: admin.id,
           email: admin.email,
-          role: "super_admin"
-        }
+          role: "super_admin",
+          loginTime: new Date().toISOString()
+        };
+
+        res.json({ 
+          message: "Login successful",
+          user: {
+            id: admin.id,
+            email: admin.email,
+            role: "super_admin"
+          }
+        });
       });
     } catch (error) {
       console.error("Admin login error:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Authentication failed" });
     }
   });
 
-  app.post("/api/auth/agency/login", async (req: Request, res: Response) => {
+  app.post("/api/auth/agency/login", authLimiter, async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
       
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
+      // Input validation
+      if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+        return res.status(400).json({ message: "Invalid credentials format" });
       }
 
-      const agency = await storage.getAgencyByCredentials(email, password);
+      // Sanitize email
+      const sanitizedEmail = validator.normalizeEmail(email);
+      if (!sanitizedEmail || !validator.isEmail(sanitizedEmail)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+
+      const agency = await storage.getAgencyByCredentials(sanitizedEmail, password);
       if (!agency) {
-        return res.status(401).json({ message: "Invalid email or password" });
+        // Generic error message to prevent user enumeration
+        return res.status(401).json({ message: "Authentication failed" });
       }
 
-      // Set session
-      (req.session as any).user = {
-        id: agency.id,
-        email: agency.email,
-        role: "agency",
-        status: agency.status
-      };
+      // Regenerate session to prevent session fixation
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ message: "Authentication failed" });
+        }
 
-      res.json({ 
-        message: "Login successful",
-        user: {
+        // Set session with minimal information
+        (req.session as any).user = {
           id: agency.id,
           email: agency.email,
           role: "agency",
-          status: agency.status
-        }
+          status: agency.status,
+          loginTime: new Date().toISOString()
+        };
+
+        res.json({ 
+          message: "Login successful",
+          user: {
+            id: agency.id,
+            email: agency.email,
+            role: "agency",
+            status: agency.status
+          }
+        });
       });
     } catch (error) {
       console.error("Agency login error:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Authentication failed" });
     }
   });
 
-  app.post("/api/auth/agency/signup", async (req: Request, res: Response) => {
+  app.post("/api/auth/agency/signup", authLimiter, async (req: Request, res: Response) => {
     try {
+      // Parse and validate data
       const data = insertAgencySchema.parse(req.body);
       
-      // Check if email already exists
-      const existingAgency = await storage.getAgencyByEmail(data.email);
-      if (existingAgency) {
-        return res.status(400).json({ message: "Email already registered" });
+      // Additional email validation
+      const sanitizedEmail = validator.normalizeEmail(data.email);
+      if (!sanitizedEmail || !validator.isEmail(sanitizedEmail)) {
+        return res.status(400).json({ message: "Invalid email format" });
       }
 
-      // Hash password
-      const hashedPassword = await bcrypt.hash(data.password!, 10);
+      // Password strength validation
+      if (data.password) {
+        if (data.password.length < 8) {
+          return res.status(400).json({ message: "Password must be at least 8 characters long" });
+        }
+        if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(data.password)) {
+          return res.status(400).json({ 
+            message: "Password must contain uppercase, lowercase, number, and special character" 
+          });
+        }
+      }
       
+      // Check if email already exists
+      const existingAgency = await storage.getAgencyByEmail(sanitizedEmail);
+      if (existingAgency) {
+        return res.status(409).json({ message: "Email already registered" });
+      }
+
+      // Sanitize phone number
+      if (data.phone && !validator.isMobilePhone(data.phone, 'any')) {
+        return res.status(400).json({ message: "Invalid phone number format" });
+      }
+
+      // Create agency with sanitized data
       const agency = await storage.createAgency({
         ...data,
-        password: hashedPassword
+        email: sanitizedEmail
       });
 
       res.status(201).json({ 
@@ -114,43 +234,78 @@ export function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Agency signup error:", error);
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        });
       }
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Registration failed" });
     }
   });
 
   app.post("/api/auth/logout", (req: Request, res: Response) => {
+    // Clear all session data
+    const sessionId = req.sessionID;
+    
     req.session.destroy((err) => {
       if (err) {
         console.error("Logout error:", err);
-        return res.status(500).json({ message: "Could not log out" });
+        return res.status(500).json({ message: "Logout failed" });
       }
+      
+      // Clear all possible cookie variations
+      res.clearCookie("connect.sid", {
+        path: '/',
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict'
+      });
+      
+      // Also clear with different path configurations
+      res.clearCookie("connect.sid", { path: '/' });
       res.clearCookie("connect.sid");
+      
       res.json({ message: "Logged out successfully" });
     });
   });
 
   // Initial admin setup route - only works if no admin exists
-  app.post("/api/auth/admin/setup", async (req: Request, res: Response) => {
+  app.post("/api/auth/admin/setup", authLimiter, async (req: Request, res: Response) => {
     try {
-      const { email, password } = req.body;
+      const { email, password, name } = req.body;
       
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
+      // Input validation
+      if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+        return res.status(400).json({ message: "Invalid input format" });
+      }
+
+      // Sanitize email
+      const sanitizedEmail = validator.normalizeEmail(email);
+      if (!sanitizedEmail || !validator.isEmail(sanitizedEmail)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+
+      // Password strength validation
+      if (password.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters long" });
+      }
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(password)) {
+        return res.status(400).json({ 
+          message: "Password must contain uppercase, lowercase, number, and special character" 
+        });
       }
 
       // Check if any admin already exists
       const adminExists = await storage.checkAdminExists();
       if (adminExists) {
-        return res.status(400).json({ message: "Admin account already exists" });
+        return res.status(409).json({ message: "Admin account already exists" });
       }
 
       // Create the first admin
       const admin = await storage.createAdminCredentials({
-        email,
+        email: sanitizedEmail,
         password,
-        name: "Super Admin"
+        name: name ? sanitizeInput(name) : "Super Admin"
       });
 
       res.status(201).json({ 
@@ -162,7 +317,7 @@ export function registerRoutes(app: Express) {
       });
     } catch (error) {
       console.error("Admin setup error:", error);
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Setup failed" });
     }
   });
 
@@ -356,20 +511,44 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.post("/api/traveler-data/upload", upload.single("file"), async (req: Request, res: Response) => {
+  // Authorization middleware
+  function requireAuth(roles: string[] = []) {
+    return (req: Request, res: Response, next: any) => {
+      const user = (req.session as any)?.user;
+      
+      if (!user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      // Check session timeout (24 hours)
+      const loginTime = new Date(user.loginTime || 0);
+      const now = new Date();
+      const diffHours = (now.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
+      
+      if (diffHours > 24) {
+        req.session.destroy(() => {});
+        return res.status(401).json({ message: "Session expired" });
+      }
+      
+      if (roles.length > 0 && !roles.includes(user.role)) {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+      
+      next();
+    };
+  }
+
+  app.post("/api/traveler-data/upload", requireAuth(['agency']), upload.single("file"), async (req: Request, res: Response) => {
     try {
       const user = (req.session as any)?.user;
-      if (!user || user.role !== "agency") {
-        return res.status(403).json({ message: "Access denied" });
-      }
 
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
       const { busId } = req.body;
-      if (!busId) {
-        return res.status(400).json({ message: "Bus ID is required" });
+      if (!busId || !validator.isInt(busId.toString())) {
+        return res.status(400).json({ message: "Invalid bus ID" });
       }
 
       // Parse Excel/CSV file

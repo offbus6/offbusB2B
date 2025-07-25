@@ -36,6 +36,46 @@ import {
 import { db } from "./db";
 import { eq, and, desc, count, sql, ne } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import validator from "validator";
+import rateLimit from "express-rate-limit";
+
+// Input sanitization helper
+function sanitizeInput(input: string): string {
+  if (!input) return "";
+  return validator.escape(input.trim());
+}
+
+// Email validation helper
+function validateEmail(email: string): boolean {
+  return validator.isEmail(email) && email.length <= 254;
+}
+
+// Password strength validation
+function validatePassword(password: string): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (password.length < 8) {
+    errors.push("Password must be at least 8 characters long");
+  }
+  if (!/(?=.*[a-z])/.test(password)) {
+    errors.push("Password must contain at least one lowercase letter");
+  }
+  if (!/(?=.*[A-Z])/.test(password)) {
+    errors.push("Password must contain at least one uppercase letter");
+  }
+  if (!/(?=.*\d)/.test(password)) {
+    errors.push("Password must contain at least one number");
+  }
+  if (!/(?=.*[@$!%*?&])/.test(password)) {
+    errors.push("Password must contain at least one special character");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
 
 export interface IStorage {
   // User operations
@@ -195,9 +235,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAgency(agency: InsertAgency): Promise<Agency> {
+    // Validate required fields
+    if (!validateEmail(agency.email)) {
+      throw new Error("Invalid email format");
+    }
+
+    if (agency.password) {
+      const passwordValidation = validatePassword(agency.password);
+      if (!passwordValidation.isValid) {
+        throw new Error(`Password validation failed: ${passwordValidation.errors.join(", ")}`);
+      }
+    }
+
+    // Sanitize inputs
+    const sanitizedData = {
+      ...agency,
+      name: sanitizeInput(agency.name),
+      email: validator.normalizeEmail(agency.email) || agency.email,
+      contactPerson: sanitizeInput(agency.contactPerson),
+      phone: sanitizeInput(agency.phone),
+      state: agency.state ? sanitizeInput(agency.state) : null,
+      city: sanitizeInput(agency.city),
+      website: agency.website ? validator.isURL(agency.website) ? agency.website : null : null,
+      password: agency.password ? await bcrypt.hash(agency.password, 12) : null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
     const [newAgency] = await db
       .insert(agencies)
-      .values(agency)
+      .values(sanitizedData)
       .returning();
     return newAgency;
   }
@@ -240,41 +307,67 @@ export class DatabaseStorage implements IStorage {
     return agency;
   }
 
-  async getAgencyByCredentials(email: string, password: string): Promise<Agency | undefined> {
-    const [agency] = await db.select().from(agencies).where(eq(agencies.email, email));
-
-    if (!agency) {
-      // Prevent timing attacks
-      await bcrypt.hash('dummy', 12);
-      return undefined;
-    }
-
-    if (!agency.password) {
-      console.error('Agency password is null');
-      return undefined;
-    }
-
+  async getAgencyByCredentials(email: string, password: string): Promise<Agency | null> {
     try {
-      const isValidPassword = await bcrypt.compare(password, agency.password);
-      if (isValidPassword) {
-        return agency;
+      // Input validation
+      if (!validateEmail(email) || !password) {
+        // Still perform hash operation to prevent timing attacks
+        await bcrypt.compare("dummy", "$2b$12$dummy.hash.to.prevent.timing.attacks");
+        return null;
       }
-    } catch (error) {
-      console.error('Agency password verification error:', error);
-    }
 
-    return undefined;
+      const sanitizedEmail = validator.normalizeEmail(email) || email;
+
+      const [agency] = await db
+        .select()
+        .from(agencies)
+        .where(eq(agencies.email, sanitizedEmail))
+        .limit(1);
+
+      // Always perform hash comparison to prevent timing attacks
+      const isValidPassword = (agency && agency.password)
+        ? await bcrypt.compare(password, agency.password)
+        : await bcrypt.compare(password, "$2b$12$dummy.hash.to.prevent.timing.attacks");
+
+      if (!agency || !agency.password || !isValidPassword) {
+        return null;
+      }
+
+      return agency;
+    } catch (error) {
+      console.error("Agency authentication error:", error);
+      // Still perform dummy hash to maintain consistent timing
+      await bcrypt.compare("dummy", "$2b$12$dummy.hash.to.prevent.timing.attacks");
+      return null;
+    }
   }
 
   // Admin operations
-  async createAdminCredentials(admin: InsertAdminCredentials): Promise<AdminCredentials> {
-    // Always hash passwords for security
-    const passwordToStore = await bcrypt.hash(admin.password, 12); // Increased salt rounds for better security
+  async createAdminCredentials(admin: { email: string; password: string; name?: string }): Promise<AdminCredentials> {
+    // Validate email
+    if (!validateEmail(admin.email)) {
+      throw new Error("Invalid email format");
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(admin.password);
+    if (!passwordValidation.isValid) {
+      throw new Error(`Password validation failed: ${passwordValidation.errors.join(", ")}`);
+    }
+
+    // Sanitize inputs
+    const sanitizedEmail = validator.normalizeEmail(admin.email) || admin.email;
+    const sanitizedName = sanitizeInput(admin.name || "Admin");
+
+    // Hash password with higher cost factor for admin accounts
+    const passwordToStore = await bcrypt.hash(admin.password, 12);
 
     const [credentials] = await db
       .insert(adminCredentials)
       .values({
-        ...admin,
+        id: crypto.randomUUID(),
+        email: sanitizedEmail,
+        name: sanitizedName,
         password: passwordToStore,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -283,29 +376,39 @@ export class DatabaseStorage implements IStorage {
     return credentials;
   }
 
-  async getAdminCredentials(email: string, password: string): Promise<AdminCredentials | undefined> {
+  async getAdminCredentials(email: string, password: string): Promise<AdminCredentials | null> {
     try {
-      const [credentials] = await db
+      // Input validation
+      if (!validateEmail(email) || !password) {
+        // Still perform hash operation to prevent timing attacks
+        await bcrypt.compare("dummy", "$2b$12$dummy.hash.to.prevent.timing.attacks");
+        return null;
+      }
+
+      const sanitizedEmail = validator.normalizeEmail(email) || email;
+
+      const [admin] = await db
         .select()
         .from(adminCredentials)
-        .where(eq(adminCredentials.email, email))
+        .where(eq(adminCredentials.email, sanitizedEmail))
         .limit(1);
 
-      if (!credentials) {
-        // Prevent timing attacks
-        await bcrypt.hash('dummy', 12);
-        return undefined;
+      // Always perform hash comparison to prevent timing attacks
+      const isValidPassword = admin 
+        ? await bcrypt.compare(password, admin.password)
+        : await bcrypt.compare(password, "$2b$12$dummy.hash.to.prevent.timing.attacks");
+
+      if (!admin || !isValidPassword) {
+        return null;
       }
 
-      const isValidPassword = await bcrypt.compare(password, credentials.password);
-      if (isValidPassword) {
-        return credentials;
-      }
+      return admin;
     } catch (error) {
-      console.error('Password verification error:', error);
+      console.error("Authentication error:", error);
+      // Still perform dummy hash to maintain consistent timing
+      await bcrypt.compare("dummy", "$2b$12$dummy.hash.to.prevent.timing.attacks");
+      return null;
     }
-
-    return undefined;
   }
 
   async updateAdminCredentials(id: number, updates: Partial<InsertAdminCredentials>): Promise<AdminCredentials> {
@@ -645,6 +748,7 @@ export class DatabaseStorage implements IStorage {
         totalMessages: count(),
         pendingMessages: count(sql`case when status = 'pending' then 1 end`),
         sentMessages: count(sql`case when status = 'sent' then 1 end`),
+        failedMessages: count(sql`case when status = 'sent' then 1 end`),
         failedMessages: count(sql`case when status = 'failed' then 1 end`),
       })
       .from(whatsappQueue);
@@ -828,7 +932,8 @@ export class DatabaseStorage implements IStorage {
           createdAt: paymentHistory.createdAt
         })
         .from(paymentHistory)
-        .where(
+        .<tool_code>
+where(
           and(
             eq(paymentHistory.agencyId, agencyId),
             eq(paymentHistory.paymentStatus, 'pending'),
