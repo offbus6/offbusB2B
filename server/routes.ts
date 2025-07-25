@@ -8,44 +8,54 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import validator from "validator";
 import { insertAgencySchema, insertBusSchema, insertTravelerDataSchema } from "@shared/schema";
+import { 
+  createAuthLimiter, 
+  createGeneralLimiter, 
+  createApiLimiter,
+  validatePassword,
+  validateEmail,
+  validatePhoneNumber,
+  SECURITY_CONFIG,
+  SECURITY_HEADERS,
+  sanitizeLogData
+} from "./security-config";
+import { securityMonitor, createSecurityMiddleware } from "./security-monitor";
 
-// Rate limiting configurations
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per window
-  message: { message: "Too many authentication attempts, please try again later" },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// Rate limiting configurations from security config
+const authLimiter = createAuthLimiter();
+const generalLimiter = createGeneralLimiter();
+const apiLimiter = createApiLimiter();
 
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
-  message: { message: "Too many requests, please try again later" },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Configure multer for file uploads with security
+// Configure multer for file uploads with enhanced security
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: { 
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-    files: 1 // Only allow 1 file at a time
+    fileSize: SECURITY_CONFIG.FILE_UPLOAD.maxSize,
+    files: SECURITY_CONFIG.FILE_UPLOAD.maxFiles
   },
   fileFilter: (req, file, cb) => {
-    // Only allow specific file types
-    const allowedMimes = [
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/csv'
-    ];
-    
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Only Excel and CSV files are allowed.'));
+    // Validate MIME type
+    if (!SECURITY_CONFIG.FILE_UPLOAD.allowedMimeTypes.includes(file.mimetype)) {
+      return cb(new Error('Invalid file type. Only Excel and CSV files are allowed.'));
     }
+    
+    // Validate file extension
+    const ext = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
+    if (!SECURITY_CONFIG.FILE_UPLOAD.allowedExtensions.includes(ext)) {
+      return cb(new Error('Invalid file extension. Only .csv, .xls, .xlsx files are allowed.'));
+    }
+    
+    // Additional filename validation
+    if (file.originalname.length > 255) {
+      return cb(new Error('Filename too long.'));
+    }
+    
+    // Check for suspicious filename patterns
+    if (/[<>:"/\\|?*]/.test(file.originalname)) {
+      return cb(new Error('Invalid characters in filename.'));
+    }
+    
+    cb(null, true);
   }
 });
 
@@ -56,26 +66,62 @@ function sanitizeInput(input: any): string {
 }
 
 export function registerRoutes(app: Express) {
-  // Apply security middleware
+  // Apply comprehensive security middleware
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
         scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://replit.com"],
-        imgSrc: ["'self'", "data:", "https:"],
+        imgSrc: ["'self'", "data:", "https:", "blob:"],
         connectSrc: ["'self'", "ws:", "wss:", "https:"],
-        fontSrc: ["'self'"],
+        fontSrc: ["'self'", "fonts.gstatic.com", "data:"],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
         frameSrc: ["'none'"],
+        formAction: ["'self'"],
+        upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
       },
     },
-    crossOriginEmbedderPolicy: false
+    crossOriginEmbedderPolicy: false,
+    hsts: {
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+      preload: true
+    },
+    noSniff: true,
+    xssFilter: true,
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" }
   }));
   
-  // Apply general rate limiting
+  // Additional security headers
+  app.use((req, res, next) => {
+    // Prevent MIME type sniffing
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    
+    // Prevent clickjacking
+    res.setHeader('X-Frame-Options', 'DENY');
+    
+    // Remove server signature
+    res.removeHeader('X-Powered-By');
+    
+    // Add cache control for sensitive pages
+    if (req.path.includes('/admin') || req.path.includes('/auth')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
+    }
+    
+    next();
+  });
+  
+  // Apply security monitoring
+  app.use(createSecurityMiddleware());
+  
+  // Apply rate limiting
   app.use('/api', generalLimiter);
+  app.use('/api/data', apiLimiter); // More restrictive for data endpoints
 
   // Auth routes with specific rate limiting
   app.post("/api/auth/admin/login", authLimiter, async (req: Request, res: Response) => {
@@ -187,20 +233,20 @@ export function registerRoutes(app: Express) {
       // Parse and validate data
       const data = insertAgencySchema.parse(req.body);
       
-      // Additional email validation
-      const sanitizedEmail = validator.normalizeEmail(data.email);
-      if (!sanitizedEmail || !validator.isEmail(sanitizedEmail)) {
-        return res.status(400).json({ message: "Invalid email format" });
+      // Enhanced email validation
+      const emailValidation = validateEmail(data.email);
+      if (!emailValidation.isValid) {
+        return res.status(400).json({ message: emailValidation.error });
       }
+      const sanitizedEmail = emailValidation.sanitized!;
 
-      // Password strength validation
+      // Enhanced password validation
       if (data.password) {
-        if (data.password.length < 8) {
-          return res.status(400).json({ message: "Password must be at least 8 characters long" });
-        }
-        if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(data.password)) {
+        const passwordValidation = validatePassword(data.password);
+        if (!passwordValidation.isValid) {
           return res.status(400).json({ 
-            message: "Password must contain uppercase, lowercase, number, and special character" 
+            message: "Password validation failed",
+            errors: passwordValidation.errors
           });
         }
       }
@@ -211,9 +257,12 @@ export function registerRoutes(app: Express) {
         return res.status(409).json({ message: "Email already registered" });
       }
 
-      // Sanitize phone number
-      if (data.phone && !validator.isMobilePhone(data.phone, 'any')) {
-        return res.status(400).json({ message: "Invalid phone number format" });
+      // Enhanced phone validation
+      if (data.phone) {
+        const phoneValidation = validatePhoneNumber(data.phone);
+        if (!phoneValidation.isValid) {
+          return res.status(400).json({ message: phoneValidation.error });
+        }
       }
 
       // Create agency with sanitized data
@@ -507,6 +556,39 @@ export function registerRoutes(app: Express) {
       res.json(travelerData);
     } catch (error) {
       console.error("Get traveler data error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Security dashboard endpoint (super admin only)
+  app.get("/api/security/dashboard", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const summary = securityMonitor.getSecuritySummary(24);
+      res.json(summary);
+    } catch (error) {
+      console.error("Security dashboard error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Security events endpoint (super admin only)
+  app.get("/api/security/events", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const hours = parseInt(req.query.hours as string) || 24;
+      const events = securityMonitor.getRecentEvents(hours);
+      res.json(events);
+    } catch (error) {
+      console.error("Security events error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

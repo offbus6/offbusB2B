@@ -47,12 +47,23 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      
+      // Only log response data for non-sensitive endpoints and non-success responses for debugging
+      if (capturedJsonResponse && !path.includes('/auth/') && res.statusCode >= 400) {
+        // Sanitize sensitive data from logs
+        const sanitizedResponse = { ...capturedJsonResponse };
+        delete sanitizedResponse.password;
+        delete sanitizedResponse.token;
+        delete sanitizedResponse.access_token;
+        delete sanitizedResponse.refresh_token;
+        delete sanitizedResponse.apiKey;
+        delete sanitizedResponse.apiSecret;
+        
+        logLine += ` :: ${JSON.stringify(sanitizedResponse)}`;
       }
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+      if (logLine.length > 120) {
+        logLine = logLine.slice(0, 119) + "…";
       }
 
       log(logLine);
@@ -66,12 +77,21 @@ app.use((req, res, next) => {
   // Register routes first (this mutates the app and returns it)
   await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
+    
+    // Log error details for debugging (server-side only)
+    console.error(`Error ${status} on ${req.method} ${req.path}:`, {
+      message: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Send generic error message to client to prevent information disclosure
+    const message = status < 500 ? err.message : "Internal Server Error";
+    
+    // Don't throw the error again to prevent application crashes
     res.status(status).json({ message });
-    throw err;
   });
 
   // Create HTTP server from Express app
