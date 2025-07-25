@@ -54,6 +54,7 @@ export interface IStorage {
   getAgency(id: number): Promise<Agency | undefined>;
   getAgencyByUserId(userId: string): Promise<Agency | undefined>;
   getAgencyByUsername(username: string): Promise<Agency | undefined>;
+  getAgencyByEmail(email: string): Promise<Agency | undefined>;
   getAgencyByCredentials(username: string, password: string): Promise<Agency | undefined>;
   getPendingAgencies(): Promise<Agency[]>;
   getApprovedAgencies(): Promise<Agency[]>;
@@ -66,6 +67,7 @@ export interface IStorage {
   createBus(bus: InsertBus): Promise<Bus>;
   getBus(id: number): Promise<Bus | undefined>;
   getBusesByAgency(agencyId: number): Promise<Bus[]>;
+  getAllBuses(): Promise<Bus[]>;
   updateBus(id: number, updates: Partial<InsertBus>): Promise<Bus>;
   deleteBus(id: number): Promise<void>;
 
@@ -73,6 +75,7 @@ export interface IStorage {
   createTravelerData(data: InsertTravelerData[]): Promise<TravelerData[]>;
   getTravelerData(id: number): Promise<TravelerData | undefined>;
   getTravelerDataByAgency(agencyId: number): Promise<TravelerData[]>;
+  getAllTravelerData(): Promise<TravelerData[]>;
   getTravelerDataByBus(busId: number): Promise<TravelerData[]>;
   updateTravelerData(id: number, updates: Partial<InsertTravelerData>): Promise<TravelerData>;
 
@@ -86,6 +89,12 @@ export interface IStorage {
 
   // Stats operations
   getSystemStats(): Promise<{
+    totalAgencies: number;
+    totalBuses: number;
+    totalMessages: number;
+    totalCoupons: number;
+  }>;
+  getAdminStats(): Promise<{
     totalAgencies: number;
     totalBuses: number;
     totalMessages: number;
@@ -225,12 +234,22 @@ export class DatabaseStorage implements IStorage {
     return agency;
   }
 
+  async getAgencyByEmail(email: string): Promise<Agency | undefined> {
+    const [agency] = await db.select().from(agencies).where(eq(agencies.email, email));
+    return agency;
+  }
+
   async getAgencyByCredentials(email: string, password: string): Promise<Agency | undefined> {
     const [agency] = await db.select().from(agencies).where(eq(agencies.email, email));
     
     if (!agency) {
       // Prevent timing attacks
       await bcrypt.hash('dummy', 12);
+      return undefined;
+    }
+
+    if (!agency.password) {
+      console.error('Agency password is null');
       return undefined;
     }
 
@@ -365,6 +384,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(buses).where(eq(buses.agencyId, agencyId));
   }
 
+  async getAllBuses(): Promise<Bus[]> {
+    return await db.select().from(buses).orderBy(desc(buses.createdAt));
+  }
+
   async updateBus(id: number, updates: Partial<InsertBus>): Promise<Bus> {
     const [bus] = await db
       .update(buses)
@@ -395,6 +418,13 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(travelerData)
       .where(eq(travelerData.agencyId, agencyId))
+      .orderBy(desc(travelerData.createdAt));
+  }
+
+  async getAllTravelerData(): Promise<TravelerData[]> {
+    return await db
+      .select()
+      .from(travelerData)
       .orderBy(desc(travelerData.createdAt));
   }
 
@@ -482,6 +512,15 @@ export class DatabaseStorage implements IStorage {
       totalMessages: messageCount?.count || 0,
       totalCoupons: couponCount?.count || 0,
     };
+  }
+
+  async getAdminStats(): Promise<{
+    totalAgencies: number;
+    totalBuses: number;
+    totalMessages: number;
+    totalCoupons: number;
+  }> {
+    return await this.getSystemStats(); // Alias for admin stats
   }
 
   async getAgencyStats(agencyId: number): Promise<{
