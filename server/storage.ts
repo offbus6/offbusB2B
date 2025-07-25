@@ -308,7 +308,7 @@ export class DatabaseStorage implements IStorage {
     return undefined;
   }
 
-  async updateAdminCredentials(id: string, updates: Partial<InsertAdminCredentials>): Promise<AdminCredentials> {
+  async updateAdminCredentials(id: number, updates: Partial<InsertAdminCredentials>): Promise<AdminCredentials> {
     const updateData = { ...updates, updatedAt: new Date() };
 
     // Hash password if provided
