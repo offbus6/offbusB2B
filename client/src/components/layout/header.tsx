@@ -76,6 +76,10 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
                 src="/logo.png" 
                 alt="Off Bus" 
                 className="h-10 w-auto"
+                onError={(e) => {
+                  console.error('Logo failed to load');
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             </Link>
             <div className="text-sm text-[var(--airbnb-gray)]">
@@ -99,6 +103,10 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
                   src="/logo.png" 
                   alt="Off Bus" 
                   className="h-10 w-auto"
+                  onError={(e) => {
+                    console.error('Logo failed to load');
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
               </Link>
             </div>
@@ -205,6 +213,10 @@ export default function Header({ variant = 'dashboard' }: HeaderProps) {
                 src="/logo.png" 
                 alt="Off Bus" 
                 className="h-10 w-auto"
+                onError={(e) => {
+                  console.error('Logo failed to load');
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             </Link>
           </div>
