@@ -145,10 +145,10 @@ export default function AdminLogin() {
                 <p className="text-xs text-red-700 mb-2 font-semibold">Admin Credentials:</p>
                 <div className="space-y-1">
                   <p className="text-xs text-red-600">
-                    Email: <span className="font-mono bg-red-100 px-2 py-1 rounded text-red-800">admin@travelflow.com</span>
+                    Email: <span className="font-mono bg-red-100 px-2 py-1 rounded text-red-800">admin@offbus.com</span>
                   </p>
                   <p className="text-xs text-red-600">
-                    Password: <span className="font-mono bg-red-100 px-2 py-1 rounded text-red-800">admin123</span>
+                    Password: <span className="font-mono bg-red-100 px-2 py-1 rounded text-red-800">OffBus2024!</span>
                   </p>
                 </div>
                 <p className="text-xs text-red-500 mt-2 italic">Use these credentials for admin access</p>
