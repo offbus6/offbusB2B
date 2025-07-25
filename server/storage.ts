@@ -146,8 +146,13 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user;
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      return undefined;
+    }
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
@@ -221,17 +226,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAgencyByCredentials(email: string, password: string): Promise<Agency | undefined> {
-    const [agency] = await db.select().from(agencies).where(
-      and(eq(agencies.email, email), eq(agencies.password, password))
-    );
-    return agency;
+    const [agency] = await db.select().from(agencies).where(eq(agencies.email, email));
+    
+    if (!agency) {
+      // Prevent timing attacks
+      await bcrypt.hash('dummy', 12);
+      return undefined;
+    }
+
+    try {
+      const isValidPassword = await bcrypt.compare(password, agency.password);
+      if (isValidPassword) {
+        return agency;
+      }
+    } catch (error) {
+      console.error('Agency password verification error:', error);
+    }
+
+    return undefined;
   }
 
   // Admin operations
   async createAdminCredentials(admin: InsertAdminCredentials): Promise<AdminCredentials> {
-    // For the default admin account, store password as plain text for simplicity
-    // For other admin accounts, hash the password
-    const passwordToStore = admin.email === 'admin@travelflow.com' ? admin.password : await bcrypt.hash(admin.password, 10);
+    // Always hash passwords for security
+    const passwordToStore = await bcrypt.hash(admin.password, 12); // Increased salt rounds for better security
 
     const [credentials] = await db
       .insert(adminCredentials)
@@ -253,39 +271,34 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
 
     if (!credentials) {
+      // Prevent timing attacks
+      await bcrypt.hash('dummy', 12);
       return undefined;
     }
 
-    // Check if password is already hashed or plain text
-    let isValidPassword = false;
-
-    // For the default admin account, use direct comparison
-    if (email === 'admin@travelflow.com' && password === 'admin123') {
-      isValidPassword = password === credentials.password;
-    } else {
-      // For other accounts, try bcrypt comparison first
-      try {
-        isValidPassword = await bcrypt.compare(password, credentials.password);
-      } catch (error) {
-        // If bcrypt fails, try direct comparison as fallback
-        isValidPassword = password === credentials.password;
+    try {
+      const isValidPassword = await bcrypt.compare(password, credentials.password);
+      if (isValidPassword) {
+        return credentials;
       }
-    }
-
-    if (isValidPassword) {
-      return credentials;
+    } catch (error) {
+      console.error('Password verification error:', error);
     }
 
     return undefined;
   }
 
   async updateAdminCredentials(id: string, updates: Partial<InsertAdminCredentials>): Promise<AdminCredentials> {
+    const updateData = { ...updates, updatedAt: new Date() };
+    
+    // Hash password if provided
+    if (updates.password) {
+      updateData.password = await bcrypt.hash(updates.password, 12);
+    }
+
     const [credentials] = await db
       .update(adminCredentials)
-      .set({
-        ...updates,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(adminCredentials.id, id))
       .returning();
     return credentials;
