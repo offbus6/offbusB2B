@@ -932,8 +932,7 @@ export class DatabaseStorage implements IStorage {
           createdAt: paymentHistory.createdAt
         })
         .from(paymentHistory)
-        .<tool_code>
-where(
+        .where(
           and(
             eq(paymentHistory.agencyId, agencyId),
             eq(paymentHistory.paymentStatus, 'pending'),
