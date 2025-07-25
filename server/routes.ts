@@ -141,8 +141,8 @@ export function registerRoutes(app: Express) {
       }
 
       // Check if any admin already exists
-      const existingAdmin = await storage.getAdminCredentials(email, "dummy");
-      if (existingAdmin) {
+      const adminExists = await storage.checkAdminExists();
+      if (adminExists) {
         return res.status(400).json({ message: "Admin account already exists" });
       }
 

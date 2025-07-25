@@ -48,6 +48,7 @@ export interface IStorage {
   createAdminCredentials(admin: InsertAdminCredentials): Promise<AdminCredentials>;
   getAdminCredentials(email: string, password: string): Promise<AdminCredentials | undefined>;
   updateAdminCredentials(id: string, updates: Partial<InsertAdminCredentials>): Promise<AdminCredentials>;
+  checkAdminExists(): Promise<boolean>;
 
   // Agency operations
   createAgency(agency: InsertAgency): Promise<Agency>;
@@ -241,7 +242,7 @@ export class DatabaseStorage implements IStorage {
 
   async getAgencyByCredentials(email: string, password: string): Promise<Agency | undefined> {
     const [agency] = await db.select().from(agencies).where(eq(agencies.email, email));
-    
+
     if (!agency) {
       // Prevent timing attacks
       await bcrypt.hash('dummy', 12);
@@ -309,7 +310,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateAdminCredentials(id: string, updates: Partial<InsertAdminCredentials>): Promise<AdminCredentials> {
     const updateData = { ...updates, updatedAt: new Date() };
-    
+
     // Hash password if provided
     if (updates.password) {
       updateData.password = await bcrypt.hash(updates.password, 12);
@@ -321,6 +322,19 @@ export class DatabaseStorage implements IStorage {
       .where(eq(adminCredentials.id, id))
       .returning();
     return credentials;
+  }
+
+  async checkAdminExists(): Promise<boolean> {
+    try {
+      const [admin] = await db
+        .select({ id: adminCredentials.id })
+        .from(adminCredentials)
+        .limit(1);
+      return !!admin;
+    } catch (error) {
+      console.error('Error checking admin existence:', error);
+      return false;
+    }
   }
 
   // Dummy data seeding removed - system now uses only live data
