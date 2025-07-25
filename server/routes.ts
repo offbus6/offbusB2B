@@ -131,6 +131,41 @@ export function registerRoutes(app: Express) {
     });
   });
 
+  // Initial admin setup route - only works if no admin exists
+  app.post("/api/auth/admin/setup", async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      // Check if any admin already exists
+      const existingAdmin = await storage.getAdminCredentials(email, "dummy");
+      if (existingAdmin) {
+        return res.status(400).json({ message: "Admin account already exists" });
+      }
+
+      // Create the first admin
+      const admin = await storage.createAdminCredentials({
+        email,
+        password,
+        name: "Super Admin"
+      });
+
+      res.status(201).json({ 
+        message: "Admin account created successfully",
+        admin: {
+          id: admin.id,
+          email: admin.email
+        }
+      });
+    } catch (error) {
+      console.error("Admin setup error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Session check
   app.get("/api/auth/me", (req: Request, res: Response) => {
     const user = (req.session as any)?.user;

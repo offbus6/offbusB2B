@@ -283,19 +283,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAdminCredentials(email: string, password: string): Promise<AdminCredentials | undefined> {
-    const [credentials] = await db
-      .select()
-      .from(adminCredentials)
-      .where(eq(adminCredentials.email, email))
-      .limit(1);
-
-    if (!credentials) {
-      // Prevent timing attacks
-      await bcrypt.hash('dummy', 12);
-      return undefined;
-    }
-
     try {
+      const [credentials] = await db
+        .select()
+        .from(adminCredentials)
+        .where(eq(adminCredentials.email, email))
+        .limit(1);
+
+      if (!credentials) {
+        // Prevent timing attacks
+        await bcrypt.hash('dummy', 12);
+        return undefined;
+      }
+
       const isValidPassword = await bcrypt.compare(password, credentials.password);
       if (isValidPassword) {
         return credentials;

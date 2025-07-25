@@ -14,6 +14,8 @@ import AgencyDetails from "./pages/admin/agency-details";
 import WhatsappConfig from "./pages/admin/whatsapp-config";
 import AdminProfile from "@/pages/admin/profile";
 import AdminSignup from "@/pages/admin-signup";
+import AdminSetup from "@/pages/admin-setup";
+import AgencyLogin from "@/pages/agency-login";
 import AgencyDashboard from "@/pages/agency/dashboard";
 import BusManagement from "@/pages/agency/bus-management";
 import UploadData from "@/pages/agency/upload-data";
@@ -60,6 +62,7 @@ function Router() {
         <Route path="/login" component={Login} />
         <Route path="/admin-login" component={AdminLogin} />
         <Route path="/admin-signup" component={AdminSignup} />
+        <Route path="/admin-setup" component={AdminSetup} />
         <Route path="/agency-login" component={AgencyLogin} />
         <Route path="/signup" component={Signup} />
         <Route path="/bus-search" component={BusSearch} />
