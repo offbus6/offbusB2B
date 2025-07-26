@@ -605,12 +605,13 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(whatsappQueue)
       .where(eq(whatsappQueue.travelerId, id));
-
-    // Then delete the traveler data
+    
+    // Then delete the traveler data record
     await db
       .delete(travelerData)
       .where(eq(travelerData.id, id));
   }
+
 
   // WhatsApp opt-out operations
   async optOutTravelerFromWhatsapp(phoneNumber: string): Promise<TravelerData[]> {
