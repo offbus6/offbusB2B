@@ -1063,8 +1063,9 @@ export function registerRoutes(app: Express) {
         agencyId: user.id,
         travelerName: String(row["Traveler Name"] || row["traveler_name"] || row["travelerName"] || ""),
         phone: String(row["Phone"] || row["phone"] || ""),
-        travelDate: req.body.travelDate, // Use the travel date from form instead of row data
-        couponCode: req.body.couponCode // Use the coupon code from form instead of row data
+        travelDate: new Date(req.body.travelDate || ""), // Convert to Date object
+        couponCode: String(req.body.couponCode || ""), // Ensure it's a string
+        whatsappStatus: "pending"
       }));
 
       // Validate each record

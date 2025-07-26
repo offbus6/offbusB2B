@@ -48,21 +48,24 @@ export default function UploadedData() {
     },
   });
 
-  const { data: travelerData, isLoading: dataLoading } = useQuery({
+  const { data: travelerData = [], isLoading: dataLoading } = useQuery({
     queryKey: ["/api/traveler-data"],
     retry: false,
   });
 
-  const { data: buses, isLoading: busesLoading } = useQuery({
+  const { data: buses = [], isLoading: busesLoading } = useQuery({
     queryKey: ["/api/buses"],
     retry: false,
   });
 
   const updateTravelerMutation = useMutation({
     mutationFn: async (data: z.infer<typeof travelerFormSchema>) => {
-      await apiRequest("PATCH", `/api/traveler-data/${editingTraveler.id}`, {
-        ...data,
-        travelDate: new Date(data.travelDate).toISOString().split('T')[0],
+      return await apiRequest(`/api/traveler-data/${editingTraveler.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          ...data,
+          travelDate: new Date(data.travelDate).toISOString().split('T')[0],
+        }),
       });
     },
     onSuccess: () => {
@@ -97,7 +100,9 @@ export default function UploadedData() {
 
   const deleteTravelerMutation = useMutation({
     mutationFn: async (travelerId: number) => {
-      await apiRequest("DELETE", `/api/traveler-data/${travelerId}`, {});
+      return await apiRequest(`/api/traveler-data/${travelerId}`, {
+        method: "DELETE",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/traveler-data"] });
