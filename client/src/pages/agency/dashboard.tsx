@@ -12,12 +12,12 @@ export default function AgencyDashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading, user } = useAuth();
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats = {}, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/stats/agency"],
     retry: false,
   });
 
-  const { data: uploadHistory, isLoading: historyLoading } = useQuery({
+  const { data: uploadHistory = [], isLoading: historyLoading } = useQuery({
     queryKey: ["/api/upload-history"],
     retry: false,
   });

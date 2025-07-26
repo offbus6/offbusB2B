@@ -45,21 +45,23 @@ function AppContent() {
   if (user) {
     if (user.role === "super_admin") {
       return (
-        <div className="flex h-screen bg-gray-50">
-          <Sidebar />
-          <main className="flex-1 overflow-y-auto">
-            <Switch>
-              <Route path="/" component={AdminDashboard} />
-              <Route path="/admin/dashboard" component={AdminDashboard} />
-              <Route path="/admin/agencies" component={ManageAgencies} />
-              <Route path="/admin/agencies/:id" component={AgencyDetails} />
-              <Route path="/admin/agency-approval" component={AgencyApproval} />
-              <Route path="/admin/whatsapp-config" component={WhatsappConfig} />
-              <Route path="/admin/profile" component={AdminProfile} />
-              <Route component={NotFound} />
-            </Switch>
-          </main>
-        </div>
+        <Layout variant="dashboard">
+          <div className="flex h-screen bg-gray-50">
+            <Sidebar />
+            <main className="flex-1 overflow-y-auto">
+              <Switch>
+                <Route path="/" component={AdminDashboard} />
+                <Route path="/admin/dashboard" component={AdminDashboard} />
+                <Route path="/admin/agencies" component={ManageAgencies} />
+                <Route path="/admin/agencies/:id" component={AgencyDetails} />
+                <Route path="/admin/agency-approval" component={AgencyApproval} />
+                <Route path="/admin/whatsapp-config" component={WhatsappConfig} />
+                <Route path="/admin/profile" component={AdminProfile} />
+                <Route component={NotFound} />
+              </Switch>
+            </main>
+          </div>
+        </Layout>
       );
     } else if (user.role === "agency") {
       // Check if agency is approved
@@ -68,19 +70,21 @@ function AppContent() {
       }
 
       return (
-        <div className="flex h-screen bg-gray-50">
-          <Sidebar />
-          <main className="flex-1 overflow-y-auto">
-            <Switch>
-              <Route path="/" component={AgencyDashboard} />
-              <Route path="/agency/dashboard" component={AgencyDashboard} />
-              <Route path="/agency/buses" component={BusManagement} />
-              <Route path="/agency/upload" component={UploadData} />
-              <Route path="/agency/data" component={UploadedData} />
-              <Route component={NotFound} />
-            </Switch>
-          </main>
-        </div>
+        <Layout variant="dashboard">
+          <div className="flex h-screen bg-gray-50">
+            <Sidebar />
+            <main className="flex-1 overflow-y-auto">
+              <Switch>
+                <Route path="/" component={AgencyDashboard} />
+                <Route path="/agency/dashboard" component={AgencyDashboard} />
+                <Route path="/agency/buses" component={BusManagement} />
+                <Route path="/agency/upload" component={UploadData} />
+                <Route path="/agency/data" component={UploadedData} />
+                <Route component={NotFound} />
+              </Switch>
+            </main>
+          </div>
+        </Layout>
       );
     }
   }
@@ -88,16 +92,16 @@ function AppContent() {
   // Public routes for non-authenticated users
   return (
     <Switch>
-      <Route path="/" component={Landing} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
       <Route path="/admin-login" component={AdminLogin} />
       <Route path="/admin-signup" component={AdminSignup} />
       <Route path="/admin-setup" component={AdminSetup} />
       <Route path="/agency-login" component={AgencyLogin} />
-      <Route path="/agency-register" component={AgencyRegister} />
+      <Route path="/agency-register" component={AgencyRegister} />  
       <Route path="/role-selection" component={RoleSelection} />
       <Route path="/bus-search" component={BusSearch} />
+      <Route path="/" component={Landing} />
       <Route component={NotFound} />
     </Switch>
   );
