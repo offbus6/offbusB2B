@@ -8,6 +8,28 @@ import cors from "cors";
 
 const app = express();
 
+// Graceful shutdown handler to prevent port conflicts
+function gracefulShutdown(signal: string) {
+  console.log(`\n${new Date().toLocaleTimeString()} [express] Received ${signal}, shutting down gracefully...`);
+  process.exit(0);
+}
+
+// Handle process termination signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2')); // nodemon restart
+
+// Handle uncaught exceptions to prevent hanging processes
+process.on('uncaughtException', (error) => {
+  console.error(`${new Date().toLocaleTimeString()} [express] Uncaught Exception:`, error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error(`${new Date().toLocaleTimeString()} [express] Unhandled Rejection at:`, promise, 'reason:', reason);
+  process.exit(1);
+});
+
 // Security configurations
 app.set('trust proxy', 1); // Trust first proxy
 app.disable('x-powered-by'); // Hide Express.js signature
@@ -94,12 +116,24 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
-  // Create HTTP server from Express app
+  // Create HTTP server from Express app with error handling
+  const PORT = parseInt(process.env.PORT || '5000', 10);
   const server = app.listen({
-    port: parseInt(process.env.PORT || '5000', 10),
+    port: PORT,
     host: "0.0.0.0",
   }, () => {
-    log(`serving on port ${parseInt(process.env.PORT || '5000', 10)}`);
+    log(`serving on port ${PORT}`);
+  });
+
+  // Handle server errors to prevent hanging processes
+  server.on('error', (error: any) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`${new Date().toLocaleTimeString()} [express] Port ${PORT} is already in use. Process will exit for clean restart.`);
+      process.exit(1);
+    } else {
+      console.error(`${new Date().toLocaleTimeString()} [express] Server error:`, error);
+      process.exit(1);
+    }
   });
 
   // importantly only setup vite in development and after

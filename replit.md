@@ -195,3 +195,12 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - Added comprehensive status tracking (sent, failed, pending, template_approval_pending)
 - System handles BhashSMS credential management (user=BhashWapAi, pass=bwap@123$, sender=BUZWAP)
 - Ready for production use once BhashSMS templates are approved by provider
+- **PERMANENT FIX: Port conflict and backend restart issues (July 26, 2025)**
+- Fixed recurring EADDRINUSE port 5000 conflicts that occurred after code updates
+- Added graceful shutdown handlers for SIGTERM, SIGINT, and SIGUSR2 signals
+- Implemented process cleanup to prevent hanging Node processes
+- Added comprehensive error handling for server startup failures
+- Created cleanup.sh script to kill existing processes before server restart
+- Added uncaught exception and unhandled rejection handlers to prevent zombie processes
+- Server now exits cleanly on port conflicts allowing workflow restart to succeed
+- System automatically cleans up old processes when code changes are detected
