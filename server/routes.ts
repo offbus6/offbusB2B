@@ -20,6 +20,7 @@ import {
   sanitizeLogData
 } from "./security-config";
 import { securityMonitor, createSecurityMiddleware } from "./security-monitor";
+import { whatsappService } from "./whatsapp-service";
 
 // Rate limiting configurations from security config
 const authLimiter = createAuthLimiter();
@@ -737,6 +738,66 @@ export function registerRoutes(app: Express) {
       res.status(201).json(template);
     } catch (error) {
       console.error("Create WhatsApp template error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Test WhatsApp API endpoint (super admin only)
+  app.post("/api/whatsapp/test", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { phoneNumber, message } = req.body;
+
+      // Enhanced input validation
+      const phoneValidation = validatePhoneNumber(phoneNumber);
+      if (!phoneValidation.isValid) {
+        return res.status(400).json({ message: phoneValidation.error });
+      }
+
+      if (!message || typeof message !== 'string' || message.length > 1000) {
+        return res.status(400).json({ message: "Invalid message content" });
+      }
+
+      // Get WhatsApp configuration
+      const config = await storage.getWhatsappConfig();
+      if (!config || !config.isActive) {
+        return res.status(400).json({ message: "WhatsApp configuration not found or inactive" });
+      }
+
+      // Send test message using BhashSMS API
+      const testMessage = `🧪 TEST MESSAGE from TravelFlow Admin\n\n${message}\n\nSent at: ${new Date().toLocaleString()}`;
+      
+      // Use the whatsapp service to send the message
+      const success = await whatsappService.sendTestMessage(phoneNumber, testMessage, config);
+      
+      if (success) {
+        // Log successful test for security monitoring
+        securityMonitor.logSecurityEvent({
+          type: 'AUTH_FAILURE', // Using as general event type
+          ip: req.ip || 'unknown',
+          endpoint: '/api/whatsapp/test',
+          details: { 
+            admin: user.email,
+            phoneNumber: phoneNumber.substring(0, 5) + 'xxxxx',
+            success: true
+          },
+          severity: 'LOW'
+        });
+
+        res.json({ 
+          message: "Test message sent successfully",
+          phoneNumber: phoneNumber,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(500).json({ message: "Failed to send test message" });
+      }
+    } catch (error) {
+      console.error("WhatsApp test error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

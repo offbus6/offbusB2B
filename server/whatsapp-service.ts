@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import type { TravelerData, WhatsappTemplate } from "@shared/schema";
+import { securityMonitor } from "./security-monitor";
 
 export interface WhatsappMessage {
   to: string;
@@ -12,15 +13,15 @@ export class WhatsappService {
   /**
    * Process dynamic variables in message templates
    */
-  private processMessageTemplate(template: string, travelerData: TravelerData, agency: any): string {
+  private processMessageTemplate(template: string, travelerData: TravelerData, agency: any, bus?: any): string {
     const variables = {
       '{{traveler_name}}': travelerData.travelerName || 'Traveler',
       '{{agency_name}}': agency?.name || 'Travel Agency',
-      '{{bus_name}}': travelerData.busName || 'Bus',
-      '{{route}}': travelerData.route || 'Route',
+      '{{bus_name}}': bus?.name || 'Bus Service',
+      '{{route}}': bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Route',
       '{{travel_date}}': travelerData.travelDate ? new Date(travelerData.travelDate).toLocaleDateString() : 'Travel Date',
       '{{coupon_code}}': travelerData.couponCode || 'TRAVEL2024',
-      '{{coupon_link}}': travelerData.couponLink || 'https://travelflow.com/coupon',
+      '{{coupon_link}}': 'https://travelflow.com/coupon',
       '{{phone}}': travelerData.phone || '',
       '{{days_since_travel}}': travelerData.travelDate ? 
         Math.floor((Date.now() - new Date(travelerData.travelDate).getTime()) / (1000 * 60 * 60 * 24)).toString() : '0',
@@ -58,13 +59,16 @@ export class WhatsappService {
       const templates = await storage.getWhatsappTemplates();
       const activeTemplates = templates.filter(template => template.isActive);
 
+      // Get bus information for better message templates
+      const bus = await storage.getBus(travelerData.busId);
+
       // Schedule messages for each template
       for (const template of activeTemplates) {
-        const uploadDate = new Date(travelerData.createdAt);
+        const uploadDate = new Date(travelerData.createdAt || new Date());
         const scheduledDate = new Date(uploadDate);
         scheduledDate.setDate(uploadDate.getDate() + template.dayTrigger);
 
-        const processedMessage = this.processMessageTemplate(template.message, travelerData, agency);
+        const processedMessage = this.processMessageTemplate(template.message, travelerData, agency, bus);
 
         await storage.createWhatsappQueue({
           travelerId: travelerId,
@@ -199,49 +203,124 @@ export class WhatsappService {
   }
 
   /**
-   * Send WhatsApp message using configured provider
+   * Send WhatsApp message using BhashSMS API with security measures
    */
-  private async sendWhatsappMessage(phoneNumber: string, message: string, config: any): Promise<void> {
-    // This is where you'd integrate with actual WhatsApp API providers
-    // For demonstration, we'll simulate the API call
-    
-    console.log(`Sending WhatsApp message via ${config.provider}`);
-    console.log(`To: ${phoneNumber}`);
-    console.log(`Message: ${message}`);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For now, we'll just log the message
-    // In production, you'd implement actual API calls based on the provider:
-    
-    switch (config.provider) {
-      case 'business_api':
-        // await this.sendViaBusinessAPI(phoneNumber, message, config);
-        break;
-      case 'twilio':
-        // await this.sendViaTwilio(phoneNumber, message, config);
-        break;
-      case 'messagebird':
-        // await this.sendViaMessageBird(phoneNumber, message, config);
-        break;
-      default:
-        throw new Error(`Unsupported provider: ${config.provider}`);
+  private async sendWhatsappMessage(phoneNumber: string, message: string, config: any): Promise<boolean> {
+    try {
+      // Security: Validate phone number format
+      if (!phoneNumber || !/^\d{10,15}$/.test(phoneNumber.replace(/\D/g, ''))) {
+        securityMonitor.logSecurityEvent({
+          type: 'INVALID_INPUT',
+          ip: 'system',
+          endpoint: '/whatsapp/send',
+          details: { phoneNumber: 'invalid_format' },
+          severity: 'MEDIUM'
+        });
+        throw new Error('Invalid phone number format');
+      }
+
+      // Security: Validate message content
+      if (!message || message.length > 1000) {
+        securityMonitor.logSecurityEvent({
+          type: 'INVALID_INPUT',
+          ip: 'system',
+          endpoint: '/whatsapp/send',
+          details: { messageLength: message?.length || 0 },
+          severity: 'MEDIUM'
+        });
+        throw new Error('Invalid message content');
+      }
+
+      // Clean phone number (remove country code if +91)
+      let cleanPhone = phoneNumber.replace(/\D/g, '');
+      if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+        cleanPhone = cleanPhone.substring(2);
+      }
+
+      // BhashSMS API integration with security
+      const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
+      const params = new URLSearchParams({
+        user: config.apiKey || 'BhashWapAi',
+        pass: config.apiSecret || process.env.BHASH_SMS_PASSWORD || 'bwap@123$',
+        sender: config.phoneNumber || 'BUZWAP',
+        phone: cleanPhone,
+        text: message,
+        priority: 'wa',
+        stype: 'normal'
+      });
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const response = await fetch(`${apiUrl}?${params}`, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'TravelFlow-WhatsApp-Service/1.0'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.text();
+      
+      // Check if message was sent successfully
+      if (result.startsWith('S.')) {
+        console.log(`✅ WhatsApp message sent successfully to ${cleanPhone}. ID: ${result}`);
+        return true;
+      } else {
+        // Log failed attempts for monitoring
+        securityMonitor.logSecurityEvent({
+          type: 'INVALID_INPUT',
+          ip: 'system',
+          endpoint: '/whatsapp/send',
+          details: { 
+            phoneNumber: cleanPhone,
+            apiResponse: result,
+            provider: 'bhashsms'
+          },
+          severity: 'MEDIUM'
+        });
+        
+        console.error(`❌ Failed to send WhatsApp message. Response: ${result}`);
+        return false;
+      }
+    } catch (error) {
+      // Security: Log failed API calls
+      securityMonitor.logSecurityEvent({
+        type: 'INVALID_INPUT',
+        ip: 'system',
+        endpoint: '/whatsapp/send',
+        details: { 
+          error: error instanceof Error ? error.message : 'Unknown error',
+          phoneNumber: phoneNumber?.substring(0, 5) + 'xxxxx' // Partially mask phone
+        },
+        severity: 'HIGH'
+      });
+      
+      console.error('Error sending WhatsApp message:', error);
+      return false;
     }
   }
 
   /**
    * Send test message to verify configuration
    */
-  async sendTestMessage(): Promise<void> {
+  async sendTestMessage(phoneNumber?: string, message?: string, config?: any): Promise<boolean> {
     try {
-      const config = await storage.getWhatsappConfig();
-      if (!config) {
+      const whatsappConfig = config || await storage.getWhatsappConfig();
+      if (!whatsappConfig) {
         throw new Error('WhatsApp configuration not found');
       }
 
-      const testMessage = `Test message from TravelFlow at ${new Date().toLocaleString()}`;
-      await this.sendWhatsappMessage(config.phoneNumber, testMessage, config);
+      const testPhone = phoneNumber || whatsappConfig.phoneNumber;
+      const testMessage = message || `Test message from TravelFlow at ${new Date().toLocaleString()}`;
+      
+      return await this.sendWhatsappMessage(testPhone, testMessage, whatsappConfig);
       
       console.log('Test message sent successfully');
     } catch (error) {
