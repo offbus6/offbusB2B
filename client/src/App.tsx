@@ -81,7 +81,7 @@ function Router() {
 
   // Check agency status for non-admin users
   const userAgency = (user as any)?.agency;
-  
+
   if (!isSuperAdmin && userAgency) {
     // If agency exists, check its status
     if (userAgency.status === 'pending') {

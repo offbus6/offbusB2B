@@ -103,6 +103,7 @@ export interface IStorage {
   updateAgencyStatus(id: number, status: string): Promise<Agency>;
   updateAgency(id: number, updates: Partial<InsertAgency>): Promise<Agency>;
   deleteAgency(id: number): Promise<void>;
+  getAgencyById(id: number): Promise<Agency | null>;
 
   // Bus operations
   createBus(bus: InsertBus): Promise<Bus>;
@@ -481,6 +482,14 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAgency(id: number): Promise<void> {
     await db.delete(agencies).where(eq(agencies.id, id));
+  }
+  async getAgencies(): Promise<Agency[]> {
+    return await db.select().from(agencies);
+  }
+
+  async getAgencyById(id: number): Promise<Agency | null> {
+    const result = await db.select().from(agencies).where(eq(agencies.id, id)).limit(1);
+    return result[0] || null;
   }
 
   async createBus(bus: InsertBus): Promise<Bus> {
