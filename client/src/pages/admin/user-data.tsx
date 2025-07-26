@@ -38,7 +38,7 @@ export default function AdminUserData() {
     );
   }
 
-  const filteredData = userData?.filter((user: any) => {
+  const filteredData = (userData as any[])?.filter((user: any) => {
     const matchesSearch = user.travelerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.phone.includes(searchTerm) ||
                          user.agencyName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -63,7 +63,7 @@ export default function AdminUserData() {
       return;
     }
 
-    const exportData = filteredData.map((user: any) => ({
+    const exportData = (filteredData as any[])?.map((user: any) => ({
       'Traveler Name': user.travelerName,
       'Phone': user.phone,
       'Travel Agency': user.agencyName,
@@ -105,10 +105,14 @@ export default function AdminUserData() {
     );
   };
 
-  const totalUsers = userData?.length || 0;
-  const totalAgencies = new Set(userData?.map((u: any) => u.agencyId)).size || 0;
-  const totalBuses = new Set(userData?.map((u: any) => u.busId)).size || 0;
-  const totalRevenue = userData?.reduce((sum: number, u: any) => sum + (parseInt(u.fare.replace(/[^\d]/g, '')) || 0), 0) || 0;
+  const totalUsers = (userData as any[])?.length || 0;
+  const totalAgencies = new Set((userData as any[])?.map((u: any) => u.agencyId)).size || 0;
+  const totalBuses = new Set((userData as any[])?.map((u: any) => u.busId)).size || 0;
+  const totalRevenue = (userData as any[])?.reduce((sum: number, u: any) => {
+    if (!u.fare) return sum;
+    const fareStr = typeof u.fare === 'string' ? u.fare : String(u.fare);
+    return sum + (parseInt(fareStr.replace(/[^\d]/g, '')) || 0);
+  }, 0) || 0;
 
   return (
     <div>
@@ -204,7 +208,7 @@ export default function AdminUserData() {
         <CardHeader className="border-b border-[var(--airbnb-border)]">
           <div className="flex justify-between items-center">
             <CardTitle className="text-xl font-semibold text-[var(--airbnb-dark)]">
-              Traveler Data ({filteredData.length} records)
+              Traveler Data ({(filteredData as any[])?.length || 0} records)
             </CardTitle>
             <Button
               onClick={handleExport}
