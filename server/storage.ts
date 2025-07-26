@@ -569,6 +569,12 @@ export class DatabaseStorage implements IStorage {
     return data;
   }
 
+  async deleteTravelerData(id: number): Promise<void> {
+    await db
+      .delete(travelerData)
+      .where(eq(travelerData.id, id));
+  }
+
   // WhatsApp opt-out operations
   async optOutTravelerFromWhatsapp(phoneNumber: string): Promise<TravelerData[]> {
     return await db

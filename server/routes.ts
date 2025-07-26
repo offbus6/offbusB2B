@@ -1005,6 +1005,40 @@ export function registerRoutes(app: Express) {
     };
   }
 
+  app.patch("/api/traveler-data/:id", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "agency") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { id } = req.params;
+      const updates = req.body;
+
+      const traveler = await storage.updateTravelerData(parseInt(id), updates);
+      res.json(traveler);
+    } catch (error) {
+      console.error("Update traveler data error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/traveler-data/:id", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "agency") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { id } = req.params;
+      await storage.deleteTravelerData(parseInt(id));
+      res.json({ message: "Traveler data deleted successfully" });
+    } catch (error) {
+      console.error("Delete traveler data error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.post("/api/traveler-data/upload", requireAuth(['agency']), upload.single("file"), async (req: Request, res: Response) => {
     try {
       const user = (req.session as any)?.user;

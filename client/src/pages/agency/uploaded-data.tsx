@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertTravelerDataSchema } from "@shared/schema";
-import { Search, Edit, Download } from "lucide-react";
+import { Search, Edit, Download, Trash2 } from "lucide-react";
 import { z } from "zod";
 
 const travelerFormSchema = insertTravelerDataSchema.omit({ 
@@ -95,6 +95,37 @@ export default function UploadedData() {
     },
   });
 
+  const deleteTravelerMutation = useMutation({
+    mutationFn: async (travelerId: number) => {
+      await apiRequest("DELETE", `/api/traveler-data/${travelerId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/traveler-data"] });
+      toast({
+        title: "Success",
+        description: "Traveler data deleted successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete traveler data",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       toast({
@@ -119,6 +150,12 @@ export default function UploadedData() {
       whatsappStatus: traveler.whatsappStatus,
     });
     setIsDialogOpen(true);
+  };
+
+  const handleDelete = (traveler: any) => {
+    if (window.confirm(`Are you sure you want to delete ${traveler.travelerName}'s data? This action cannot be undone.`)) {
+      deleteTravelerMutation.mutate(traveler.id);
+    }
   };
 
   const onSubmit = async (data: z.infer<typeof travelerFormSchema>) => {
@@ -370,14 +407,25 @@ export default function UploadedData() {
                       {getStatusBadge(traveler.whatsappStatus)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(traveler)}
-                        className="text-[var(--airbnb-primary)] hover:text-[var(--airbnb-dark)]"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(traveler)}
+                          className="text-[var(--airbnb-primary)] hover:text-[var(--airbnb-dark)]"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(traveler)}
+                          className="text-red-500 hover:text-red-700"
+                          disabled={deleteTravelerMutation.isPending}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
