@@ -545,10 +545,41 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(travelerData.createdAt));
   }
 
-  async getAllTravelerData(): Promise<TravelerData[]> {
+  async getAllTravelerData(): Promise<any[]> {
     return await db
-      .select()
+      .select({
+        id: travelerData.id,
+        busId: travelerData.busId,
+        agencyId: travelerData.agencyId,
+        travelerName: travelerData.travelerName,
+        phone: travelerData.phone,
+        travelDate: travelerData.travelDate,
+        couponCode: travelerData.couponCode,
+        whatsappStatus: travelerData.whatsappStatus,
+        whatsappOptOut: travelerData.whatsappOptOut,
+        optOutDate: travelerData.optOutDate,
+        createdAt: travelerData.createdAt,
+        updatedAt: travelerData.updatedAt,
+        // Agency information
+        agencyName: agencies.name,
+        agencyCity: agencies.city,
+        agencyState: agencies.state,
+        agencyPhone: agencies.phone,
+        agencyContactPerson: agencies.contactPerson,
+        // Bus information
+        busNumber: buses.number,
+        busName: buses.name,
+        fromLocation: buses.fromLocation,
+        toLocation: buses.toLocation,
+        departureTime: buses.departureTime,
+        arrivalTime: buses.arrivalTime,
+        busType: buses.busType,
+        capacity: buses.capacity,
+        fare: buses.fare,
+      })
       .from(travelerData)
+      .leftJoin(agencies, eq(travelerData.agencyId, agencies.id))
+      .leftJoin(buses, eq(travelerData.busId, buses.id))
       .orderBy(desc(travelerData.createdAt));
   }
 

@@ -1416,6 +1416,23 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Delete traveler data (admin only)
+  app.delete("/api/admin/user-data/:id", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { id } = req.params;
+      await storage.deleteTravelerData(parseInt(id));
+      res.json({ message: "Traveler data deleted successfully" });
+    } catch (error) {
+      console.error("Delete admin user data error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/admin/payments", async (req: Request, res: Response) => {
     try {
       const user = (req.session as any)?.user;

@@ -1,18 +1,20 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, Users, Bus, MapPin, Calendar } from "lucide-react";
+import { Download, Search, Users, Bus, MapPin, Calendar, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import StatsCard from "@/components/ui/stats-card";
 import * as XLSX from 'xlsx';
 
 export default function AdminUserData() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [agencyFilter, setAgencyFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -30,6 +32,28 @@ export default function AdminUserData() {
     retry: false,
   });
 
+  const deleteTravelerMutation = useMutation({
+    mutationFn: async (travelerId: number) => {
+      return await apiRequest(`/api/admin/user-data/${travelerId}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/user-data"] });
+      toast({
+        title: "Success",
+        description: "Traveler data deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete traveler data",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (dataLoading || agenciesLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -39,10 +63,10 @@ export default function AdminUserData() {
   }
 
   const filteredData = (userData as any[])?.filter((user: any) => {
-    const matchesSearch = user.travelerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.phone.includes(searchTerm) ||
-                         user.agencyName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesAgency = agencyFilter === "all" || user.agencyId.toString() === agencyFilter;
+    const matchesSearch = user.travelerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.phone?.includes(searchTerm) ||
+                         user.agencyName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesAgency = agencyFilter === "all" || user.agencyId?.toString() === agencyFilter;
     const matchesStatus = statusFilter === "all" || user.whatsappStatus === statusFilter;
     const matchesDate = !dateFilter || new Date(user.travelDate).toISOString().split('T')[0] === dateFilter;
     
@@ -244,12 +268,15 @@ export default function AdminUserData() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-[var(--airbnb-gray)] uppercase tracking-wider">
                   Status
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--airbnb-gray)] uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-[var(--airbnb-border)]">
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-[var(--airbnb-gray)]">
+                  <td colSpan={8} className="px-6 py-8 text-center text-[var(--airbnb-gray)]">
                     No traveler data found
                   </td>
                 </tr>
@@ -306,6 +333,17 @@ export default function AdminUserData() {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       {getStatusBadge(user.whatsappStatus)}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => deleteTravelerMutation.mutate(user.id)}
+                        disabled={deleteTravelerMutation.isPending}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </td>
                   </tr>
                 ))
