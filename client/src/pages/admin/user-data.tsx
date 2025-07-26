@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Search, Users, Bus, MapPin, Calendar, Trash2, MessageSquare, Send } from "lucide-react";
+import { Download, Search, Users, Bus, MapPin, MessageSquare, Trash2, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import StatsCard from "@/components/ui/stats-card";
@@ -193,11 +193,7 @@ export default function AdminUserData() {
   const totalUsers = (userData as any[])?.length || 0;
   const totalAgencies = new Set((userData as any[])?.map((u: any) => u.agencyId)).size || 0;
   const totalBuses = new Set((userData as any[])?.map((u: any) => u.busId)).size || 0;
-  const totalRevenue = (userData as any[])?.reduce((sum: number, u: any) => {
-    if (!u.fare) return sum;
-    const fareStr = typeof u.fare === 'string' ? u.fare : String(u.fare);
-    return sum + (parseInt(fareStr.replace(/[^\d]/g, '')) || 0);
-  }, 0) || 0;
+  const totalMessagesSent = (userData as any[])?.filter((u: any) => u.whatsappStatus === 'sent').length || 0;
 
   return (
     <div>
@@ -231,10 +227,10 @@ export default function AdminUserData() {
           value={totalAgencies}
         />
         <StatsCard
-          icon={Calendar}
+          icon={MessageSquare}
           iconColor="text-green-500"
-          title="Total Revenue"
-          value={`₹${totalRevenue.toLocaleString()}`}
+          title="WhatsApp Messages Sent"
+          value={totalMessagesSent}
         />
       </div>
 
