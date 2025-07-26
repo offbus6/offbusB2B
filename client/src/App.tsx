@@ -82,56 +82,71 @@ function Router() {
   // Check agency status for non-admin users
   const userAgency = (user as any)?.agency;
 
-  if (!isSuperAdmin && userAgency) {
-    // If agency exists, check its status
-    if (userAgency.status === 'pending') {
-      return <AgencyPending />;
-    }
-    if (userAgency.status === 'rejected') {
-      return <AgencyPending />; // Still show pending page for rejected status with proper message
-    }
-    // If approved, continue to dashboard below
-  } else if (!isSuperAdmin && !userAgency) {
-    // No agency found, show registration
-    return <AgencyRegister />;
-  }
-
   return (
-    <Layout variant="dashboard">
-      <div className="bg-[var(--airbnb-light)] min-h-screen">
-        <div className="flex">
-          <Sidebar />
-          <main className="flex-1 p-8">
-            <Switch>
-              {isSuperAdmin ? (
-                <>
-                  <Route path="/" component={AdminDashboard} />
-                  <Route path="/admin/dashboard" component={AdminDashboard} />
-                  <Route path="/admin/agency-approval" component={AgencyApproval} />
-                  <Route path="/admin/manage-agencies" component={ManageAgencies} />
-                  <Route path="/admin/agencies/:id" component={AgencyDetails} />
-                  <Route path="/admin/whatsapp-config" component={WhatsappConfig} />
-                  <Route path="/admin/profile" component={AdminProfile} />
-                  <Route path="/admin/accounts" component={AdminAccounts} />
-                  <Route path="/admin/user-data" component={AdminUserData} />
-                  <Route path="/admin/notifications" component={AdminNotifications} />
-                </>
-              ) : (
-                <>
-                  <Route path="/" component={AgencyDashboard} />
-                  <Route path="/agency/dashboard" component={AgencyDashboard} />
-                  <Route path="/agency/bus-management" component={BusManagement} />
-                  <Route path="/agency/upload-data" component={UploadData} />
-                  <Route path="/agency/uploaded-data" component={UploadedData} />
-                  <Route path="/agency/payments" component={AgencyPayments} />
-                </>
-              )}
-              <Route component={NotFound} />
-            </Switch>
-          </main>
-        </div>
-      </div>
-    </Layout>
+    <Switch>
+      {/* Public routes */}
+      <Route path="/" component={Landing} />
+      <Route path="/bus-search" component={BusSearch} />
+      
+      {/* Agency registration and status routes */}
+      <Route path="/agency/register">
+        {!isSuperAdmin && !userAgency ? <AgencyRegister /> : <Landing />}
+      </Route>
+      <Route path="/agency/pending">
+        {!isSuperAdmin && userAgency?.status === 'pending' ? <AgencyPending /> : <Landing />}
+      </Route>
+      
+      {/* Dashboard routes */}
+      <Route path="/admin/*">
+        {isSuperAdmin ? (
+          <Layout variant="dashboard">
+            <div className="bg-[var(--airbnb-light)] min-h-screen">
+              <div className="flex">
+                <Sidebar />
+                <main className="flex-1 p-8">
+                  <Switch>
+                    <Route path="/admin/dashboard" component={AdminDashboard} />
+                    <Route path="/admin/agency-approval" component={AgencyApproval} />
+                    <Route path="/admin/manage-agencies" component={ManageAgencies} />
+                    <Route path="/admin/agencies/:id" component={AgencyDetails} />
+                    <Route path="/admin/whatsapp-config" component={WhatsappConfig} />
+                    <Route path="/admin/profile" component={AdminProfile} />
+                    <Route path="/admin/accounts" component={AdminAccounts} />
+                    <Route path="/admin/user-data" component={AdminUserData} />
+                    <Route path="/admin/notifications" component={AdminNotifications} />
+                    <Route component={NotFound} />
+                  </Switch>
+                </main>
+              </div>
+            </div>
+          </Layout>
+        ) : <Landing />}
+      </Route>
+      
+      <Route path="/agency/*">
+        {!isSuperAdmin && userAgency?.status === 'approved' ? (
+          <Layout variant="dashboard">
+            <div className="bg-[var(--airbnb-light)] min-h-screen">
+              <div className="flex">
+                <Sidebar />
+                <main className="flex-1 p-8">
+                  <Switch>
+                    <Route path="/agency/dashboard" component={AgencyDashboard} />
+                    <Route path="/agency/bus-management" component={BusManagement} />
+                    <Route path="/agency/upload-data" component={UploadData} />
+                    <Route path="/agency/uploaded-data" component={UploadedData} />
+                    <Route path="/agency/payments" component={AgencyPayments} />
+                    <Route component={NotFound} />
+                  </Switch>
+                </main>
+              </div>
+            </div>
+          </Layout>
+        ) : !isSuperAdmin && userAgency?.status === 'pending' ? <AgencyPending /> : !isSuperAdmin && !userAgency ? <AgencyRegister /> : <Landing />}
+      </Route>
+      
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 

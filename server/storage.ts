@@ -318,7 +318,6 @@ export class DatabaseStorage implements IStorage {
       }
 
       const sanitizedEmail = validator.normalizeEmail(email) || email;
-
       const [agency] = await db
         .select()
         .from(agencies)
