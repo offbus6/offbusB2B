@@ -1100,8 +1100,30 @@ export function registerRoutes(app: Express) {
         };
       });
 
+      // Remove duplicates within the upload (keep first occurrence)
+      const seenPhones = new Set();
+      const uniqueTravelerData = travelerDataArray.filter((traveler) => {
+        if (!traveler.phone || seenPhones.has(traveler.phone)) {
+          return false; // Skip duplicates or empty phone numbers
+        }
+        seenPhones.add(traveler.phone);
+        return true;
+      });
+
+      // Check for existing phone numbers in database for this agency
+      const existingTravelers = await storage.getTravelerDataByAgency(user.id);
+      const existingPhones = new Set(existingTravelers.map(t => t.phone));
+      
+      // Filter out phone numbers that already exist in database
+      const finalTravelerData = uniqueTravelerData.filter((traveler) => {
+        return !existingPhones.has(traveler.phone);
+      });
+
+      const duplicatesInFile = travelerDataArray.length - uniqueTravelerData.length;
+      const duplicatesInDB = uniqueTravelerData.length - finalTravelerData.length;
+
       // Validate each record
-      const validatedData = travelerDataArray.map(data => 
+      const validatedData = finalTravelerData.map(data => 
         insertTravelerDataSchema.parse(data)
       );
 
@@ -1117,9 +1139,17 @@ export function registerRoutes(app: Express) {
         status: "completed"
       });
 
+      let message = "Data uploaded successfully";
+      if (duplicatesInFile > 0 || duplicatesInDB > 0) {
+        message += `. Removed ${duplicatesInFile} duplicates from file and ${duplicatesInDB} existing phone numbers.`;
+      }
+
       res.status(201).json({
-        message: "Data uploaded successfully",
+        message: message,
         count: createdData.length,
+        originalCount: travelerDataArray.length,
+        duplicatesInFile: duplicatesInFile,
+        duplicatesInDB: duplicatesInDB,
         data: createdData
       });
     } catch (error) {
