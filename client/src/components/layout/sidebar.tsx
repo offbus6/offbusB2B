@@ -94,6 +94,11 @@ export default function Sidebar() {
       icon: User, 
       label: "Profile" 
     },
+    { 
+      href: "/agency/whatsapp-schedule", 
+      icon: MessageSquare, 
+      label: "WhatsApp Schedule" 
+    },
   ];
 
   const navItems = isSuperAdmin ? superAdminNavItems : agencyNavItems;

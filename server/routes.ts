@@ -1130,6 +1130,17 @@ export function registerRoutes(app: Express) {
       // Save to database
       const createdData = await storage.createTravelerData(validatedData);
 
+      // Schedule WhatsApp messages for each uploaded traveler
+      try {
+        for (const traveler of createdData) {
+          await whatsappService.scheduleMessagesForTraveler(traveler.id);
+        }
+        console.log(`✅ Scheduled WhatsApp messages for ${createdData.length} travelers`);
+      } catch (error) {
+        console.error('Error scheduling WhatsApp messages:', error);
+        // Continue with upload even if scheduling fails
+      }
+
       // Create upload history record
       await storage.createUploadHistory({
         agencyId: user.id,
@@ -1566,6 +1577,62 @@ export function registerRoutes(app: Express) {
       }
     } catch (error) {
       console.error("Get system stats error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get WhatsApp message schedule for a specific traveler or agency
+  app.get("/api/whatsapp/schedule/:type/:id", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { type, id } = req.params;
+      let schedule = [];
+
+      if (type === 'traveler' && (user.role === 'agency' || user.role === 'super_admin')) {
+        // Get schedule for specific traveler
+        const queue = await storage.getWhatsappQueue();
+        schedule = queue.filter(msg => msg.travelerId === parseInt(id));
+      } else if (type === 'agency' && user.role === 'agency') {
+        // Get schedule for agency's travelers
+        const queue = await storage.getWhatsappQueue();
+        const travelers = await storage.getTravelerDataByAgency(user.id);
+        const travelerIds = travelers.map(t => t.id);
+        schedule = queue.filter(msg => travelerIds.includes(msg.travelerId));
+      } else if (type === 'agency' && user.role === 'super_admin') {
+        // Admin can see any agency's schedule  
+        const queue = await storage.getWhatsappQueue();
+        const travelers = await storage.getTravelerDataByAgency(parseInt(id));
+        const travelerIds = travelers.map(t => t.id);
+        schedule = queue.filter(msg => travelerIds.includes(msg.travelerId));
+      }
+
+      // Add traveler and template details
+      const enrichedSchedule = await Promise.all(schedule.map(async (msg) => {
+        const traveler = await storage.getTravelerData(msg.travelerId);
+        const templates = await storage.getWhatsappTemplates();
+        const template = templates.find(t => t.id === msg.templateId);
+        
+        return {
+          ...msg,
+          travelerName: traveler?.travelerName,
+          travelerPhone: traveler?.phone,
+          templateName: template?.name,
+          dayTrigger: template?.dayTrigger,
+          timeUntilSend: Math.ceil((new Date(msg.scheduledFor).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) // days
+        };
+      }));
+
+      res.json({
+        schedule: enrichedSchedule.sort((a, b) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime()),
+        count: enrichedSchedule.length,
+        nextMessage: enrichedSchedule.find(msg => msg.status === 'pending' && new Date(msg.scheduledFor) > new Date())
+      });
+    } catch (error) {
+      console.error("Get WhatsApp schedule error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

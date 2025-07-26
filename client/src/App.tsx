@@ -24,6 +24,7 @@ import AgencyDashboard from "@/pages/agency/dashboard";
 import BusManagement from "@/pages/agency/bus-management";
 import UploadData from "@/pages/agency/upload-data";
 import UploadedData from "@/pages/agency/uploaded-data";
+import WhatsAppSchedule from "@/pages/agency/whatsapp-schedule";
 import AgencyPayments from "@/pages/agency/payments";
 import AgencyRegister from "@/pages/agency/register";
 import AgencyPending from "@/pages/agency/pending";
