@@ -1062,12 +1062,12 @@ export function registerRoutes(app: Express) {
       // Transform and validate data
       const travelerDataArray = jsonData.map((row: any) => {
         let phone = String(row["Phone"] || row["phone"] || "").trim();
-        
+
         // Auto-format Indian phone numbers
         if (phone) {
           // Remove any existing country code or special characters
           phone = phone.replace(/[^\d]/g, '');
-          
+
           // If it's a 10-digit number, add +91
           if (phone.length === 10 && phone.match(/^[6-9]\d{9}$/)) {
             phone = '+91' + phone;
@@ -1549,7 +1549,7 @@ export function registerRoutes(app: Express) {
       }
 
       const { phoneNumber, message, agencyName } = req.body;
-      
+
       if (!phoneNumber) {
         return res.status(400).json({ message: "Phone number is required" });
       }
@@ -1604,7 +1604,7 @@ Happy Travels! 🌟`;
       }
 
       const result = await response.text();
-      
+
       // Update traveler WhatsApp status if found
       const traveler = await storage.getTravelerByPhone(`+91${cleanPhone}`);
       if (traveler) {
@@ -1658,7 +1658,7 @@ Happy Travels! 🌟`;
       }
 
       const { agencyId, message } = req.body;
-      
+
       if (!agencyId) {
         return res.status(400).json({ message: "Agency ID is required" });
       }
@@ -1666,7 +1666,7 @@ Happy Travels! 🌟`;
       // Get all travelers for the agency
       const travelers = await storage.getTravelerDataByAgency(agencyId);
       const agency = await storage.getAgency(agencyId);
-      
+
       if (!agency) {
         return res.status(404).json({ message: "Agency not found" });
       }
@@ -1724,7 +1724,7 @@ Happy Travels! 🌟`;
 
           clearTimeout(timeoutId);
           const result = await response.text();
-          
+
           // Update traveler status
           const status = result.startsWith('S.') ? 'sent' : 'failed';
           await storage.updateTravelerData(traveler.id, { whatsappStatus: status });
@@ -1777,6 +1777,167 @@ Happy Travels! 🌟`;
         success: false, 
         message: error instanceof Error ? error.message : "Unknown error occurred"
       });
+    }
+  });
+
+  // Middleware to check authentication
+  function authMiddleware(req: Request, res: Response, next: () => void) {
+    if (!(req.session as any)?.user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    next();
+  }
+
+  // Delete traveler data by admin
+  app.delete("/api/admin/user-data/:id", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { user } = req.session as any;
+      if (!user || user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+
+      await storage.deleteTravelerData(id);
+      res.json({ message: "Traveler data deleted successfully" });
+    } catch (error) {
+      console.error("Delete admin user data error:", error);
+      res.status(500).json({ message: "Failed to delete traveler data" });
+    }
+  });
+
+  // Update agency profile
+  app.patch("/api/agencies/:id", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { user } = req.session as any;
+      if (!user || user.role !== 'agency') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const agencyId = parseInt(req.params.id);
+      if (isNaN(agencyId)) {
+        return res.status(400).json({ message: "Invalid agency ID" });
+      }
+
+      // Ensure agency can only update their own profile
+      if (user.agency?.id !== agencyId) {
+        return res.status(403).json({ message: "You can only update your own profile" });
+      }
+
+      const { name, email, contactPerson, phone, city, state, website } = req.body;
+
+      // Enhanced email validation if email is being changed
+      if (email && email !== user.agency.email) {
+        const emailValidation = validateEmail(email);
+        if (!emailValidation.isValid) {
+          return res.status(400).json({ message: emailValidation.error });
+        }
+
+        // Check if new email already exists
+        const existingAgency = await storage.getAgencyByEmail(emailValidation.sanitized!);
+        if (existingAgency && existingAgency.id !== agencyId) {
+          return res.status(409).json({ message: "Email already in use by another agency" });
+        }
+      }
+
+      // Enhanced phone validation
+      if (phone) {
+        const phoneValidation = validatePhoneNumber(phone);
+        if (!phoneValidation.isValid) {
+          return res.status(400).json({ message: phoneValidation.error });
+        }
+      }
+
+      const updateData = {
+        name: name ? sanitizeInput(name) : undefined,
+        email: email ? sanitizeInput(email) : undefined,
+        contactPerson: contactPerson ? sanitizeInput(contactPerson) : undefined,
+        phone: phone ? sanitizeInput(phone) : undefined,
+        city: city ? sanitizeInput(city) : undefined,
+        state: state ? sanitizeInput(state) : undefined,
+        website: website ? sanitizeInput(website) : undefined,
+      };
+
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => 
+        updateData[key as keyof typeof updateData] === undefined && delete updateData[key as keyof typeof updateData]
+      );
+
+      await storage.updateAgency(agencyId, updateData);
+
+      // Update session with new data
+      if (req.session) {
+        const updatedAgency = await storage.getAgencyById(agencyId);
+        if (updatedAgency) {
+          (req.session as any).user.agency = {
+            ...user.agency,
+            ...updateData
+          };
+        }
+      }
+
+      res.json({ message: "Agency profile updated successfully" });
+    } catch (error) {
+      console.error("Update agency profile error:", error);
+      res.status(500).json({ message: "Failed to update agency profile" });
+    }
+  });
+
+  // Update agency password
+  app.patch("/api/agencies/:id/password", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { user } = req.session as any;
+      if (!user || user.role !== 'agency') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const agencyId = parseInt(req.params.id);
+      if (isNaN(agencyId)) {
+        return res.status(400).json({ message: "Invalid agency ID" });
+      }
+
+      // Ensure agency can only update their own password
+      if (user.agency?.id !== agencyId) {
+        return res.status(403).json({ message: "You can only update your own password" });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current password and new password are required" });
+      }
+
+      // Enhanced password validation
+      const passwordValidation = validatePassword(newPassword);
+      if (!passwordValidation.isValid) {
+        return res.status(400).json({ 
+          message: "New password validation failed",
+          errors: passwordValidation.errors
+        });
+      }
+
+      // Verify current password
+      const agency = await storage.getAgencyById(agencyId);
+      if (!agency) {
+        return res.status(404).json({ message: "Agency not found" });
+      }
+
+      const isValidPassword = await bcrypt.compare(currentPassword, agency.password);
+      if (!isValidPassword) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      // Hash new password and update
+      const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+      await storage.updateAgency(agencyId, { password: hashedNewPassword });
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Update agency password error:", error);
+      res.status(500).json({ message: "Failed to update password" });
     }
   });
 

@@ -605,11 +605,28 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(whatsappQueue)
       .where(eq(whatsappQueue.travelerId, id));
-    
-    // Then delete the traveler data record
+
+    // Then delete the traveler data
     await db
       .delete(travelerData)
       .where(eq(travelerData.id, id));
+  }
+
+  async updateAgency(id: number, data: Partial<{
+    name: string;
+    email: string;
+    contactPerson: string;
+    phone: string;
+    city: string;
+    state: string;
+    website: string;
+    password: string;
+    status: string;
+  }>): Promise<void> {
+    await db
+      .update(agencies)
+      .set(data)
+      .where(eq(agencies.id, id));
   }
 
 

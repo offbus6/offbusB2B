@@ -1,5 +1,5 @@
 import { Switch, Route } from "wouter";
-import React from "react";
+import React, { lazy } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -93,6 +93,9 @@ function AppContent() {
                   <Route path="/agency/upload-data" component={UploadData} />
                   <Route path="/agency/uploaded-data" component={UploadedData} />
                   <Route path="/agency/payments" component={AgencyPayments} />
+                  <Route path="/agency/profile" component={lazy(() => import("@/pages/agency/profile"))} />
+                  <Route path="/agency/pending" component={AgencyPending} />
+                  <Route path="/agency/register" component={AgencyRegister} />
                   <Route component={NotFound} />
                 </Switch>
               </main>

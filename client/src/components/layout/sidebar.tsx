@@ -89,6 +89,11 @@ export default function Sidebar() {
       icon: CreditCard,
       label: "Payments"
     },
+    { 
+      href: "/agency/profile", 
+      icon: User, 
+      label: "Profile" 
+    },
   ];
 
   const navItems = isSuperAdmin ? superAdminNavItems : agencyNavItems;
