@@ -21,7 +21,8 @@ export class WhatsappService {
       '{{route}}': bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Route',
       '{{travel_date}}': travelerData.travelDate ? new Date(travelerData.travelDate).toLocaleDateString() : 'Travel Date',
       '{{coupon_code}}': travelerData.couponCode || 'TRAVEL2024',
-      '{{coupon_link}}': 'https://travelflow.com/coupon',
+      '{{coupon_link}}': agency?.bookingWebsite || 'https://travelflow.com/coupon',
+      '{{booking_website}}': agency?.bookingWebsite || 'https://travelflow.com/book',
       '{{phone}}': travelerData.phone || '',
       '{{days_since_travel}}': travelerData.travelDate ? 
         Math.floor((Date.now() - new Date(travelerData.travelDate).getTime()) / (1000 * 60 * 60 * 24)).toString() : '0',

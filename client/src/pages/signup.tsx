@@ -24,6 +24,7 @@ const signupSchema = z.object({
   state: z.string().min(1, "State is required"),
   city: z.string().min(1, "City is required"),
   logoUrl: z.string().optional(),
+  bookingWebsite: z.string().url("Please enter a valid booking website URL").min(1, "Booking website is required"),
 });
 
 type SignupData = z.infer<typeof signupSchema>;
@@ -87,6 +88,7 @@ export default function Signup() {
       state: "",
       city: "",
       logoUrl: "",
+      bookingWebsite: "",
     },
   });
 
@@ -389,6 +391,28 @@ export default function Signup() {
                     )}
                   />
                 </div>
+                
+                {/* Booking Website Field */}
+                <FormField
+                  control={form.control}
+                  name="bookingWebsite"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[var(--airbnb-dark)]">Booking Website URL *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="https://your-booking-website.com"
+                          {...field}
+                          className="border-gray-300 focus:border-[var(--airbnb-primary)] focus:ring-[var(--airbnb-primary)]"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-xs text-gray-500 mt-1">
+                        This is where customers will use their coupon codes. Required for WhatsApp messaging.
+                      </p>
+                    </FormItem>
+                  )}
+                />
                 
                 <Button
                   type="submit"

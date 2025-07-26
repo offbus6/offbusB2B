@@ -48,6 +48,7 @@ export const agencies = pgTable("agencies", {
   state: varchar("state"),
   city: varchar("city").notNull(),
   website: varchar("website"),
+  bookingWebsite: varchar("booking_website"),
   logoUrl: varchar("logo_url"),
   username: varchar("username").unique(),
   password: varchar("password"),
@@ -143,6 +144,8 @@ export const insertAgencySchema = createInsertSchema(agencies).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  bookingWebsite: z.string().url("Please enter a valid booking website URL").optional(),
 });
 
 export const insertBusSchema = createInsertSchema(buses).omit({

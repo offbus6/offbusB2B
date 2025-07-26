@@ -353,7 +353,7 @@ export function registerRoutes(app: Express) {
   // Generic signup route (alias for agency signup for frontend compatibility)
   app.post("/api/auth/signup", authLimiter, async (req: Request, res: Response) => {
     try {
-      const { firstName, lastName, agencyName, email, phone, city, state, logoUrl, password } = req.body;
+      const { firstName, lastName, agencyName, email, phone, city, state, logoUrl, password, bookingWebsite } = req.body;
 
       // Map frontend fields to backend expected fields
       const mappedData = {
@@ -364,6 +364,7 @@ export function registerRoutes(app: Express) {
         city,
         state,
         website: "",
+        bookingWebsite,
         password,
         logoUrl
       };
@@ -410,6 +411,7 @@ export function registerRoutes(app: Express) {
         city: sanitizeInput(mappedData.city),
         state: mappedData.state ? sanitizeInput(mappedData.state) : undefined,
         website: mappedData.website ? sanitizeInput(mappedData.website) : undefined,
+        bookingWebsite: mappedData.bookingWebsite ? sanitizeInput(mappedData.bookingWebsite) : undefined,
         logoUrl: mappedData.logoUrl ? sanitizeInput(mappedData.logoUrl) : undefined,
         password: mappedData.password,
         status: "pending" as const
@@ -1566,7 +1568,7 @@ Thank you for choosing us for your travel needs. Here's your special coupon code
 🚌 Valid for all bus routes
 📅 Valid till 31st March 2025
 
-Book now at: https://travelflow.com/book
+Book now at: https://your-booking-website.com
 
 To stop receiving messages, reply STOP.
 
@@ -1691,7 +1693,7 @@ Thank you for traveling with us. Here's your exclusive coupon code: ${traveler.c
 🚌 Valid for all our routes
 📅 Limited time offer
 
-Book now and save more!
+Book now at: ${agency.bookingWebsite || 'https://your-booking-website.com'}
 
 To stop receiving messages, reply STOP.
 
