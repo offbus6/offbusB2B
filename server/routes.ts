@@ -910,8 +910,7 @@ export function registerRoutes(app: Express) {
     try {
       const user = (req.session as any)?.user;
       if (!user || (user.role !== "agency" && user.role !== "super_admin")) {
-        ```text
-return res.status(403).json({ message: "Access denied" });
+        return res.status(403).json({ message: "Access denied" });
       }
 
       const { id } = req.params;
@@ -1154,7 +1153,7 @@ return res.status(403).json({ message: "Access denied" });
       }
 
       // Send test message using BhashSMS API
-      const testMessage = `🧪 TEST MESSAGE from TravelFlow Admin\n\n${message}\n\nSent at: ${new Date().toLocaleString()}`;
+      const testMessage = "TEST MESSAGE from TravelFlow Admin\n\n" + message + "\n\nSent at: " + new Date().toLocaleString();
 
       // Use the whatsapp service to send the message
       const success = await whatsappService.sendTestMessage(phoneNumber, testMessage, config);
