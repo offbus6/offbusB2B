@@ -605,7 +605,7 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(whatsappQueue)
       .where(eq(whatsappQueue.travelerId, id));
-    
+
     // Then delete the traveler data
     await db
       .delete(travelerData)
