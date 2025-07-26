@@ -1538,5 +1538,244 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // WhatsApp Testing Route for Admin
+  app.post("/api/admin/whatsapp/test", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { phoneNumber, message, agencyName } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      // Clean phone number (remove +91 if present)
+      let cleanPhone = phoneNumber.replace(/\D/g, '');
+      if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+        cleanPhone = cleanPhone.substring(2);
+      }
+
+      const testMessage = message || `🎉 Greetings from ${agencyName || 'TravelFlow'}! 
+
+Thank you for choosing us for your travel needs. Here's your special coupon code: TRAVEL2025
+
+💰 Get 15% off on your next booking!
+🚌 Valid for all bus routes
+📅 Valid till 31st March 2025
+
+Book now at: https://travelflow.com/book
+
+To stop receiving messages, reply STOP.
+
+Happy Travels! 🌟`;
+
+      // Send via BhashSMS API - Use utility type for template compliance
+      const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
+      const params = new URLSearchParams({
+        user: 'BhashWapAi',
+        pass: 'bwap@123$',
+        sender: 'BUZWAP',
+        phone: cleanPhone,
+        text: testMessage,
+        priority: 'wa',
+        stype: 'utility'  // Use utility type for template compliance
+      });
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const response = await fetch(`${apiUrl}?${params}`, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'TravelFlow-WhatsApp-Service/1.0'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.text();
+      
+      // Update traveler WhatsApp status if found
+      const traveler = await storage.getTravelerByPhone(`+91${cleanPhone}`);
+      if (traveler) {
+        const status = result.startsWith('S.') ? 'sent' : 'failed';
+        await storage.updateTravelerData(traveler.id, { whatsappStatus: status });
+      }
+
+      // Handle different API responses
+      if (result.startsWith('S.')) {
+        res.json({ 
+          success: true, 
+          message: `WhatsApp message sent successfully to +91${cleanPhone}`,
+          messageId: result,
+          travelerUpdated: !!traveler,
+          apiResponse: result
+        });
+      } else if (result.includes('Only Utility or Authentication Templates Supported')) {
+        // Handle template configuration error
+        res.json({ 
+          success: false, 
+          message: `Template Configuration Issue: The WhatsApp Business API requires approved message templates. Current response: ${result}`,
+          travelerUpdated: false,
+          apiResponse: result,
+          requiresTemplateSetup: true
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: `Failed to send WhatsApp message: ${result}`,
+          travelerUpdated: false,
+          apiResponse: result
+        });
+      }
+    } catch (error) {
+      console.error("WhatsApp test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        travelerUpdated: false
+      });
+    }
+  });
+
+  // Bulk WhatsApp Testing for Agency Users
+  app.post("/api/admin/whatsapp/bulk-test", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { agencyId, message } = req.body;
+      
+      if (!agencyId) {
+        return res.status(400).json({ message: "Agency ID is required" });
+      }
+
+      // Get all travelers for the agency
+      const travelers = await storage.getTravelerDataByAgency(agencyId);
+      const agency = await storage.getAgency(agencyId);
+      
+      if (!agency) {
+        return res.status(404).json({ message: "Agency not found" });
+      }
+
+      const results = [];
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const traveler of travelers) {
+        try {
+          // Clean phone number
+          let cleanPhone = traveler.phone.replace(/\D/g, '');
+          if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+            cleanPhone = cleanPhone.substring(2);
+          }
+
+          const personalizedMessage = message || `🎉 Dear ${traveler.travelerName},
+
+Greetings from ${agency.name}! 
+
+Thank you for traveling with us. Here's your exclusive coupon code: ${traveler.couponCode}
+
+💰 Get special discounts on your next booking!
+🚌 Valid for all our routes
+📅 Limited time offer
+
+Book now and save more!
+
+To stop receiving messages, reply STOP.
+
+Happy Travels! 🌟`;
+
+          // Send via BhashSMS API - Use utility type for template compliance
+          const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
+          const params = new URLSearchParams({
+            user: 'BhashWapAi',
+            pass: 'bwap@123$',
+            sender: 'BUZWAP',
+            phone: cleanPhone,
+            text: personalizedMessage,
+            priority: 'wa',
+            stype: 'utility'  // Use utility type for template compliance
+          });
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+          const response = await fetch(`${apiUrl}?${params}`, {
+            method: 'GET',
+            headers: {
+              'User-Agent': 'TravelFlow-WhatsApp-Service/1.0'
+            },
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+          const result = await response.text();
+          
+          // Update traveler status
+          const status = result.startsWith('S.') ? 'sent' : 'failed';
+          await storage.updateTravelerData(traveler.id, { whatsappStatus: status });
+
+          if (result.startsWith('S.')) {
+            successCount++;
+            results.push({
+              travelerName: traveler.travelerName,
+              phone: `+91${cleanPhone}`,
+              status: 'sent',
+              messageId: result
+            });
+          } else {
+            failCount++;
+            results.push({
+              travelerName: traveler.travelerName,
+              phone: `+91${cleanPhone}`,
+              status: 'failed',
+              error: result
+            });
+          }
+
+          // Add delay between messages to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+        } catch (error) {
+          failCount++;
+          results.push({
+            travelerName: traveler.travelerName,
+            phone: traveler.phone,
+            status: 'failed',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Bulk WhatsApp sending completed. Sent: ${successCount}, Failed: ${failCount}`,
+        agencyName: agency.name,
+        totalTravelers: travelers.length,
+        successCount,
+        failCount,
+        results
+      });
+
+    } catch (error) {
+      console.error("Bulk WhatsApp test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+
   return app;
 }

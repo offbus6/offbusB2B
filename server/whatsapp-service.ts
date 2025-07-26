@@ -237,12 +237,12 @@ export class WhatsappService {
         cleanPhone = cleanPhone.substring(2);
       }
 
-      // BhashSMS API integration with security
+      // BhashSMS API integration with provided credentials
       const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
       const params = new URLSearchParams({
-        user: config.apiKey || 'BhashWapAi',
-        pass: config.apiSecret || process.env.BHASH_SMS_PASSWORD || 'bwap@123$',
-        sender: config.phoneNumber || 'BUZWAP',
+        user: 'BhashWapAi',
+        pass: 'bwap@123$',
+        sender: 'BUZWAP',
         phone: cleanPhone,
         text: message,
         priority: 'wa',

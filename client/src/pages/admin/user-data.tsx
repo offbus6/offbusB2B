@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, Users, Bus, MapPin, Calendar, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Download, Search, Users, Bus, MapPin, Calendar, Trash2, MessageSquare, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import StatsCard from "@/components/ui/stats-card";
@@ -21,6 +23,11 @@ export default function AdminUserData() {
   const [dateFilter, setDateFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+  const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
+  const [testPhoneNumber, setTestPhoneNumber] = useState("");
+  const [testMessage, setTestMessage] = useState("");
+  const [isBulkTestDialogOpen, setIsBulkTestDialogOpen] = useState(false);
+  const [selectedAgencyForBulk, setSelectedAgencyForBulk] = useState("");
 
   const { data: userData, isLoading: dataLoading } = useQuery({
     queryKey: ["/api/admin/user-data"],
@@ -49,6 +56,60 @@ export default function AdminUserData() {
       toast({
         title: "Error",
         description: "Failed to delete traveler data",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const testWhatsAppMutation = useMutation({
+    mutationFn: async ({ phoneNumber, message, agencyName }: { phoneNumber: string; message?: string; agencyName?: string }) => {
+      return await apiRequest('/api/admin/whatsapp/test', {
+        method: 'POST',
+        body: JSON.stringify({ phoneNumber, message, agencyName }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/user-data"] });
+      toast({
+        title: "WhatsApp Test Sent",
+        description: data.message || "Test message sent successfully",
+      });
+      setIsWhatsAppDialogOpen(false);
+      setTestPhoneNumber("");
+      setTestMessage("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "WhatsApp Test Failed",
+        description: error.message || "Failed to send test message",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkTestWhatsAppMutation = useMutation({
+    mutationFn: async ({ agencyId, message }: { agencyId: number; message?: string }) => {
+      return await apiRequest('/api/admin/whatsapp/bulk-test', {
+        method: 'POST',
+        body: JSON.stringify({ agencyId, message }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/user-data"] });
+      toast({
+        title: "Bulk WhatsApp Test Completed",
+        description: `${data.message}. Agency: ${data.agencyName}`,
+      });
+      setIsBulkTestDialogOpen(false);
+      setSelectedAgencyForBulk("");
+      setTestMessage("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Bulk WhatsApp Test Failed",
+        description: error.message || "Failed to send bulk messages",
         variant: "destructive",
       });
     },
@@ -234,13 +295,112 @@ export default function AdminUserData() {
             <CardTitle className="text-xl font-semibold text-[var(--airbnb-dark)]">
               Traveler Data ({(filteredData as any[])?.length || 0} records)
             </CardTitle>
-            <Button
-              onClick={handleExport}
-              className="bg-[var(--airbnb-teal)] hover:bg-[var(--airbnb-teal)]/90 text-white"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export Excel
-            </Button>
+            <div className="flex gap-2">
+              <Dialog open={isWhatsAppDialogOpen} onOpenChange={setIsWhatsAppDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-green-600 hover:bg-green-700 text-white">
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Test WhatsApp
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Test WhatsApp Message</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Phone Number (10 digits)</label>
+                      <Input
+                        placeholder="9876543210"
+                        value={testPhoneNumber}
+                        onChange={(e) => setTestPhoneNumber(e.target.value)}
+                        maxLength={10}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Custom Message (Optional)</label>
+                      <Textarea
+                        placeholder="Leave empty for default message..."
+                        value={testMessage}
+                        onChange={(e) => setTestMessage(e.target.value)}
+                        rows={4}
+                      />
+                    </div>
+                    <Button
+                      onClick={() => testWhatsAppMutation.mutate({ 
+                        phoneNumber: testPhoneNumber, 
+                        message: testMessage || undefined,
+                        agencyName: "TravelFlow Admin"
+                      })}
+                      disabled={!testPhoneNumber || testPhoneNumber.length !== 10 || testWhatsAppMutation.isPending}
+                      className="w-full bg-green-600 hover:bg-green-700"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      {testWhatsAppMutation.isPending ? "Sending..." : "Send Test Message"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isBulkTestDialogOpen} onOpenChange={setIsBulkTestDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Users className="w-4 h-4 mr-2" />
+                    Bulk WhatsApp
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Bulk WhatsApp Test</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Select Agency</label>
+                      <Select value={selectedAgencyForBulk} onValueChange={setSelectedAgencyForBulk}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose agency..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {agencies?.map((agency: any) => (
+                            <SelectItem key={agency.id} value={agency.id.toString()}>
+                              {agency.name} ({filteredData.filter(u => u.agencyId === agency.id).length} travelers)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Custom Message (Optional)</label>
+                      <Textarea
+                        placeholder="Leave empty for personalized messages..."
+                        value={testMessage}
+                        onChange={(e) => setTestMessage(e.target.value)}
+                        rows={4}
+                      />
+                    </div>
+                    <Button
+                      onClick={() => bulkTestWhatsAppMutation.mutate({ 
+                        agencyId: parseInt(selectedAgencyForBulk), 
+                        message: testMessage || undefined
+                      })}
+                      disabled={!selectedAgencyForBulk || bulkTestWhatsAppMutation.isPending}
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      {bulkTestWhatsAppMutation.isPending ? "Sending..." : "Send Bulk Messages"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Button
+                onClick={handleExport}
+                className="bg-[var(--airbnb-teal)] hover:bg-[var(--airbnb-teal)]/90 text-white"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export Excel
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <div className="overflow-x-auto">
