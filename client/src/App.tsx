@@ -28,123 +28,74 @@ import Signup from "@/pages/signup";
 import AdminLogin from "@/pages/admin-login";
 import Sidebar from "@/components/layout/sidebar";
 import Layout from "@/components/layout/layout";
-import AdminAccounts from "@/pages/admin/accounts";
-import AdminUserData from "@/pages/admin/user-data";
-import AdminNotifications from "@/pages/admin/notifications";
-import AgencyPayments from "./pages/agency/payments";
-import BusSearch from "@/pages/bus-search";
 
-function Router() {
-  const { isAuthenticated, isLoading, user } = useAuth();
-
-  // Fix dashboard scroll issue - must be at the top before any conditional returns
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      window.scrollTo(0, 0);
-    }
-  }, [isAuthenticated]);
+function AppContent() {
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: '#e91e63' }}></div>
-          <p style={{ color: '#6c757d' }}>Loading...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return (
-      <Switch>
-        <Route path="/login" component={Login} />
-        <Route path="/admin-login" component={AdminLogin} />
-        <Route path="/admin-signup" component={AdminSignup} />
-        <Route path="/admin-setup" component={AdminSetup} />
-        <Route path="/agency-login" component={AgencyLogin} />
-        <Route path="/signup" component={Signup} />
-        <Route path="/bus-search" component={BusSearch} />
-        <Route path="/" component={Landing} />
-        <Route component={NotFound} />
-      </Switch>
-    );
+  // If user is authenticated, show appropriate dashboard
+  if (user) {
+    if (user.role === "super_admin") {
+      return (
+        <div className="flex h-screen bg-gray-50">
+          <Sidebar />
+          <main className="flex-1 overflow-y-auto">
+            <Switch>
+              <Route path="/" component={AdminDashboard} />
+              <Route path="/admin/dashboard" component={AdminDashboard} />
+              <Route path="/admin/agencies" component={ManageAgencies} />
+              <Route path="/admin/agencies/:id" component={AgencyDetails} />
+              <Route path="/admin/agency-approval" component={AgencyApproval} />
+              <Route path="/admin/whatsapp-config" component={WhatsappConfig} />
+              <Route path="/admin/profile" component={AdminProfile} />
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+        </div>
+      );
+    } else if (user.role === "agency") {
+      // Check if agency is approved
+      if (user.agency?.status === "pending") {
+        return <AgencyPending />;
+      }
+
+      return (
+        <div className="flex h-screen bg-gray-50">
+          <Sidebar />
+          <main className="flex-1 overflow-y-auto">
+            <Switch>
+              <Route path="/" component={AgencyDashboard} />
+              <Route path="/agency/dashboard" component={AgencyDashboard} />
+              <Route path="/agency/buses" component={BusManagement} />
+              <Route path="/agency/upload" component={UploadData} />
+              <Route path="/agency/data" component={UploadedData} />
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+        </div>
+      );
+    }
   }
 
-  const userRole = (user as any)?.role;
-  const isSuperAdmin = userRole === 'super_admin';
-
-  // Check if user needs to select a role
-  if (!userRole) {
-    return <RoleSelection />;
-  }
-
-  // Check agency status for non-admin users
-  const userAgency = (user as any)?.agency;
-
+  // Public routes for non-authenticated users
   return (
     <Switch>
-      {/* Public routes */}
       <Route path="/" component={Landing} />
-      <Route path="/bus-search" component={BusSearch} />
-      
-      {/* Agency registration and status routes */}
-      <Route path="/agency/register">
-        {!isSuperAdmin && !userAgency ? <AgencyRegister /> : <Landing />}
-      </Route>
-      <Route path="/agency/pending">
-        {!isSuperAdmin && userAgency?.status === 'pending' ? <AgencyPending /> : <Landing />}
-      </Route>
-      
-      {/* Dashboard routes */}
-      <Route path="/admin/*">
-        {isSuperAdmin ? (
-          <Layout variant="dashboard">
-            <div className="bg-[var(--airbnb-light)] min-h-screen">
-              <div className="flex">
-                <Sidebar />
-                <main className="flex-1 p-8">
-                  <Switch>
-                    <Route path="/admin/dashboard" component={AdminDashboard} />
-                    <Route path="/admin/agency-approval" component={AgencyApproval} />
-                    <Route path="/admin/manage-agencies" component={ManageAgencies} />
-                    <Route path="/admin/agencies/:id" component={AgencyDetails} />
-                    <Route path="/admin/whatsapp-config" component={WhatsappConfig} />
-                    <Route path="/admin/profile" component={AdminProfile} />
-                    <Route path="/admin/accounts" component={AdminAccounts} />
-                    <Route path="/admin/user-data" component={AdminUserData} />
-                    <Route path="/admin/notifications" component={AdminNotifications} />
-                    <Route component={NotFound} />
-                  </Switch>
-                </main>
-              </div>
-            </div>
-          </Layout>
-        ) : <Landing />}
-      </Route>
-      
-      <Route path="/agency/*">
-        {!isSuperAdmin && userAgency?.status === 'approved' ? (
-          <Layout variant="dashboard">
-            <div className="bg-[var(--airbnb-light)] min-h-screen">
-              <div className="flex">
-                <Sidebar />
-                <main className="flex-1 p-8">
-                  <Switch>
-                    <Route path="/agency/dashboard" component={AgencyDashboard} />
-                    <Route path="/agency/bus-management" component={BusManagement} />
-                    <Route path="/agency/upload-data" component={UploadData} />
-                    <Route path="/agency/uploaded-data" component={UploadedData} />
-                    <Route path="/agency/payments" component={AgencyPayments} />
-                    <Route component={NotFound} />
-                  </Switch>
-                </main>
-              </div>
-            </div>
-          </Layout>
-        ) : !isSuperAdmin && userAgency?.status === 'pending' ? <AgencyPending /> : !isSuperAdmin && !userAgency ? <AgencyRegister /> : <Landing />}
-      </Route>
-      
+      <Route path="/login" component={Login} />
+      <Route path="/signup" component={Signup} />
+      <Route path="/admin-login" component={AdminLogin} />
+      <Route path="/admin-signup" component={AdminSignup} />
+      <Route path="/admin-setup" component={AdminSetup} />
+      <Route path="/agency-login" component={AgencyLogin} />
+      <Route path="/agency-register" component={AgencyRegister} />
+      <Route path="/role-selection" component={RoleSelection} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -154,8 +105,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <AppContent />
         <Toaster />
-        <Router />
       </TooltipProvider>
     </QueryClientProvider>
   );

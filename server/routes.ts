@@ -39,23 +39,23 @@ const upload = multer({
     if (!SECURITY_CONFIG.FILE_UPLOAD.allowedMimeTypes.includes(file.mimetype)) {
       return cb(new Error('Invalid file type. Only Excel and CSV files are allowed.'));
     }
-    
+
     // Validate file extension
     const ext = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
     if (!SECURITY_CONFIG.FILE_UPLOAD.allowedExtensions.includes(ext)) {
       return cb(new Error('Invalid file extension. Only .csv, .xls, .xlsx files are allowed.'));
     }
-    
+
     // Additional filename validation
     if (file.originalname.length > 255) {
       return cb(new Error('Filename too long.'));
     }
-    
+
     // Check for suspicious filename patterns
     if (/[<>:"/\\|?*]/.test(file.originalname)) {
       return cb(new Error('Invalid characters in filename.'));
     }
-    
+
     cb(null, true);
   }
 });
@@ -94,18 +94,18 @@ export function registerRoutes(app: Express) {
     xssFilter: true,
     referrerPolicy: { policy: "strict-origin-when-cross-origin" }
   }));
-  
+
   // Additional security headers
   app.use((req, res, next) => {
     // Prevent MIME type sniffing
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    
+
     // Prevent clickjacking
     res.setHeader('X-Frame-Options', 'DENY');
-    
+
     // Remove server signature
     res.removeHeader('X-Powered-By');
-    
+
     // Add cache control for sensitive pages
     if (req.path.includes('/admin') || req.path.includes('/auth')) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -113,22 +113,125 @@ export function registerRoutes(app: Express) {
       res.setHeader('Expires', '0');
       res.setHeader('Surrogate-Control', 'no-store');
     }
-    
+
     next();
   });
-  
+
   // Apply security monitoring
   app.use(createSecurityMiddleware());
-  
+
   // Apply rate limiting
   app.use('/api', generalLimiter);
   app.use('/api/data', apiLimiter); // More restrictive for data endpoints
 
-  // Auth routes with specific rate limiting
+  // General login endpoint (checks both admin and agency)
+  app.post("/api/auth/login", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+
+      // Input validation
+      if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+        return res.status(400).json({ message: "Invalid credentials format" });
+      }
+
+      // Sanitize email
+      const sanitizedEmail = validator.normalizeEmail(email);
+      if (!sanitizedEmail || !validator.isEmail(sanitizedEmail)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+
+      // Try admin login first
+      const admin = await storage.getAdminCredentials(sanitizedEmail, password);
+      if (admin) {
+        // Regenerate session to prevent session fixation
+        req.session.regenerate((err) => {
+          if (err) {
+            console.error("Session regeneration error:", err);
+            return res.status(500).json({ message: "Authentication failed" });
+          }
+
+          // Set session with minimal information
+          (req.session as any).user = {
+            id: admin.id,
+            email: admin.email,
+            role: "super_admin",
+            loginTime: new Date().toISOString()
+          };
+
+          res.json({ 
+            message: "Login successful",
+            user: {
+              id: admin.id,
+              email: admin.email,
+              role: "super_admin"
+            }
+          });
+        });
+        return;
+      }
+
+      // Try agency login
+      const agency = await storage.getAgencyByCredentials(sanitizedEmail, password);
+      if (agency) {
+        // Regenerate session to prevent session fixation
+        req.session.regenerate((err) => {
+          if (err) {
+            console.error("Session regeneration error:", err);
+            return res.status(500).json({ message: "Authentication failed" });
+          }
+
+          // Set session with agency information
+          (req.session as any).user = {
+            id: agency.id,
+            email: agency.email,
+            role: "agency",
+            loginTime: new Date().toISOString(),
+            agency: {
+              id: agency.id,
+              name: agency.name,
+              email: agency.email,
+              status: agency.status,
+              contactPerson: agency.contactPerson,
+              phone: agency.phone,
+              city: agency.city,
+              state: agency.state
+            }
+          };
+
+          res.json({ 
+            message: "Login successful",
+            user: {
+              id: agency.id,
+              email: agency.email,
+              role: "agency",
+              agency: {
+                id: agency.id,
+                name: agency.name,
+                email: agency.email,
+                status: agency.status,
+                contactPerson: agency.contactPerson,
+                phone: agency.phone,
+                city: agency.city,
+                state: agency.state
+              }
+            }
+          });
+        });
+        return;
+      }
+
+      // Neither admin nor agency found
+      return res.status(401).json({ message: "Authentication failed" });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Authentication failed" });
+    }
+  });
+
   app.post("/api/auth/admin/login", authLimiter, async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
-      
+
       // Input validation
       if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
         return res.status(400).json({ message: "Invalid credentials format" });
@@ -179,7 +282,7 @@ export function registerRoutes(app: Express) {
   app.post("/api/auth/agency/login", authLimiter, async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
-      
+
       // Input validation
       if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
         return res.status(400).json({ message: "Invalid credentials format" });
@@ -251,7 +354,7 @@ export function registerRoutes(app: Express) {
   app.post("/api/auth/signup", authLimiter, async (req: Request, res: Response) => {
     try {
       const { firstName, lastName, agencyName, email, phone, city, state, logoUrl, password } = req.body;
-      
+
       // Map frontend fields to backend expected fields
       const mappedData = {
         name: agencyName,
@@ -264,7 +367,7 @@ export function registerRoutes(app: Express) {
         password,
         logoUrl
       };
-      
+
       // Enhanced email validation
       const emailValidation = validateEmail(mappedData.email);
       if (!emailValidation.isValid) {
@@ -282,7 +385,7 @@ export function registerRoutes(app: Express) {
           });
         }
       }
-      
+
       // Check if email already exists
       const existingAgency = await storage.getAgencyByEmail(sanitizedEmail);
       if (existingAgency) {
@@ -338,7 +441,7 @@ export function registerRoutes(app: Express) {
   app.post("/api/auth/agency/signup", authLimiter, async (req: Request, res: Response) => {
     try {
       const { name, email, contactPerson, phone, city, state, website, password } = req.body;
-      
+
       // Enhanced email validation
       const emailValidation = validateEmail(email);
       if (!emailValidation.isValid) {
@@ -356,7 +459,7 @@ export function registerRoutes(app: Express) {
           });
         }
       }
-      
+
       // Check if email already exists
       const existingAgency = await storage.getAgencyByEmail(sanitizedEmail);
       if (existingAgency) {
@@ -411,13 +514,13 @@ export function registerRoutes(app: Express) {
   app.post("/api/auth/logout", (req: Request, res: Response) => {
     // Clear all session data
     const sessionId = req.sessionID;
-    
+
     req.session.destroy((err) => {
       if (err) {
         console.error("Logout error:", err);
         return res.status(500).json({ message: "Logout failed" });
       }
-      
+
       // Clear all possible cookie variations
       res.clearCookie("connect.sid", {
         path: '/',
@@ -425,11 +528,11 @@ export function registerRoutes(app: Express) {
         secure: true,
         sameSite: 'strict'
       });
-      
+
       // Also clear with different path configurations
       res.clearCookie("connect.sid", { path: '/' });
       res.clearCookie("connect.sid");
-      
+
       res.json({ message: "Logged out successfully" });
     });
   });
@@ -438,7 +541,7 @@ export function registerRoutes(app: Express) {
   app.post("/api/auth/admin/setup", authLimiter, async (req: Request, res: Response) => {
     try {
       const { email, password, name } = req.body;
-      
+
       // Input validation
       if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
         return res.status(400).json({ message: "Invalid input format" });
@@ -636,7 +739,7 @@ export function registerRoutes(app: Express) {
   app.post("/api/agencies", async (req: Request, res: Response) => {
     try {
       const { name, email, contactPerson, phone, city, state, website, password } = req.body;
-      
+
       // Enhanced email validation
       const emailValidation = validateEmail(email);
       if (!emailValidation.isValid) {
@@ -654,7 +757,7 @@ export function registerRoutes(app: Express) {
           });
         }
       }
-      
+
       // Check if email already exists
       const existingAgency = await storage.getAgencyByEmail(sanitizedEmail);
       if (existingAgency) {
@@ -807,7 +910,8 @@ export function registerRoutes(app: Express) {
     try {
       const user = (req.session as any)?.user;
       if (!user || (user.role !== "agency" && user.role !== "super_admin")) {
-        return res.status(403).json({ message: "Access denied" });
+        ```text
+return res.status(403).json({ message: "Access denied" });
       }
 
       const { id } = req.params;
@@ -879,25 +983,25 @@ export function registerRoutes(app: Express) {
   function requireAuth(roles: string[] = []) {
     return (req: Request, res: Response, next: any) => {
       const user = (req.session as any)?.user;
-      
+
       if (!user) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      
+
       // Check session timeout (24 hours)
       const loginTime = new Date(user.loginTime || 0);
       const now = new Date();
       const diffHours = (now.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
-      
+
       if (diffHours > 24) {
         req.session.destroy(() => {});
         return res.status(401).json({ message: "Session expired" });
       }
-      
+
       if (roles.length > 0 && !roles.includes(user.role)) {
         return res.status(403).json({ message: "Insufficient permissions" });
       }
-      
+
       next();
     };
   }
@@ -1051,10 +1155,10 @@ export function registerRoutes(app: Express) {
 
       // Send test message using BhashSMS API
       const testMessage = `🧪 TEST MESSAGE from TravelFlow Admin\n\n${message}\n\nSent at: ${new Date().toLocaleString()}`;
-      
+
       // Use the whatsapp service to send the message
       const success = await whatsappService.sendTestMessage(phoneNumber, testMessage, config);
-      
+
       if (success) {
         // Log successful test for security monitoring
         securityMonitor.logSecurityEvent({
