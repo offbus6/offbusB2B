@@ -1027,10 +1027,10 @@ export function registerRoutes(app: Express) {
       const travelerDataArray = jsonData.map((row: any) => ({
         busId: parseInt(busId),
         agencyId: user.id,
-        travelerName: row["Traveler Name"] || row["travelerName"] || "",
-        phone: row["Phone"] || row["phone"] || "",
-        travelDate: new Date(row["Travel Date"] || row["travelDate"]),
-        couponCode: row["Coupon Code"] || row["couponCode"] || ""
+        travelerName: String(row["Traveler Name"] || row["traveler_name"] || row["travelerName"] || ""),
+        phone: String(row["Phone"] || row["phone"] || ""),
+        travelDate: req.body.travelDate, // Use the travel date from form instead of row data
+        couponCode: req.body.couponCode // Use the coupon code from form instead of row data
       }));
 
       // Validate each record
