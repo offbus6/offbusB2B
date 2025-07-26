@@ -138,8 +138,8 @@ export default function AgencyDetails() {
   }, [agency]);
 
   useEffect(() => {
-    if (taxConfig) {
-      setTaxPercentage(taxConfig.percentage || 18);
+    if (taxConfig && typeof taxConfig === 'object' && 'percentage' in taxConfig) {
+      setTaxPercentage((taxConfig as any).percentage || 18);
     }
   }, [taxConfig]);
 
@@ -406,14 +406,15 @@ export default function AgencyDetails() {
 
   // Memoize calculation-heavy operations
   const billingCalculation = useMemo(() => {
-    const totalBuses = agency?.totalBuses || 0;
+    const agencyData = agency as any || {};
+    const totalBuses = agencyStats?.totalBuses || agencyData.totalBuses || 0;
     const ratePerBus = formData.renewalChargePerBus || 5000;
     const subtotal = totalBuses * ratePerBus;
     const taxAmount = Math.round((subtotal * taxPercentage) / 100);
     const total = subtotal + taxAmount;
     
     return { totalBuses, ratePerBus, subtotal, taxAmount, total };
-  }, [agency?.totalBuses, formData.renewalChargePerBus, taxPercentage]);
+  }, [agency, agencyStats, formData.renewalChargePerBus, taxPercentage]);
 
   if (isLoading || agencyLoading) {
     return (
@@ -700,7 +701,7 @@ export default function AgencyDetails() {
                 <span className="text-sm text-[var(--airbnb-gray)]">Total Buses</span>
                 <div className="flex items-center gap-1">
                   <Bus className="w-4 h-4" />
-                  <span className="font-semibold">{agency.totalBuses}</span>
+                  <span className="font-semibold">{(agency as any)?.totalBuses || 0}</span>
                 </div>
               </div>
               <div className="flex items-center justify-between">
@@ -770,7 +771,7 @@ export default function AgencyDetails() {
               <div className="bg-[var(--airbnb-light)] p-4 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Monthly Billing Calculator</span>
-                  {(agency?.totalBuses || 0) === 0 && (
+                  {((agency as any)?.totalBuses || 0) === 0 && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -854,7 +855,7 @@ export default function AgencyDetails() {
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--airbnb-pink)]"></div>
                   </div>
-                ) : !busDetails || busDetails.length === 0 ? (
+                ) : !busDetails || !Array.isArray(busDetails) || busDetails.length === 0 ? (
                   <div className="text-center py-8">
                     <Bus className="w-12 h-12 text-[var(--airbnb-gray)] mx-auto mb-4" />
                     <p className="text-[var(--airbnb-gray)]">No buses found for this agency</p>
@@ -876,7 +877,7 @@ export default function AgencyDetails() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {busDetails.map((bus: any) => (
+                      {(busDetails as any[])?.map((bus: any) => (
                         <TableRow key={bus.id}>
                           <TableCell className="font-medium">{bus.number}</TableCell>
                           <TableCell>{bus.name}</TableCell>
@@ -928,9 +929,9 @@ export default function AgencyDetails() {
               <CardContent className="p-0">
                 {usersLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8w-8 border-b-2 border-[var(--airbnb-pink)]"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--airbnb-pink)]"></div>
                   </div>
-                ) : !userDetails || userDetails.length === 0 ? (
+                ) : !userDetails || !Array.isArray(userDetails) || userDetails.length === 0 ? (
                   <div className="text-center py-8">
                     <Users className="w-12 h-12 text-[var(--airbnb-gray)] mx-auto mb-4" />
                     <p className="text-[var(--airbnb-gray)]">No user data found for this agency</p>
@@ -950,7 +951,7 @@ export default function AgencyDetails() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {userDetails.map((user: any) => (
+                      {(userDetails as any[])?.map((user: any) => (
                         <TableRow key={user.id}>
                           <TableCell className="font-medium">{user.travelerName}</TableCell>
                           <TableCell>{user.phone}</TableCell>
@@ -1052,7 +1053,7 @@ export default function AgencyDetails() {
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--airbnb-pink)]"></div>
                 </div>
-              ) : !paymentHistory || paymentHistory.length === 0 ? (
+              ) : !paymentHistory || !Array.isArray(paymentHistory) || paymentHistory.length === 0 ? (
                 <div className="text-center py-8">
                   <Receipt className="w-12 h-12 text-[var(--airbnb-gray)] mx-auto mb-4" />
                   <p className="text-[var(--airbnb-gray)]">No payment history found</p>
@@ -1071,7 +1072,7 @@ export default function AgencyDetails() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paymentHistory.map((payment: any) => (
+                      {(paymentHistory as any[])?.map((payment: any) => (
                         <TableRow key={payment.id}>
                           <TableCell className="font-medium">
                             {payment.paymentDate 

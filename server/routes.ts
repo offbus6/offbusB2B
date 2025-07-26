@@ -1090,5 +1090,228 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Missing admin agency detail routes
+  app.get("/api/admin/agencies/:id", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { id } = req.params;
+      const agency = await storage.getAgency(parseInt(id));
+      if (!agency) {
+        return res.status(404).json({ message: "Agency not found" });
+      }
+      res.json(agency);
+    } catch (error) {
+      console.error("Get admin agency error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/agencies/:id/payments", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Return empty array for now - payment system not fully implemented
+      res.json([]);
+    } catch (error) {
+      console.error("Get admin agency payments error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/agencies/:id/buses", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { id } = req.params;
+      const buses = await storage.getBusesByAgency(parseInt(id));
+      res.json(buses);
+    } catch (error) {
+      console.error("Get admin agency buses error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/agencies/:id/users", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Return empty array for now - user system not fully implemented for agencies
+      res.json([]);
+    } catch (error) {
+      console.error("Get admin agency users error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/agencies/:id/stats", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { id } = req.params;
+      const stats = await storage.getAgencyStats(parseInt(id));
+      res.json(stats || {
+        totalBuses: 0,
+        totalUsers: 0,
+        totalCoupons: 0,
+        couponsUsed: 0,
+        messagesSent: 0
+      });
+    } catch (error) {
+      console.error("Get admin agency stats error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/tax-config", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Return default tax config
+      res.json({ percentage: 18 });
+    } catch (error) {
+      console.error("Get admin tax config error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/user-data", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const travelerData = await storage.getAllTravelerData();
+      res.json(travelerData);
+    } catch (error) {
+      console.error("Get admin user data error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/payments", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const payments = await storage.getAllPayments();
+      res.json(payments);
+    } catch (error) {
+      console.error("Get admin payments error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/payment-stats", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Return basic payment stats
+      res.json({
+        totalRevenue: 0,
+        pendingPayments: 0,
+        overduePayments: 0,
+        monthlyGrowth: 0
+      });
+    } catch (error) {
+      console.error("Get admin payment stats error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/whatsapp-templates", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const templates = await storage.getWhatsappTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Get admin whatsapp templates error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/whatsapp-config", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const config = await storage.getWhatsappConfig();
+      res.json(config);
+    } catch (error) {
+      console.error("Get admin whatsapp config error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/whatsapp-queue/stats", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const queue = await storage.getWhatsappQueue();
+      res.json({
+        totalMessages: queue.length,
+        pendingMessages: queue.filter(m => m.status === 'pending').length,
+        sentMessages: queue.filter(m => m.status === 'sent').length,
+        failedMessages: queue.filter(m => m.status === 'failed').length
+      });
+    } catch (error) {
+      console.error("Get admin whatsapp queue stats error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/stats/system", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      if (user.role === "super_admin") {
+        const stats = await storage.getAdminStats();
+        res.json(stats);
+      } else {
+        const stats = await storage.getAgencyStats(user.id);
+        res.json(stats);
+      }
+    } catch (error) {
+      console.error("Get system stats error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return app;
 }
