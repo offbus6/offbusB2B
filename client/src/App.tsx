@@ -13,6 +13,9 @@ import ManageAgencies from "./pages/admin/manage-agencies";
 import AgencyDetails from "./pages/admin/agency-details";
 import WhatsappConfig from "./pages/admin/whatsapp-config";
 import AdminProfile from "@/pages/admin/profile";
+import AdminAccounts from "@/pages/admin/accounts";
+import AdminUserData from "@/pages/admin/user-data";
+import AdminNotifications from "@/pages/admin/notifications";
 import AdminSignup from "@/pages/admin-signup";
 import AdminSetup from "@/pages/admin-setup";
 import AgencyLogin from "@/pages/agency-login";
@@ -20,6 +23,7 @@ import AgencyDashboard from "@/pages/agency/dashboard";
 import BusManagement from "@/pages/agency/bus-management";
 import UploadData from "@/pages/agency/upload-data";
 import UploadedData from "@/pages/agency/uploaded-data";
+import AgencyPayments from "@/pages/agency/payments";
 import AgencyRegister from "@/pages/agency/register";
 import AgencyPending from "@/pages/agency/pending";
 import RoleSelection from "@/pages/role-selection";
@@ -46,20 +50,25 @@ function AppContent() {
     if (user.role === "super_admin") {
       return (
         <Layout variant="dashboard">
-          <div className="flex h-screen bg-gray-50">
-            <Sidebar />
-            <main className="flex-1 overflow-y-auto">
-              <Switch>
-                <Route path="/" component={AdminDashboard} />
-                <Route path="/admin/dashboard" component={AdminDashboard} />
-                <Route path="/admin/agencies" component={ManageAgencies} />
-                <Route path="/admin/agencies/:id" component={AgencyDetails} />
-                <Route path="/admin/agency-approval" component={AgencyApproval} />
-                <Route path="/admin/whatsapp-config" component={WhatsappConfig} />
-                <Route path="/admin/profile" component={AdminProfile} />
-                <Route component={NotFound} />
-              </Switch>
-            </main>
+          <div className="bg-[var(--airbnb-light)] min-h-screen">
+            <div className="flex">
+              <Sidebar />
+              <main className="flex-1 p-8">
+                <Switch>
+                  <Route path="/" component={AdminDashboard} />
+                  <Route path="/admin/dashboard" component={AdminDashboard} />
+                  <Route path="/admin/agency-approval" component={AgencyApproval} />
+                  <Route path="/admin/manage-agencies" component={ManageAgencies} />
+                  <Route path="/admin/agencies/:id" component={AgencyDetails} />
+                  <Route path="/admin/whatsapp-config" component={WhatsappConfig} />
+                  <Route path="/admin/profile" component={AdminProfile} />
+                  <Route path="/admin/accounts" component={AdminAccounts} />
+                  <Route path="/admin/user-data" component={AdminUserData} />
+                  <Route path="/admin/notifications" component={AdminNotifications} />
+                  <Route component={NotFound} />
+                </Switch>
+              </main>
+            </div>
           </div>
         </Layout>
       );
@@ -71,18 +80,21 @@ function AppContent() {
 
       return (
         <Layout variant="dashboard">
-          <div className="flex h-screen bg-gray-50">
-            <Sidebar />
-            <main className="flex-1 overflow-y-auto">
-              <Switch>
-                <Route path="/" component={AgencyDashboard} />
-                <Route path="/agency/dashboard" component={AgencyDashboard} />
-                <Route path="/agency/buses" component={BusManagement} />
-                <Route path="/agency/upload" component={UploadData} />
-                <Route path="/agency/data" component={UploadedData} />
-                <Route component={NotFound} />
-              </Switch>
-            </main>
+          <div className="bg-[var(--airbnb-light)] min-h-screen">
+            <div className="flex">
+              <Sidebar />
+              <main className="flex-1 p-8">
+                <Switch>
+                  <Route path="/" component={AgencyDashboard} />
+                  <Route path="/agency/dashboard" component={AgencyDashboard} />
+                  <Route path="/agency/bus-management" component={BusManagement} />
+                  <Route path="/agency/upload-data" component={UploadData} />
+                  <Route path="/agency/uploaded-data" component={UploadedData} />
+                  <Route path="/agency/payments" component={AgencyPayments} />
+                  <Route component={NotFound} />
+                </Switch>
+              </main>
+            </div>
           </div>
         </Layout>
       );
