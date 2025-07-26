@@ -180,3 +180,9 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - Sanitized logging to prevent sensitive data exposure (passwords, tokens, API keys)
 - Fixed session management with secure cookies, session regeneration, and timeout handling
 - Added input validation across all endpoints to prevent injection attacks
+- **FIXED: Application startup, agency deletion, and signup issues (July 26, 2025)**
+- Resolved port conflict that prevented application startup by killing duplicate server processes
+- Added missing `/api/admin/agencies/:id` DELETE endpoint for proper agency deletion
+- Fixed agency signup flow by adding `/api/auth/signup` route with proper field mapping
+- Enhanced bus deletion permissions to allow both agencies and super admins
+- All CRUD operations now working correctly for agencies and buses

@@ -229,6 +229,94 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Generic signup route (alias for agency signup for frontend compatibility)
+  app.post("/api/auth/signup", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const { firstName, lastName, agencyName, email, phone, city, state, logoUrl, password } = req.body;
+      
+      // Map frontend fields to backend expected fields
+      const mappedData = {
+        name: agencyName,
+        email,
+        contactPerson: `${firstName} ${lastName}`,
+        phone,
+        city,
+        state,
+        website: "",
+        password,
+        logoUrl
+      };
+      
+      // Enhanced email validation
+      const emailValidation = validateEmail(mappedData.email);
+      if (!emailValidation.isValid) {
+        return res.status(400).json({ message: emailValidation.error });
+      }
+      const sanitizedEmail = emailValidation.sanitized!;
+
+      // Enhanced password validation
+      if (mappedData.password) {
+        const passwordValidation = validatePassword(mappedData.password);
+        if (!passwordValidation.isValid) {
+          return res.status(400).json({ 
+            message: "Password validation failed",
+            errors: passwordValidation.errors
+          });
+        }
+      }
+      
+      // Check if email already exists
+      const existingAgency = await storage.getAgencyByEmail(sanitizedEmail);
+      if (existingAgency) {
+        return res.status(409).json({ message: "Email already registered" });
+      }
+
+      // Enhanced phone validation
+      if (mappedData.phone) {
+        const phoneValidation = validatePhoneNumber(mappedData.phone);
+        if (!phoneValidation.isValid) {
+          return res.status(400).json({ message: phoneValidation.error });
+        }
+      }
+
+      // Create agency with proper data structure
+      const agencyData = {
+        userId: `agency_${Date.now()}`, // Generate a temporary userId
+        name: sanitizeInput(mappedData.name),
+        email: sanitizedEmail,
+        contactPerson: sanitizeInput(mappedData.contactPerson),
+        phone: sanitizeInput(mappedData.phone),
+        city: sanitizeInput(mappedData.city),
+        state: mappedData.state ? sanitizeInput(mappedData.state) : undefined,
+        website: mappedData.website ? sanitizeInput(mappedData.website) : undefined,
+        logoUrl: mappedData.logoUrl ? sanitizeInput(mappedData.logoUrl) : undefined,
+        password: mappedData.password,
+        status: "pending" as const
+      };
+
+      const agency = await storage.createAgency(agencyData);
+
+      res.status(201).json({ 
+        message: "Agency registered successfully. Please wait for admin approval.",
+        agency: {
+          id: agency.id,
+          name: agency.name,
+          email: agency.email,
+          status: agency.status
+        }
+      });
+    } catch (error) {
+      console.error("Signup error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        });
+      }
+      res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
   app.post("/api/auth/agency/signup", authLimiter, async (req: Request, res: Response) => {
     try {
       const { name, email, contactPerson, phone, city, state, website, password } = req.body;
@@ -594,6 +682,23 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Admin-specific agency delete endpoint (alias for backward compatibility)
+  app.delete("/api/admin/agencies/:id", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { id } = req.params;
+      await storage.deleteAgency(parseInt(id));
+      res.json({ message: "Agency deleted successfully" });
+    } catch (error) {
+      console.error("Delete admin agency error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Bus routes
   app.get("/api/buses", async (req: Request, res: Response) => {
     try {
@@ -661,7 +766,7 @@ export function registerRoutes(app: Express) {
   app.delete("/api/buses/:id", async (req: Request, res: Response) => {
     try {
       const user = (req.session as any)?.user;
-      if (!user || user.role !== "agency") {
+      if (!user || (user.role !== "agency" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Access denied" });
       }
 
