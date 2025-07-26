@@ -204,13 +204,22 @@ export function registerRoutes(app: Express) {
           return res.status(500).json({ message: "Authentication failed" });
         }
 
-        // Set session with minimal information
+        // Set session with agency information
         (req.session as any).user = {
           id: agency.id,
           email: agency.email,
           role: "agency",
-          status: agency.status,
-          loginTime: new Date().toISOString()
+          loginTime: new Date().toISOString(),
+          agency: {
+            id: agency.id,
+            name: agency.name,
+            email: agency.email,
+            status: agency.status,
+            contactPerson: agency.contactPerson,
+            phone: agency.phone,
+            city: agency.city,
+            state: agency.state
+          }
         };
 
         res.json({ 
@@ -219,7 +228,16 @@ export function registerRoutes(app: Express) {
             id: agency.id,
             email: agency.email,
             role: "agency",
-            status: agency.status
+            agency: {
+              id: agency.id,
+              name: agency.name,
+              email: agency.email,
+              status: agency.status,
+              contactPerson: agency.contactPerson,
+              phone: agency.phone,
+              city: agency.city,
+              state: agency.state
+            }
           }
         });
       });
@@ -477,12 +495,34 @@ export function registerRoutes(app: Express) {
     res.json({ user });
   });
 
-  // Add alias for backwards compatibility
-  app.get("/api/auth/user", (req: Request, res: Response) => {
+  // Add alias for backwards compatibility with enhanced agency data loading
+  app.get("/api/auth/user", async (req: Request, res: Response) => {
     const user = (req.session as any)?.user;
     if (!user) {
       return res.status(401).json({ message: "Not authenticated" });
     }
+
+    // For agency users, ensure we have the latest agency data
+    if (user.role === "agency" && user.id) {
+      try {
+        const agency = await storage.getAgencyById(user.id);
+        if (agency) {
+          user.agency = {
+            id: agency.id,
+            name: agency.name,
+            email: agency.email,
+            status: agency.status,
+            contactPerson: agency.contactPerson,
+            phone: agency.phone,
+            city: agency.city,
+            state: agency.state
+          };
+        }
+      } catch (error) {
+        console.error("Error loading agency data:", error);
+      }
+    }
+
     res.json({ user });
   });
 

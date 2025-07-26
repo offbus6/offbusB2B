@@ -79,19 +79,21 @@ function Router() {
     return <RoleSelection />;
   }
 
-  // Check if user needs to register an agency
+  // Check agency status for non-admin users
   const userAgency = (user as any)?.agency;
-  const needsAgencyRegistration = !isSuperAdmin && !userAgency;
-
-  if (needsAgencyRegistration) {
+  
+  if (!isSuperAdmin && userAgency) {
+    // If agency exists, check its status
+    if (userAgency.status === 'pending') {
+      return <AgencyPending />;
+    }
+    if (userAgency.status === 'rejected') {
+      return <AgencyPending />; // Still show pending page for rejected status with proper message
+    }
+    // If approved, continue to dashboard below
+  } else if (!isSuperAdmin && !userAgency) {
+    // No agency found, show registration
     return <AgencyRegister />;
-  }
-
-  // Check if user has pending agency approval
-  const hasPendingAgency = !isSuperAdmin && userAgency && userAgency.status !== 'approved';
-
-  if (hasPendingAgency) {
-    return <AgencyPending />;
   }
 
   return (
