@@ -60,10 +60,27 @@ export default function UploadedData() {
 
   const updateTravelerMutation = useMutation({
     mutationFn: async (data: z.infer<typeof travelerFormSchema>) => {
+      // Auto-format phone number for Indian numbers
+      let phone = data.phone.trim();
+      if (phone) {
+        // Remove any existing formatting
+        phone = phone.replace(/[^\d]/g, '');
+        
+        // If it's a 10-digit number, add +91
+        if (phone.length === 10 && phone.match(/^[6-9]\d{9}$/)) {
+          phone = '+91' + phone;
+        }
+        // If it already has 91 prefix, format it properly
+        else if (phone.length === 12 && phone.startsWith('91') && phone.substring(2).match(/^[6-9]\d{9}$/)) {
+          phone = '+91' + phone.substring(2);
+        }
+      }
+
       return await apiRequest(`/api/traveler-data/${editingTraveler.id}`, {
         method: "PATCH",
         body: JSON.stringify({
           ...data,
+          phone: phone,
           travelDate: new Date(data.travelDate).toISOString().split('T')[0],
         }),
       });
@@ -395,6 +412,9 @@ export default function UploadedData() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--airbnb-dark)]">
                       {traveler.phone}
+                      {traveler.phone && !traveler.phone.startsWith('+91') && traveler.phone.length === 10 && (
+                        <span className="text-xs text-[var(--airbnb-gray)] block">+91{traveler.phone}</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--airbnb-dark)]">
                       <div>
@@ -513,8 +533,20 @@ export default function UploadedData() {
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter phone" {...field} />
+                      <Input 
+                        placeholder="Enter 10-digit mobile number" 
+                        {...field}
+                        onChange={(e) => {
+                          let value = e.target.value.replace(/[^\d]/g, ''); // Only digits
+                          if (value.length <= 10) {
+                            field.onChange(value);
+                          }
+                        }}
+                      />
                     </FormControl>
+                    <p className="text-xs text-[var(--airbnb-gray)] mt-1">
+                      Enter 10-digit number. +91 will be added automatically.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

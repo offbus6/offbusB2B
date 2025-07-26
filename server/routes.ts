@@ -1058,15 +1058,45 @@ export function registerRoutes(app: Express) {
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
       // Transform and validate data
-      const travelerDataArray = jsonData.map((row: any) => ({
-        busId: parseInt(busId),
-        agencyId: user.id,
-        travelerName: String(row["Traveler Name"] || row["traveler_name"] || row["travelerName"] || ""),
-        phone: String(row["Phone"] || row["phone"] || ""),
-        travelDate: new Date(req.body.travelDate || ""), // Convert to Date object
-        couponCode: String(req.body.couponCode || ""), // Ensure it's a string
-        whatsappStatus: "pending"
-      }));
+      const travelerDataArray = jsonData.map((row: any) => {
+        let phone = String(row["Phone"] || row["phone"] || "").trim();
+        
+        // Auto-format Indian phone numbers
+        if (phone) {
+          // Remove any existing country code or special characters
+          phone = phone.replace(/[^\d]/g, '');
+          
+          // If it's a 10-digit number, add +91
+          if (phone.length === 10 && phone.match(/^[6-9]\d{9}$/)) {
+            phone = '+91' + phone;
+          }
+          // If it already has 91 prefix (like 919876543210), format it properly
+          else if (phone.length === 12 && phone.startsWith('91') && phone.substring(2).match(/^[6-9]\d{9}$/)) {
+            phone = '+91' + phone.substring(2);
+          }
+          // If it's already formatted with +91, keep as is
+          else if (phone.startsWith('+91') && phone.length === 13) {
+            // Already formatted correctly
+          }
+          // For any other format, try to extract 10 digits if possible
+          else if (phone.length >= 10) {
+            const match = phone.match(/([6-9]\d{9})/);
+            if (match) {
+              phone = '+91' + match[1];
+            }
+          }
+        }
+
+        return {
+          busId: parseInt(busId),
+          agencyId: user.id,
+          travelerName: String(row["Traveler Name"] || row["traveler_name"] || row["travelerName"] || ""),
+          phone: phone,
+          travelDate: req.body.travelDate || "",
+          couponCode: String(req.body.couponCode || ""), // Ensure it's a string
+          whatsappStatus: "pending"
+        };
+      });
 
       // Validate each record
       const validatedData = travelerDataArray.map(data => 

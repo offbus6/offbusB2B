@@ -35,7 +35,10 @@ export const SECURITY_CONFIG = {
     allowedMimeTypes: [
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/csv'
+      'text/csv',
+      'text/plain', // Sometimes CSV comes as text/plain
+      'application/csv', // Alternative CSV mime type
+      'application/octet-stream', // Fallback for some file uploads
     ],
     allowedExtensions: ['.csv', '.xls', '.xlsx']
   },
