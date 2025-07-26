@@ -1623,10 +1623,11 @@ Happy Travels! 🌟`;
         // Handle template configuration error
         res.json({ 
           success: false, 
-          message: `Template Configuration Issue: The WhatsApp Business API requires approved message templates. Current response: ${result}`,
-          travelerUpdated: false,
+          message: `TEMPLATE APPROVAL REQUIRED: BhashSMS account needs WhatsApp Business templates approved. Contact BhashSMS support to activate templates. Current response: ${result}`,
+          travelerUpdated: !!traveler,
           apiResponse: result,
-          requiresTemplateSetup: true
+          requiresTemplateSetup: true,
+          nextSteps: "Contact BhashSMS support to approve WhatsApp Business message templates"
         });
       } else {
         res.status(400).json({ 
