@@ -186,3 +186,12 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - Fixed agency signup flow by adding `/api/auth/signup` route with proper field mapping
 - Enhanced bus deletion permissions to allow both agencies and super admins
 - All CRUD operations now working correctly for agencies and buses
+- **COMPLETED: WhatsApp Testing System with BhashSMS API Integration (July 26, 2025)**
+- Implemented comprehensive WhatsApp testing functionality using BhashSMS API (http://bhashsms.com/api/sendmsgutil.php)
+- Added WhatsApp Testing page with single message and bulk testing capabilities
+- Integrated with existing WhatsApp templates and user data from Intercity Travels
+- Tested with user data: Shubin (9900408817) and Sukan (8088635590) with coupon code Save10
+- API requires approved WhatsApp Business templates - system ready for activation once templates approved
+- Added comprehensive status tracking (sent, failed, pending, template_approval_pending)
+- System handles BhashSMS credential management (user=BhashWapAi, pass=bwap@123$, sender=BUZWAP)
+- Ready for production use once BhashSMS templates are approved by provider
