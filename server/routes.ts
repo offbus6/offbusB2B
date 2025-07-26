@@ -231,19 +231,18 @@ export function registerRoutes(app: Express) {
 
   app.post("/api/auth/agency/signup", authLimiter, async (req: Request, res: Response) => {
     try {
-      // Parse and validate data
-      const data = insertAgencySchema.parse(req.body);
+      const { name, email, contactPerson, phone, city, state, website, password } = req.body;
       
       // Enhanced email validation
-      const emailValidation = validateEmail(data.email);
+      const emailValidation = validateEmail(email);
       if (!emailValidation.isValid) {
         return res.status(400).json({ message: emailValidation.error });
       }
       const sanitizedEmail = emailValidation.sanitized!;
 
       // Enhanced password validation
-      if (data.password) {
-        const passwordValidation = validatePassword(data.password);
+      if (password) {
+        const passwordValidation = validatePassword(password);
         if (!passwordValidation.isValid) {
           return res.status(400).json({ 
             message: "Password validation failed",
@@ -259,21 +258,31 @@ export function registerRoutes(app: Express) {
       }
 
       // Enhanced phone validation
-      if (data.phone) {
-        const phoneValidation = validatePhoneNumber(data.phone);
+      if (phone) {
+        const phoneValidation = validatePhoneNumber(phone);
         if (!phoneValidation.isValid) {
           return res.status(400).json({ message: phoneValidation.error });
         }
       }
 
-      // Create agency with sanitized data
-      const agency = await storage.createAgency({
-        ...data,
-        email: sanitizedEmail
-      });
+      // Create agency with proper data structure
+      const agencyData = {
+        userId: `agency_${Date.now()}`, // Generate a temporary userId
+        name: sanitizeInput(name),
+        email: sanitizedEmail,
+        contactPerson: sanitizeInput(contactPerson),
+        phone: sanitizeInput(phone),
+        city: sanitizeInput(city),
+        state: state ? sanitizeInput(state) : undefined,
+        website: website ? sanitizeInput(website) : undefined,
+        password: password,
+        status: "pending" as const
+      };
+
+      const agency = await storage.createAgency(agencyData);
 
       res.status(201).json({ 
-        message: "Agency registered successfully",
+        message: "Agency registered successfully. Please wait for admin approval.",
         agency: {
           id: agency.id,
           name: agency.name,
@@ -420,6 +429,37 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Admin-specific agency routes (aliases for backward compatibility)
+  app.get("/api/admin/agencies", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const agencies = await storage.getAllAgencies();
+      res.json(agencies);
+    } catch (error) {
+      console.error("Get admin agencies error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/agencies/pending", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const agencies = await storage.getPendingAgencies();
+      res.json(agencies);
+    } catch (error) {
+      console.error("Get admin pending agencies error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.patch("/api/agencies/:id/status", async (req: Request, res: Response) => {
     try {
       const user = (req.session as any)?.user;
@@ -439,6 +479,102 @@ export function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Update agency status error:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin-specific agency status update endpoint
+  app.patch("/api/admin/agencies/:id/status", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!["approved", "rejected", "on_hold"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const agency = await storage.updateAgencyStatus(parseInt(id), status);
+      res.json(agency);
+    } catch (error) {
+      console.error("Update admin agency status error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/agencies", async (req: Request, res: Response) => {
+    try {
+      const { name, email, contactPerson, phone, city, state, website, password } = req.body;
+      
+      // Enhanced email validation
+      const emailValidation = validateEmail(email);
+      if (!emailValidation.isValid) {
+        return res.status(400).json({ message: emailValidation.error });
+      }
+      const sanitizedEmail = emailValidation.sanitized!;
+
+      // Enhanced password validation
+      if (password) {
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.isValid) {
+          return res.status(400).json({ 
+            message: "Password validation failed",
+            errors: passwordValidation.errors
+          });
+        }
+      }
+      
+      // Check if email already exists
+      const existingAgency = await storage.getAgencyByEmail(sanitizedEmail);
+      if (existingAgency) {
+        return res.status(409).json({ message: "Email already registered" });
+      }
+
+      // Enhanced phone validation
+      if (phone) {
+        const phoneValidation = validatePhoneNumber(phone);
+        if (!phoneValidation.isValid) {
+          return res.status(400).json({ message: phoneValidation.error });
+        }
+      }
+
+      // Create agency with proper data structure
+      const agencyData = {
+        userId: `agency_${Date.now()}`, // Generate a temporary userId
+        name: sanitizeInput(name),
+        email: sanitizedEmail,
+        contactPerson: sanitizeInput(contactPerson),
+        phone: sanitizeInput(phone),
+        city: sanitizeInput(city),
+        state: state ? sanitizeInput(state) : undefined,
+        website: website ? sanitizeInput(website) : undefined,
+        password: password,
+        status: "pending" as const
+      };
+
+      const agency = await storage.createAgency(agencyData);
+
+      res.status(201).json({ 
+        message: "Agency created successfully",
+        agency: {
+          id: agency.id,
+          name: agency.name,
+          email: agency.email,
+          status: agency.status
+        }
+      });
+    } catch (error) {
+      console.error("Create agency error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        });
+      }
+      res.status(500).json({ message: "Creation failed" });
     }
   });
 
