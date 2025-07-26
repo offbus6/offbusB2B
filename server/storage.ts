@@ -601,6 +601,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTravelerData(id: number): Promise<void> {
+    // First, delete any related WhatsApp queue entries to avoid foreign key constraint violation
+    await db
+      .delete(whatsappQueue)
+      .where(eq(whatsappQueue.travelerId, id));
+    
+    // Then delete the traveler data
     await db
       .delete(travelerData)
       .where(eq(travelerData.id, id));
