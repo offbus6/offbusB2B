@@ -26,6 +26,7 @@ import RoleSelection from "@/pages/role-selection";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
 import AdminLogin from "@/pages/admin-login";
+import BusSearch from "@/pages/bus-search";
 import Sidebar from "@/components/layout/sidebar";
 import Layout from "@/components/layout/layout";
 
@@ -96,6 +97,7 @@ function AppContent() {
       <Route path="/agency-login" component={AgencyLogin} />
       <Route path="/agency-register" component={AgencyRegister} />
       <Route path="/role-selection" component={RoleSelection} />
+      <Route path="/bus-search" component={BusSearch} />
       <Route component={NotFound} />
     </Switch>
   );
