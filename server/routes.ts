@@ -2170,5 +2170,94 @@ Happy Travels!`;
     }
   });
 
+  // Direct BhashSMS WhatsApp API Test Route
+  app.post("/api/test/bhash-whatsapp", async (req: Request, res: Response) => {
+    try {
+      const { phoneNumber, message, imageUrl } = req.body;
+
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      // Clean phone number (remove +91 if present, ensure it's 10 digits)
+      let cleanPhone = phoneNumber.replace(/\D/g, '');
+      if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+        cleanPhone = cleanPhone.substring(2);
+      }
+
+      // Default test message if none provided
+      const testMessage = message || "Test message from TravelFlow WhatsApp system - Hello from BhashSMS API!";
+
+      // Use your exact API credentials and endpoint
+      const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
+      const params = new URLSearchParams({
+        user: 'BhashWapAi',
+        pass: 'bwap@123$',
+        sender: 'BUZWAP',
+        phone: cleanPhone,
+        text: testMessage,
+        priority: 'wa',
+        stype: 'normal'
+      });
+
+      // Add image parameters if image URL is provided
+      if (imageUrl) {
+        params.append('htype', 'image');
+        params.append('url', imageUrl);
+      }
+
+      console.log(`Sending WhatsApp message to ${cleanPhone} via BhashSMS API`);
+      console.log(`API URL: ${apiUrl}?${params.toString()}`);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+      try {
+        const response = await fetch(`${apiUrl}?${params}`, {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'TravelFlow-WhatsApp-Service/1.0'
+          },
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+        const result = await response.text();
+
+        console.log(`BhashSMS API Response: ${result}`);
+
+        // Check if message was sent successfully
+        const success = result.startsWith('S.');
+        
+        res.json({
+          success: success,
+          message: success ? "WhatsApp message sent successfully!" : `Failed to send message. API Response: ${result}`,
+          apiResponse: result,
+          phoneNumber: cleanPhone,
+          sentMessage: testMessage,
+          imageUrl: imageUrl || null
+        });
+
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        console.error(`BhashSMS API Error:`, fetchError);
+        
+        res.json({
+          success: false,
+          message: `API request failed: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`,
+          phoneNumber: cleanPhone,
+          sentMessage: testMessage
+        });
+      }
+
+    } catch (error) {
+      console.error("BhashSMS test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+
   return app;
 }
