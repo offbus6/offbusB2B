@@ -1637,7 +1637,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  // WhatsApp Testing Route for Admin
+  // WhatsApp Testing Route for Admin with approved templates
   app.post("/api/admin/whatsapp/test", async (req: Request, res: Response) => {
     try {
       const user = (req.session as any)?.user;
@@ -1645,7 +1645,7 @@ export function registerRoutes(app: Express) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const { phoneNumber, message, agencyName } = req.body;
+      const { phoneNumber, message, agencyName, imageUrl } = req.body;
 
       if (!phoneNumber) {
         return res.status(400).json({ message: "Phone number is required" });
@@ -1671,7 +1671,7 @@ To stop receiving messages, reply STOP.
 
 Happy Travels! 🌟`;
 
-      // Send via BhashSMS API - Use utility type for template compliance
+      // Send via BhashSMS API with approved templates
       const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
       const params = new URLSearchParams({
         user: 'BhashWapAi',
@@ -1680,8 +1680,14 @@ Happy Travels! 🌟`;
         phone: cleanPhone,
         text: testMessage,
         priority: 'wa',
-        stype: 'utility'  // Use utility type for template compliance
+        stype: 'normal'  // Templates are now approved
       });
+
+      // Add image parameters if image URL is provided
+      if (imageUrl) {
+        params.append('htype', 'image');
+        params.append('url', imageUrl);
+      }
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -1709,31 +1715,24 @@ Happy Travels! 🌟`;
         await storage.updateTravelerData(traveler.id, { whatsappStatus: status });
       }
 
-      // Handle different API responses
+      // Handle API responses with approved templates
       if (result.startsWith('S.')) {
         res.json({ 
           success: true, 
-          message: `WhatsApp message sent successfully to +91${cleanPhone}`,
+          message: `WhatsApp message ${imageUrl ? 'with image ' : ''}sent successfully to +91${cleanPhone}`,
           messageId: result,
           travelerUpdated: !!traveler,
-          apiResponse: result
-        });
-      } else if (result.includes('Only Utility or Authentication Templates Supported')) {
-        // Handle template configuration error
-        res.json({ 
-          success: false, 
-          message: `TEMPLATE APPROVAL REQUIRED: BhashSMS account needs WhatsApp Business templates approved. Contact BhashSMS support to activate templates. Current response: ${result}`,
-          travelerUpdated: !!traveler,
           apiResponse: result,
-          requiresTemplateSetup: true,
-          nextSteps: "Contact BhashSMS support to approve WhatsApp Business message templates"
+          templatesApproved: true,
+          imageSupported: !!imageUrl
         });
       } else {
         res.status(400).json({ 
           success: false, 
           message: `Failed to send WhatsApp message: ${result}`,
-          travelerUpdated: false,
-          apiResponse: result
+          travelerUpdated: !!traveler,
+          apiResponse: result,
+          templatesApproved: true
         });
       }
     } catch (error) {

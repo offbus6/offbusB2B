@@ -204,9 +204,9 @@ export class WhatsappService {
   }
 
   /**
-   * Send WhatsApp message using BhashSMS API with security measures
+   * Send WhatsApp message using BhashSMS API with security measures and image support
    */
-  private async sendWhatsappMessage(phoneNumber: string, message: string, config: any): Promise<boolean> {
+  private async sendWhatsappMessage(phoneNumber: string, message: string, config: any, imageUrl?: string): Promise<boolean> {
     try {
       // Security: Validate phone number format
       if (!phoneNumber || !/^\d{10,15}$/.test(phoneNumber.replace(/\D/g, ''))) {
@@ -238,7 +238,7 @@ export class WhatsappService {
         cleanPhone = cleanPhone.substring(2);
       }
 
-      // BhashSMS API integration with provided credentials
+      // BhashSMS API integration with approved templates
       const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
       const params = new URLSearchParams({
         user: 'BhashWapAi',
@@ -250,8 +250,14 @@ export class WhatsappService {
         stype: 'normal'
       });
 
+      // Add image parameters if image URL is provided
+      if (imageUrl) {
+        params.append('htype', 'image');
+        params.append('url', imageUrl);
+      }
+
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for images
 
       const response = await fetch(`${apiUrl}?${params}`, {
         method: 'GET',
@@ -271,7 +277,7 @@ export class WhatsappService {
       
       // Check if message was sent successfully
       if (result.startsWith('S.')) {
-        console.log(`✅ WhatsApp message sent successfully to ${cleanPhone}. ID: ${result}`);
+        console.log(`✅ WhatsApp message ${imageUrl ? 'with image ' : ''}sent successfully to ${cleanPhone}. ID: ${result}`);
         return true;
       } else {
         // Log failed attempts for monitoring
@@ -282,7 +288,8 @@ export class WhatsappService {
           details: { 
             phoneNumber: cleanPhone,
             apiResponse: result,
-            provider: 'bhashsms'
+            provider: 'bhashsms',
+            hasImage: !!imageUrl
           },
           severity: 'MEDIUM'
         });
@@ -298,7 +305,8 @@ export class WhatsappService {
         endpoint: '/whatsapp/send',
         details: { 
           error: error instanceof Error ? error.message : 'Unknown error',
-          phoneNumber: phoneNumber?.substring(0, 5) + 'xxxxx' // Partially mask phone
+          phoneNumber: phoneNumber?.substring(0, 5) + 'xxxxx', // Partially mask phone
+          hasImage: !!imageUrl
         },
         severity: 'HIGH'
       });
@@ -309,9 +317,9 @@ export class WhatsappService {
   }
 
   /**
-   * Send test message to verify configuration
+   * Send test message to verify configuration with optional image support
    */
-  async sendTestMessage(phoneNumber?: string, message?: string, config?: any): Promise<boolean> {
+  async sendTestMessage(phoneNumber?: string, message?: string, config?: any, imageUrl?: string): Promise<boolean> {
     try {
       const whatsappConfig = config || await storage.getWhatsappConfig();
       if (!whatsappConfig) {
@@ -321,7 +329,7 @@ export class WhatsappService {
       const testPhone = phoneNumber || whatsappConfig.phoneNumber;
       const testMessage = message || `Test message from TravelFlow at ${new Date().toLocaleString()}`;
       
-      return await this.sendWhatsappMessage(testPhone, testMessage, whatsappConfig);
+      return await this.sendWhatsappMessage(testPhone, testMessage, whatsappConfig, imageUrl);
       
       console.log('Test message sent successfully');
     } catch (error) {

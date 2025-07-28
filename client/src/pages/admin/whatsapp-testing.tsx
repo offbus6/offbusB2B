@@ -8,20 +8,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Send, Users, CheckCircle, XCircle, Clock, AlertTriangle } from "lucide-react";
+import { MessageSquare, Send, Users, CheckCircle, Clock, AlertTriangle, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Label } from "@radix-ui/react-label";
 
 export default function WhatsAppTesting() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // Single message testing state
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
   const [testMessage, setTestMessage] = useState("");
-  
-  // Bulk testing state
+  const [testImageUrl, setTestImageUrl] = useState("");
   const [selectedAgencyForBulk, setSelectedAgencyForBulk] = useState("");
+
+  // Bulk testing state
   const [bulkMessage, setBulkMessage] = useState("");
 
   // Fetch agencies for bulk testing
@@ -36,10 +38,10 @@ export default function WhatsAppTesting() {
 
   // Single message test mutation
   const testWhatsAppMutation = useMutation({
-    mutationFn: async ({ phoneNumber, message, agencyName }: { phoneNumber: string; message?: string; agencyName?: string }) => {
+    mutationFn: async ({ phoneNumber, message, agencyName, imageUrl }: { phoneNumber: string; message?: string; agencyName?: string; imageUrl?: string }) => {
       return await apiRequest('/api/admin/whatsapp/test', {
         method: 'POST',
-        body: JSON.stringify({ phoneNumber, message, agencyName }),
+        body: JSON.stringify({ phoneNumber, message, agencyName, imageUrl }),
         headers: { 'Content-Type': 'application/json' }
       });
     },
@@ -53,6 +55,7 @@ export default function WhatsAppTesting() {
       if (data.success) {
         setTestPhoneNumber("");
         setTestMessage("");
+        setTestImageUrl("");
       }
     },
     onError: (error: any) => {
@@ -121,6 +124,24 @@ export default function WhatsAppTesting() {
     traveler.phone?.includes('9900408817') || 
     traveler.phone?.includes('8088635590')
   ) : [];
+
+    const handleTestMessage = () => {
+    if (!testPhoneNumber) {
+      toast({
+        title: "Error",
+        description: "Phone number is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    testWhatsAppMutation.mutate({
+      phoneNumber: testPhoneNumber,
+      message: testMessage,
+      agencyName: "TravelFlow Admin",
+      imageUrl: testImageUrl
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -222,18 +243,28 @@ export default function WhatsAppTesting() {
                   rows={6}
                 />
               </div>
-              <Button
-                onClick={() => testWhatsAppMutation.mutate({ 
-                  phoneNumber: testPhoneNumber, 
-                  message: testMessage || undefined,
-                  agencyName: "TravelFlow Admin"
-                })}
-                disabled={!testPhoneNumber || testPhoneNumber.length !== 10 || testWhatsAppMutation.isPending}
-                className="w-full bg-green-600 hover:bg-green-700"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                {testWhatsAppMutation.isPending ? "Sending..." : "Send Test Message"}
-              </Button>
+                            <div className="space-y-2">
+                  <Label htmlFor="imageUrl">Image URL (optional)</Label>
+                  <Input
+                    id="imageUrl"
+                    type="url"
+                    placeholder="https://example.com/image.jpg"
+                    value={testImageUrl}
+                    onChange={(e) => setTestImageUrl(e.target.value)}
+                  />
+                  <p className="text-sm text-gray-500">
+                    Test with sample image: https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={handleTestMessage}
+                  disabled={testWhatsAppMutation.isPending}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  {testWhatsAppMutation.isPending ? "Sending..." : testImageUrl ? "Send Test Message with Image" : "Send Test Message"}
+                  {testImageUrl ? <Image className="ml-2 h-4 w-4" /> : <Send className="ml-2 h-4 w-4" />}
+                </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -345,7 +376,7 @@ export default function WhatsAppTesting() {
                   <strong>Test Numbers:</strong> 9900408817 (Shubin), 8088635590 (Sukan)
                 </AlertDescription>
               </Alert>
-              
+
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium mb-2">Manual API Test Command:</h4>
                 <code className="text-sm bg-gray-100 p-2 rounded block">
