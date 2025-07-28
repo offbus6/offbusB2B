@@ -340,3 +340,101 @@ export class WhatsappService {
 }
 
 export const whatsappService = new WhatsappService();
+
+// Approved BhashSMS template with your specific variables
+const APPROVED_BHASH_TEMPLATE = "Hi {{1}}, thanks for Traveling with us at {{2}}! Get 20% off on your next trip – use Coupon Code {{3}} 🚀 Valid for Next 90 days at: {{4}} ✨ Hurry Up.";
+
+/**
+ * Replace template variables with actual data
+ */
+export function replaceApprovedTemplateVariables(
+  travelerName: string,
+  agencyName: string,
+  couponCode: string,
+  couponLink: string
+): string {
+  return APPROVED_BHASH_TEMPLATE
+    .replace('{{1}}', travelerName)
+    .replace('{{2}}', agencyName)
+    .replace('{{3}}', couponCode)
+    .replace('{{4}}', couponLink);
+}
+
+/**
+ * Send WhatsApp message using BhashSMS API with approved template
+ */
+export async function sendBhashWhatsAppMessage(
+  phoneNumber: string,
+  message?: string,
+  imageUrl?: string,
+  travelerData?: {
+    travelerName: string;
+    agencyName: string;
+    couponCode: string;
+    couponLink?: string;
+  }
+): Promise<{ success: boolean; message: string; apiResponse?: string; sentMessage?: string }> {
+  try {
+    console.log(`Sending WhatsApp message to ${phoneNumber} via BhashSMS API`);
+    
+    // Use approved template with variables if traveler data is provided
+    let finalMessage = message || 'bsl_image';
+    
+    if (travelerData && (message === 'template' || message === 'approved_template')) {
+      const couponLink = travelerData.couponLink || 'https://your-booking-site.com';
+      finalMessage = replaceApprovedTemplateVariables(
+        travelerData.travelerName,
+        travelerData.agencyName,
+        travelerData.couponCode,
+        couponLink
+      );
+      console.log('Using approved template with variables:', finalMessage);
+    }
+    
+    // Clean phone number (remove country code if +91)
+    let cleanPhone = phoneNumber.replace(/\D/g, '');
+    if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+      cleanPhone = cleanPhone.substring(2);
+    }
+    
+    const params = new URLSearchParams({
+      user: 'BhashWapAi',
+      pass: 'bwap@123$',
+      sender: 'BUZWAP',
+      phone: cleanPhone,
+      text: finalMessage,
+      priority: 'wa',
+      stype: 'normal'
+    });
+
+    if (imageUrl) {
+      params.append('htype', 'image');
+      params.append('url', imageUrl);
+    }
+
+    const apiUrl = `http://bhashsms.com/api/sendmsgutil.php?${params.toString()}`;
+    console.log('API URL:', apiUrl);
+
+    const response = await fetch(apiUrl);
+    const responseText = await response.text();
+    
+    console.log('BhashSMS API Response:', responseText);
+
+    // Check if response indicates success (starts with "S.")
+    const isSuccess = responseText.trim().startsWith('S.');
+    
+    return {
+      success: isSuccess,
+      message: isSuccess ? 'WhatsApp message sent successfully!' : `Failed to send message. API Response: ${responseText.trim()}`,
+      apiResponse: responseText.trim(),
+      sentMessage: finalMessage
+    };
+    
+  } catch (error) {
+    console.error('Error sending WhatsApp message:', error);
+    return {
+      success: false,
+      message: 'Failed to send WhatsApp message due to network error'
+    };
+  }
+}

@@ -38,6 +38,11 @@ export default function WhatsAppTest() {
       description: "Standard text template for testing"
     },
     {
+      name: "Approved Template",
+      text: "approved_template",
+      description: "Your approved BhashSMS template with variables"
+    },
+    {
       name: "Custom Test Message",
       text: "Test message from TravelFlow WhatsApp API",
       description: "Custom message (may require template approval)"
@@ -45,7 +50,29 @@ export default function WhatsAppTest() {
   ];
 
   const testWhatsAppMutation = useMutation({
-    mutationFn: async ({ phoneNumber, message, imageUrl }: { phoneNumber: string; message?: string; imageUrl?: string }) => {
+    mutationFn: async ({ phoneNumber, message, imageUrl, travelerData }: { 
+      phoneNumber: string; 
+      message?: string; 
+      imageUrl?: string;
+      travelerData?: {
+        travelerName: string;
+        agencyName: string;
+        couponCode: string;
+        couponLink?: string;
+      }
+    }) => {
+      // If using approved template with traveler data, use the new endpoint
+      if (message === 'approved_template' && travelerData) {
+        return await apiRequest('/api/admin/whatsapp/send-template', {
+          method: 'POST',
+          body: { 
+            travelerIds: [travelerData.travelerId], 
+            couponLink: travelerData.couponLink || 'https://your-booking-site.com' 
+          }
+        });
+      }
+      
+      // Otherwise use the regular test endpoint
       return await apiRequest('/api/test/bhash-whatsapp', {
         method: 'POST',
         body: { phoneNumber, message, imageUrl }
@@ -114,11 +141,27 @@ export default function WhatsAppTest() {
       return;
     }
 
-    testWhatsAppMutation.mutate({
-      phoneNumber: selectedUser.phone,
-      message: message || "bsl_image",
-      imageUrl: imageUrl.trim() || undefined
-    });
+    // If using approved template, include traveler data for variable replacement
+    if (message === 'approved_template') {
+      testWhatsAppMutation.mutate({
+        phoneNumber: selectedUser.phone,
+        message: message,
+        imageUrl: imageUrl.trim() || undefined,
+        travelerData: {
+          travelerId: selectedUser.id,
+          travelerName: selectedUser.travelerName || selectedUser.traveler_name,
+          agencyName: 'Intercity Travels', // Default agency name from your database
+          couponCode: selectedUser.couponCode || selectedUser.coupon_code || 'Save10',
+          couponLink: 'https://your-booking-site.com'
+        }
+      });
+    } else {
+      testWhatsAppMutation.mutate({
+        phoneNumber: selectedUser.phone,
+        message: message || "bsl_image",
+        imageUrl: imageUrl.trim() || undefined
+      });
+    }
   };
 
   return (

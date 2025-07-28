@@ -20,7 +20,7 @@ import {
   sanitizeLogData
 } from "./security-config";
 import { securityMonitor, createSecurityMiddleware } from "./security-monitor";
-import { whatsappService } from "./whatsapp-service";
+import { whatsappService, sendBhashWhatsAppMessage, replaceApprovedTemplateVariables } from "./whatsapp-service";
 
 // Rate limiting configurations from security config
 const authLimiter = createAuthLimiter();
@@ -2255,6 +2255,101 @@ Happy Travels!`;
       res.status(500).json({ 
         success: false, 
         message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+
+  // Send approved template message to database users
+  app.post("/api/admin/whatsapp/send-template", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { travelerIds, couponLink } = req.body;
+
+      if (!travelerIds || !Array.isArray(travelerIds) || travelerIds.length === 0) {
+        return res.status(400).json({ message: "Traveler IDs are required" });
+      }
+
+      const results = [];
+
+      for (const travelerId of travelerIds) {
+        try {
+          // Get traveler data
+          const traveler = await storage.getTravelerData(travelerId);
+          if (!traveler) {
+            results.push({
+              travelerId,
+              success: false,
+              message: "Traveler not found"
+            });
+            continue;
+          }
+
+          // Get agency data
+          const agency = await storage.getAgency(traveler.agencyId);
+          if (!agency) {
+            results.push({
+              travelerId,
+              success: false,
+              message: "Agency not found for traveler"
+            });
+            continue;
+          }
+
+          // Send message with approved template
+          const result = await sendBhashWhatsAppMessage(
+            traveler.phone,
+            'approved_template',
+            undefined,
+            {
+              travelerName: traveler.travelerName,
+              agencyName: agency.name,
+              couponCode: traveler.couponCode,
+              couponLink: couponLink || 'https://your-booking-site.com'
+            }
+          );
+
+          results.push({
+            travelerId,
+            travelerName: traveler.travelerName,
+            phone: traveler.phone,
+            success: result.success,
+            message: result.message,
+            apiResponse: result.apiResponse,
+            sentMessage: result.sentMessage
+          });
+
+        } catch (error) {
+          results.push({
+            travelerId,
+            success: false,
+            message: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      const failureCount = results.length - successCount;
+
+      res.json({
+        success: successCount > 0,
+        message: `Sent ${successCount} messages successfully, ${failureCount} failed`,
+        results,
+        summary: {
+          total: results.length,
+          sent: successCount,
+          failed: failureCount
+        }
+      });
+
+    } catch (error) {
+      console.error("Send template messages error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Internal server error" 
       });
     }
   });
