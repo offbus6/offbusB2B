@@ -1637,6 +1637,132 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Test WhatsApp with specific database user
+  app.post("/api/admin/whatsapp/test-database-user", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      // Get traveler data
+      const traveler = await storage.getTravelerData(userId);
+      if (!traveler) {
+        return res.status(404).json({ message: "Traveler not found" });
+      }
+
+      // Get agency and bus data for personalized message
+      const agency = await storage.getAgency(traveler.agencyId);
+      const bus = await storage.getBus(traveler.busId);
+
+      if (!agency) {
+        return res.status(404).json({ message: "Agency not found for this traveler" });
+      }
+
+      // Clean phone number
+      let cleanPhone = traveler.phone.replace(/\D/g, '');
+      if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+        cleanPhone = cleanPhone.substring(2);
+      }
+
+      // Create personalized test message
+      const personalizedMessage = `🎉 Dear ${traveler.travelerName},
+
+Greetings from ${agency.name}! 
+
+This is a TEST MESSAGE from TravelFlow Admin.
+
+✅ Your booking details:
+🚌 Bus: ${bus?.name || 'Bus Service'}
+📍 Route: ${bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Route'}
+📅 Travel Date: ${traveler.travelDate ? new Date(traveler.travelDate).toLocaleDateString() : 'Travel Date'}
+🎟️ Your Coupon: ${traveler.couponCode}
+
+💰 Use your coupon for special discounts!
+🌐 Book at: ${agency.bookingWebsite || 'https://your-booking-website.com'}
+
+This was a test message to verify WhatsApp delivery.
+
+To stop receiving messages, reply STOP.
+
+Happy Travels! 🌟`;
+
+      // Send via BhashSMS API
+      const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
+      const params = new URLSearchParams({
+        user: 'BhashWapAi',
+        pass: 'bwap@123$',
+        sender: 'BUZWAP',
+        phone: cleanPhone,
+        text: personalizedMessage,
+        priority: 'wa',
+        stype: 'normal'
+      });
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const response = await fetch(`${apiUrl}?${params}`, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'TravelFlow-WhatsApp-Service/1.0'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.text();
+
+      // Update traveler WhatsApp status
+      const status = result.startsWith('S.') ? 'sent' : 'failed';
+      await storage.updateTravelerData(traveler.id, { whatsappStatus: status });
+
+      if (result.startsWith('S.')) {
+        res.json({ 
+          success: true, 
+          message: `Test message sent successfully to ${traveler.travelerName} (+91${cleanPhone})`,
+          travelerData: {
+            name: traveler.travelerName,
+            phone: `+91${cleanPhone}`,
+            agency: agency.name,
+            bus: bus?.name,
+            coupon: traveler.couponCode
+          },
+          messageId: result,
+          apiResponse: result
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: `Failed to send test message to ${traveler.travelerName}: ${result}`,
+          travelerData: {
+            name: traveler.travelerName,
+            phone: `+91${cleanPhone}`,
+            agency: agency.name
+          },
+          apiResponse: result
+        });
+      }
+    } catch (error) {
+      console.error("Database user WhatsApp test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+
   // WhatsApp Testing Route for Admin with approved templates
   app.post("/api/admin/whatsapp/test", async (req: Request, res: Response) => {
     try {

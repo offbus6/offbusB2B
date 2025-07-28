@@ -212,8 +212,8 @@ export default function WhatsAppTesting() {
       <Tabs defaultValue="single" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="single">Single Message Test</TabsTrigger>
+          <TabsTrigger value="database">Database User Test</TabsTrigger>
           <TabsTrigger value="bulk">Bulk Agency Test</TabsTrigger>
-          <TabsTrigger value="status">Status Overview</TabsTrigger>
         </TabsList>
 
         <TabsContent value="single" className="space-y-4">
