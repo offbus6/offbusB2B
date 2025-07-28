@@ -34,11 +34,10 @@ export default function AgencyLogin() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: AgencyLoginData) => {
-      const response = await apiRequest("/api/auth/agency/login", {
+      return await apiRequest("/api/auth/agency/login", {
         method: "POST",
         body: data,
       });
-      return await response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -143,13 +142,13 @@ export default function AgencyLogin() {
               
               <div className="mt-6 text-center">
                 <p className="text-sm text-[var(--airbnb-gray)]">
-                  Don't have an account?{" "}
+                  Don't have an agency account?{" "}
                   <Button 
                     variant="link" 
                     className="text-[var(--airbnb-primary)] hover:text-[var(--airbnb-primary)]/80 p-0"
-                    onClick={() => navigate("/signup")}
+                    onClick={() => navigate("/agency-signup")}
                   >
-                    Sign up here
+                    Register your agency
                   </Button>
                 </p>
               </div>

@@ -21,6 +21,7 @@ import WhatsAppTest from "@/pages/whatsapp-test";
 import AdminSignup from "@/pages/admin-signup";
 import AdminSetup from "@/pages/admin-setup";
 import AgencyLogin from "@/pages/agency-login";
+import AgencySignup from "@/pages/agency-signup";
 import AgencyDashboard from "@/pages/agency/dashboard";
 import BusManagement from "@/pages/agency/bus-management";
 import UploadData from "@/pages/agency/upload-data";
@@ -118,6 +119,7 @@ function AppContent() {
       <Route path="/admin-signup" component={AdminSignup} />
       <Route path="/admin-setup" component={AdminSetup} />
       <Route path="/agency-login" component={AgencyLogin} />
+      <Route path="/agency-signup" component={AgencySignup} />
       <Route path="/agency-register" component={AgencyRegister} />  
       <Route path="/role-selection" component={RoleSelection} />
       <Route path="/bus-search" component={BusSearch} />
