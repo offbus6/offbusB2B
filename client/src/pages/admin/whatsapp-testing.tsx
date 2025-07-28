@@ -42,8 +42,7 @@ export default function WhatsAppTesting() {
     mutationFn: async ({ phoneNumber, message, agencyName, imageUrl }: { phoneNumber: string; message?: string; agencyName?: string; imageUrl?: string }) => {
       return await apiRequest('/api/admin/whatsapp/test', {
         method: 'POST',
-        body: JSON.stringify({ phoneNumber, message, agencyName, imageUrl }),
-        headers: { 'Content-Type': 'application/json' }
+        body: { phoneNumber, message, agencyName, imageUrl }
       });
     },
     onSuccess: (data: any) => {
@@ -73,8 +72,7 @@ export default function WhatsAppTesting() {
     mutationFn: async ({ agencyId, message }: { agencyId: number; message?: string }) => {
       return await apiRequest('/api/admin/whatsapp/bulk-test', {
         method: 'POST',
-        body: JSON.stringify({ agencyId, message }),
-        headers: { 'Content-Type': 'application/json' }
+        body: { agencyId, message }
       });
     },
     onSuccess: (data: any) => {
@@ -100,8 +98,7 @@ export default function WhatsAppTesting() {
     mutationFn: async ({ userId }: { userId: number }) => {
       return await apiRequest('/api/admin/whatsapp/test-database-user', {
         method: 'POST',
-        body: JSON.stringify({ userId }),
-        headers: { 'Content-Type': 'application/json' }
+        body: { userId }
       });
     },
     onSuccess: (data: any) => {
