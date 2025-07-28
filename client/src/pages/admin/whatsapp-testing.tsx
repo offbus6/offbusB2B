@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Send, Users, CheckCircle, Clock, AlertTriangle, Image } from "lucide-react";
+import { MessageSquare, Send, Users, CheckCircle, Clock, AlertTriangle, Image, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Label } from "@radix-ui/react-label";
