@@ -909,6 +909,7 @@ export function registerRoutes(app: Express) {
   });
 
   app.delete("/api/buses/:id", async (req: Request, res: Response) => {
+```
     try {
       const user = (req.session as any)?.user;
       if (!user || (user.role !== "agency" && user.role !== "super_admin")) {
@@ -1113,7 +1114,7 @@ export function registerRoutes(app: Express) {
       // Check for existing phone numbers in database for this agency
       const existingTravelers = await storage.getTravelerDataByAgency(user.id);
       const existingPhones = new Set(existingTravelers.map(t => t.phone));
-      
+
       // Filter out phone numbers that already exist in database
       const finalTravelerData = uniqueTravelerData.filter((traveler) => {
         return !existingPhones.has(traveler.phone);
@@ -1615,7 +1616,7 @@ export function registerRoutes(app: Express) {
         const traveler = await storage.getTravelerData(msg.travelerId);
         const templates = await storage.getWhatsappTemplates();
         const template = templates.find(t => t.id === msg.templateId);
-        
+
         return {
           ...msg,
           travelerName: traveler?.travelerName,
@@ -1700,7 +1701,7 @@ To stop receiving messages, reply STOP.
 
 Happy Travels! 🌟`;
 
-      // Send via BhashSMS API
+      // Send via BhashSMS API with activated utility endpoint
       const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
       const params = new URLSearchParams({
         user: 'BhashWapAi',
@@ -1709,7 +1710,7 @@ Happy Travels! 🌟`;
         phone: cleanPhone,
         text: personalizedMessage,
         priority: 'wa',
-        stype: 'normal'
+        stype: 'utility'
       });
 
       const controller = new AbortController();
@@ -1721,7 +1722,7 @@ Happy Travels! 🌟`;
           'User-Agent': 'TravelFlow-WhatsApp-Service/1.0'
         },
         signal: controller.signal
-      });
+            });
 
       clearTimeout(timeoutId);
 
@@ -1804,7 +1805,7 @@ To stop receiving messages, reply STOP.
 
 Happy Travels! 🌟`;
 
-      // Send via BhashSMS API with approved templates
+      // Send via BhashSMS API with activated utility endpoint
       const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
       const params = new URLSearchParams({
         user: 'BhashWapAi',
@@ -1813,7 +1814,7 @@ Happy Travels! 🌟`;
         phone: cleanPhone,
         text: testMessage,
         priority: 'wa',
-        stype: 'normal'  // Templates are now approved
+        stype: 'utility'  // Templates are now approved
       });
 
       // Add image parameters if image URL is provided
@@ -1928,7 +1929,7 @@ To stop receiving messages, reply STOP.
 
 Happy Travels! 🌟`;
 
-          // Send via BhashSMS API - Use utility type for template compliance
+          // Send via BhashSMS API with activated utility endpoint
           const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
           const params = new URLSearchParams({
             user: 'BhashWapAi',

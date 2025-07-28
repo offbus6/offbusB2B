@@ -9,7 +9,7 @@ export interface WhatsappMessage {
 }
 
 export class WhatsappService {
-  
+
   /**
    * Process dynamic variables in message templates
    */
@@ -29,7 +29,7 @@ export class WhatsappService {
     };
 
     let processedMessage = template;
-    
+
     // Replace all variables
     Object.entries(variables).forEach(([variable, value]) => {
       processedMessage = processedMessage.replace(new RegExp(variable, 'g'), value);
@@ -92,11 +92,11 @@ export class WhatsappService {
   async scheduleMessagesForUpload(agencyId: number, busId: number): Promise<void> {
     try {
       const travelers = await storage.getTravelerDataByBus(busId);
-      
+
       for (const traveler of travelers) {
         await this.scheduleMessagesForTraveler(traveler.id);
       }
-      
+
       console.log(`Scheduled messages for ${travelers.length} travelers from agency ${agencyId}`);
     } catch (error) {
       console.error('Error scheduling messages for upload:', error);
@@ -134,7 +134,7 @@ export class WhatsappService {
           // Here you would integrate with actual WhatsApp API
           // For now, we'll just mark as sent
           await this.sendWhatsappMessage(message.phoneNumber, message.message, config);
-          
+
           await storage.updateWhatsappQueueStatus(message.id, 'sent');
           console.log(`Message sent successfully to ${message.phoneNumber}`);
         } catch (error) {
@@ -165,13 +165,13 @@ export class WhatsappService {
 
       if (isOptOutRequest) {
         const optedOutTravelers = await storage.optOutTravelerFromWhatsapp(phoneNumber);
-        
+
         if (optedOutTravelers.length > 0) {
           console.log(`Opted out ${optedOutTravelers.length} travelers with phone: ${phoneNumber}`);
-          
+
           // Send confirmation message
           const confirmationMessage = "You have been successfully unsubscribed from our promotional messages. You will no longer receive coupon codes or travel offers. Thank you.";
-          
+
           const config = await storage.getWhatsappConfig();
           if (config) {
             await this.sendWhatsappMessage(phoneNumber, confirmationMessage, config);
@@ -191,13 +191,13 @@ export class WhatsappService {
   async processIncomingMessage(phoneNumber: string, message: string): Promise<void> {
     try {
       console.log(`Received message from ${phoneNumber}: ${message}`);
-      
+
       // Handle opt-out requests
       await this.handleOptOutRequest(phoneNumber, message);
-      
+
       // You can add more message processing logic here
       // For example, handling help requests, status inquiries, etc.
-      
+
     } catch (error) {
       console.error('Error processing incoming message:', error);
     }
@@ -238,7 +238,7 @@ export class WhatsappService {
         cleanPhone = cleanPhone.substring(2);
       }
 
-      // BhashSMS API integration with utility templates (fallback to SMS if WhatsApp fails)
+      // BhashSMS API integration with activated utility endpoint
       const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
       const params = new URLSearchParams({
         user: 'BhashWapAi',
@@ -247,7 +247,7 @@ export class WhatsappService {
         phone: cleanPhone,
         text: message,
         priority: 'wa',
-        stype: 'utility' // Try utility type instead of normal
+        stype: 'utility'
       });
 
       // Add image parameters if image URL is provided
@@ -274,7 +274,7 @@ export class WhatsappService {
       }
 
       const result = await response.text();
-      
+
       // Check if message was sent successfully
       if (result.startsWith('S.')) {
         console.log(`✅ WhatsApp message ${imageUrl ? 'with image ' : ''}sent successfully to ${cleanPhone}. ID: ${result}`);
@@ -293,7 +293,7 @@ export class WhatsappService {
           },
           severity: 'MEDIUM'
         });
-        
+
         console.error(`❌ Failed to send WhatsApp message. Response: ${result}`);
         return false;
       }
@@ -310,7 +310,7 @@ export class WhatsappService {
         },
         severity: 'HIGH'
       });
-      
+
       console.error('Error sending WhatsApp message:', error);
       return false;
     }
@@ -329,9 +329,9 @@ export class WhatsappService {
       const testPhone = phoneNumber || whatsappConfig.phoneNumber;
       // Use a very simple message that might bypass template requirements
       const testMessage = message || `Hi! This is a test message from TravelFlow. Time: ${new Date().toLocaleTimeString()}`;
-      
+
       return await this.sendWhatsappMessage(testPhone, testMessage, whatsappConfig, imageUrl);
-      
+
     } catch (error) {
       console.error('Error sending test message:', error);
       throw error;

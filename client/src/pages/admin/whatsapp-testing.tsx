@@ -178,11 +178,11 @@ export default function WhatsAppTesting() {
       </div>
 
       {/* API Status Alert */}
-      <Alert className="border-yellow-500 bg-yellow-50">
-        <AlertTriangle className="h-4 w-4 text-yellow-600" />
-        <AlertDescription className="text-yellow-800">
-          <strong>BhashSMS API Status:</strong> Currently requires approved message templates. 
-          Template setup needed for production WhatsApp messaging. Contact BhashSMS support to activate templates.
+      <Alert className="border-green-500 bg-green-50">
+        <AlertTriangle className="h-4 w-4 text-green-600" />
+        <AlertDescription className="text-green-800">
+          <strong>BhashSMS API Status:</strong> ✅ ACTIVATED! 
+          Utility endpoint is now active for testing. You can send WhatsApp messages and images using stype=utility.
         </AlertDescription>
       </Alert>
 
@@ -455,18 +455,18 @@ export default function WhatsAppTesting() {
               <Alert>
                 <MessageSquare className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Current API Endpoint:</strong> http://bhashsms.com/api/sendmsgutil.php
+                  <strong>Current API Endpoint:</strong> http://bhashsms.com/api/sendmsgutil.php (ACTIVATED)
                   <br />
                   <strong>Credentials:</strong> user=BhashWapAi, pass=bwap@123$, sender=BUZWAP
                   <br />
-                  <strong>Test Numbers:</strong> 9900408817 (Shubin), 8088635590 (Sukan)
+                  <strong>Test Numbers:</strong> 9035580937 (Activated), 9900408817 (Shubin), 8088635590 (Sukan)
                 </AlertDescription>
               </Alert>
 
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium mb-2">Manual API Test Command:</h4>
                 <code className="text-sm bg-gray-100 p-2 rounded block">
-                  curl "http://bhashsms.com/api/sendmsgutil.php?user=BhashWapAi&pass=bwap@123$&sender=BUZWAP&phone=9900408817&text=Test%20message&priority=wa&stype=normal"
+                  curl "http://bhashsms.com/api/sendmsgutil.php?user=BhashWapAi&pass=bwap@123$&sender=BUZWAP&phone=9035580937&text=Test%20message&priority=wa&stype=utility"
                 </code>
               </div>
             </CardContent>
