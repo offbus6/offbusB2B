@@ -2197,7 +2197,7 @@ Happy Travels!`;
         phone: cleanPhone,
         text: testMessage,
         priority: 'wa',
-        stype: 'normal'
+        stype: 'utility'
       });
 
       // Add image parameters if image URL is provided
