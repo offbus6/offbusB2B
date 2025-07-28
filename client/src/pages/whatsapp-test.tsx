@@ -13,9 +13,28 @@ import { apiRequest } from "@/lib/queryClient";
 export default function WhatsAppTest() {
   const { toast } = useToast();
   const [phoneNumber, setPhoneNumber] = useState("9035580937");
-  const [message, setMessage] = useState("Test message from TravelFlow - Hello! This is a test WhatsApp message via BhashSMS API");
+  const [message, setMessage] = useState("bsl_image");
   const [imageUrl, setImageUrl] = useState("https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg");
   const [testResult, setTestResult] = useState<any>(null);
+
+  // Predefined template messages that work with your account
+  const templateMessages = [
+    {
+      name: "BSL Image Template",
+      text: "bsl_image",
+      description: "Standard image template for testing"
+    },
+    {
+      name: "BSL Text Template", 
+      text: "bsl_text",
+      description: "Standard text template for testing"
+    },
+    {
+      name: "Custom Test Message",
+      text: "Test message from TravelFlow WhatsApp API",
+      description: "Custom message (may require template approval)"
+    }
+  ];
 
   const testWhatsAppMutation = useMutation({
     mutationFn: async ({ phoneNumber, message, imageUrl }: { phoneNumber: string; message?: string; imageUrl?: string }) => {
@@ -73,6 +92,15 @@ export default function WhatsAppTest() {
         <p className="text-muted-foreground">
           Test WhatsApp message sending using the BhashSMS API with your credentials
         </p>
+        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Quick Test Instructions:</h3>
+          <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+            <li>• Use "bsl_image" as the message text for template compliance</li>
+            <li>• Your phone number (9035580937) is pre-filled for testing</li>
+            <li>• The image URL is set to the test image you provided</li>
+            <li>• Click "Quick Test" for instant testing with approved template</li>
+          </ul>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -99,13 +127,28 @@ export default function WhatsAppTest() {
 
             <div className="space-y-2">
               <Label htmlFor="message">Message</Label>
-              <Textarea
-                id="message"
-                placeholder="Enter your test message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={3}
-              />
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {templateMessages.map((template, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setMessage(template.text)}
+                      className="text-xs"
+                    >
+                      {template.name}
+                    </Button>
+                  ))}
+                </div>
+                <Textarea
+                  id="message"
+                  placeholder="Enter your test message or click a template above"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={3}
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -113,12 +156,40 @@ export default function WhatsAppTest() {
                 <Image className="w-4 h-4" />
                 Image URL (Optional)
               </Label>
-              <Input
-                id="image"
-                placeholder="https://example.com/image.jpg"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-              />
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setImageUrl("https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg")}
+                    className="text-xs"
+                  >
+                    Test Image 1
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setImageUrl("https://via.placeholder.com/400x300.png?text=Test+Image")}
+                    className="text-xs"
+                  >
+                    Placeholder Image
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setImageUrl("")}
+                    className="text-xs"
+                  >
+                    Clear Image
+                  </Button>
+                </div>
+                <Input
+                  id="image"
+                  placeholder="https://example.com/image.jpg"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -205,15 +276,28 @@ export default function WhatsAppTest() {
         <CardHeader>
           <CardTitle>API Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <div><strong>API Endpoint:</strong> http://bhashsms.com/api/sendmsgutil.php</div>
-          <div><strong>User:</strong> BhashWapAi</div>
-          <div><strong>Sender:</strong> BUZWAP</div>
-          <div><strong>Priority:</strong> wa (WhatsApp)</div>
-          <div><strong>Type:</strong> normal</div>
-          <p className="text-muted-foreground mt-2">
-            Note: Your account supports utility and authentication templates. For testing, use "bsl_image" as the message text.
-          </p>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="space-y-2">
+              <div><strong>API Endpoint:</strong> http://bhashsms.com/api/sendmsgutil.php</div>
+              <div><strong>User:</strong> BhashWapAi</div>
+              <div><strong>Sender:</strong> BUZWAP</div>
+              <div><strong>Priority:</strong> wa (WhatsApp)</div>
+              <div><strong>Type:</strong> normal</div>
+            </div>
+            <div className="space-y-2">
+              <div><strong>Successful Response:</strong> S.{"{message_id}"}</div>
+              <div><strong>Failed Response:</strong> Error message text</div>
+              <div><strong>Template Support:</strong> Utility & Authentication</div>
+              <div><strong>Image Support:</strong> Yes (htype=image)</div>
+            </div>
+          </div>
+          <div className="p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              <strong>Important:</strong> Your BhashSMS account only supports approved templates. 
+              Use "bsl_image" for image messages or "bsl_text" for text-only messages to ensure delivery.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
