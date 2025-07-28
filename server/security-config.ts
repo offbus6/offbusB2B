@@ -2,10 +2,10 @@ import rateLimit from "express-rate-limit";
 
 // Security configuration constants
 export const SECURITY_CONFIG = {
-  // Rate limiting
+  // Rate limiting - Increased for testing
   AUTH_RATE_LIMIT: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 attempts per window per IP
+    max: 50, // 50 attempts per window per IP (increased from 5)
     message: { message: "Too many authentication attempts, please try again later" },
     standardHeaders: true,
     legacyHeaders: false,
@@ -14,7 +14,7 @@ export const SECURITY_CONFIG = {
   
   GENERAL_RATE_LIMIT: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // 100 requests per window per IP
+    max: 500, // 500 requests per window per IP (increased from 100)
     message: { message: "Too many requests, please try again later" },
     standardHeaders: true,
     legacyHeaders: false,
@@ -22,7 +22,7 @@ export const SECURITY_CONFIG = {
   
   API_RATE_LIMIT: {
     windowMs: 1 * 60 * 1000, // 1 minute
-    max: 20, // 20 API calls per minute per IP
+    max: 100, // 100 API calls per minute per IP (increased from 20)
     message: { message: "API rate limit exceeded" },
     standardHeaders: true,
     legacyHeaders: false,
