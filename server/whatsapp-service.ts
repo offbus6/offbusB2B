@@ -238,7 +238,7 @@ export class WhatsappService {
         cleanPhone = cleanPhone.substring(2);
       }
 
-      // BhashSMS API integration with approved templates
+      // BhashSMS API integration with utility templates (fallback to SMS if WhatsApp fails)
       const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
       const params = new URLSearchParams({
         user: 'BhashWapAi',
@@ -247,7 +247,7 @@ export class WhatsappService {
         phone: cleanPhone,
         text: message,
         priority: 'wa',
-        stype: 'normal'
+        stype: 'utility' // Try utility type instead of normal
       });
 
       // Add image parameters if image URL is provided
@@ -327,11 +327,11 @@ export class WhatsappService {
       }
 
       const testPhone = phoneNumber || whatsappConfig.phoneNumber;
-      const testMessage = message || `Test message from TravelFlow at ${new Date().toLocaleString()}`;
+      // Use a very simple message that might bypass template requirements
+      const testMessage = message || `Hi! This is a test message from TravelFlow. Time: ${new Date().toLocaleTimeString()}`;
       
       return await this.sendWhatsappMessage(testPhone, testMessage, whatsappConfig, imageUrl);
       
-      console.log('Test message sent successfully');
     } catch (error) {
       console.error('Error sending test message:', error);
       throw error;
