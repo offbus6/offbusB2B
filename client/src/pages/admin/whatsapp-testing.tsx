@@ -304,6 +304,7 @@ export default function WhatsAppTesting() {
                 <Users className="w-5 h-5" />
                 Database User Test
               </CardTitle>
+              <p className="text-sm text-gray-600">Select a user from your database to send a test WhatsApp message</p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -313,29 +314,45 @@ export default function WhatsAppTesting() {
                     <SelectValue placeholder="Choose a traveler..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.isArray(userData) && userData.map((traveler: any) => (
-                      <SelectItem key={traveler.id} value={traveler.id.toString()}>
-                        {traveler.travelerName} - {traveler.phone} ({traveler.agencyName})
+                    {Array.isArray(userData) && userData.length > 0 ? (
+                      userData.map((traveler: any) => (
+                        <SelectItem key={traveler.id} value={traveler.id.toString()}>
+                          {traveler.travelerName} - {traveler.phone} ({traveler.agencyName})
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-users" disabled>
+                        No users found in database
                       </SelectItem>
-                    ))}
+                    )}
                   </SelectContent>
                 </Select>
+                {selectedDatabaseUser && Array.isArray(userData) && (
+                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                    {(() => {
+                      const selectedUser = userData.find((u: any) => u.id.toString() === selectedDatabaseUser);
+                      return selectedUser ? (
+                        <div className="text-sm">
+                          <p><strong>Name:</strong> {selectedUser.travelerName}</p>
+                          <p><strong>Phone:</strong> {selectedUser.phone}</p>
+                          <p><strong>Agency:</strong> {selectedUser.agencyName}</p>
+                          <p><strong>Coupon:</strong> {selectedUser.couponCode}</p>
+                          <p><strong>Travel Date:</strong> {selectedUser.travelDate || 'Not specified'}</p>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
               </div>
-              <Alert>
-                <MessageSquare className="h-4 w-4" />
-                <AlertDescription>
-                  This will send a personalized test message to the selected traveler using their actual data (name, agency, bus, coupon code).
-                </AlertDescription>
-              </Alert>
               <Button
-                onClick={() => testDatabaseUserMutation.mutate({ 
+                onClick={() => testDatabaseUserMutation.mutate({
                   userId: parseInt(selectedDatabaseUser)
                 })}
-                disabled={!selectedDatabaseUser || testDatabaseUserMutation.isPending}
+                disabled={!selectedDatabaseUser || selectedDatabaseUser === 'no-users' || testDatabaseUserMutation.isPending}
                 className="w-full bg-purple-600 hover:bg-purple-700"
               >
                 <Send className="w-4 h-4 mr-2" />
-                {testDatabaseUserMutation.isPending ? "Sending..." : "Test Selected User"}
+                {testDatabaseUserMutation.isPending ? "Sending..." : "Send Test Message to Selected User"}
               </Button>
             </CardContent>
           </Card>
@@ -403,7 +420,7 @@ export default function WhatsAppTesting() {
                       <thead>
                         <tr className="border-b">
                           <th className="text-left p-2 font-medium">Traveler</th>
-                          <th className="text-left p-2 font-medium">Phone</th>
+                          <th className="text-left p-2 font-mono">Phone</th>
                           <th className="text-left p-2 font-medium">Agency</th>
                           <th className="text-left p-2 font-medium">Coupon</th>
                           <th className="text-left p-2 font-medium">WhatsApp Status</th>
