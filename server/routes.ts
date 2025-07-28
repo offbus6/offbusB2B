@@ -1590,7 +1590,7 @@ export function registerRoutes(app: Express) {
       }
 
       const { type, id } = req.params;
-      let schedule = [];
+      let schedule: any[] = [];
 
       if (type === 'traveler' && (user.role === 'agency' || user.role === 'super_admin')) {
         // Get schedule for specific traveler
@@ -1611,7 +1611,7 @@ export function registerRoutes(app: Express) {
       }
 
       // Add traveler and template details
-      const enrichedSchedule = await Promise.all(schedule.map(async (msg) => {
+      const enrichedSchedule = await Promise.all(schedule.map(async (msg: any) => {
         const traveler = await storage.getTravelerData(msg.travelerId);
         const templates = await storage.getWhatsappTemplates();
         const template = templates.find(t => t.id === msg.templateId);

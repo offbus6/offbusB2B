@@ -266,12 +266,12 @@ export default function UploadedData() {
   };
 
   const getBusNumber = (busId: number) => {
-    const bus = buses?.find((b: any) => b.id === busId);
+    const bus = Array.isArray(buses) ? buses.find((b: any) => b.id === busId) : null;
     return bus?.number || "Unknown";
   };
 
   const getBusRoute = (busId: number) => {
-    const bus = buses?.find((b: any) => b.id === busId);
+    const bus = Array.isArray(buses) ? buses.find((b: any) => b.id === busId) : null;
     return bus?.route || "Unknown";
   };
 
@@ -308,7 +308,7 @@ export default function UploadedData() {
     );
   }
 
-  const filteredData = travelerData?.filter((traveler: any) => {
+  const filteredData = Array.isArray(travelerData) ? travelerData.filter((traveler: any) => {
     const matchesSearch = traveler.travelerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          traveler.phone.includes(searchTerm);
     const matchesBus = busFilter === "all" || traveler.busId.toString() === busFilter;
@@ -316,9 +316,9 @@ export default function UploadedData() {
     const matchesDate = !dateFilter || new Date(traveler.travelDate).toISOString().split('T')[0] === dateFilter;
     
     return matchesSearch && matchesBus && matchesStatus && matchesDate;
-  }) || [];
+  }) : [];
 
-  const unsentCount = filteredData.filter(t => !t.whatsappStatus || t.whatsappStatus === 'failed').length;
+  const unsentCount = filteredData.filter((t: any) => !t.whatsappStatus || t.whatsappStatus === 'failed').length;
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
@@ -366,7 +366,7 @@ export default function UploadedData() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Buses</SelectItem>
-                  {buses?.map((bus: any) => (
+                  {Array.isArray(buses) && buses.map((bus: any) => (
                     <SelectItem key={bus.id} value={bus.id.toString()}>
                       {bus.number}
                     </SelectItem>
