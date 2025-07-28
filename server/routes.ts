@@ -909,7 +909,6 @@ export function registerRoutes(app: Express) {
   });
 
   app.delete("/api/buses/:id", async (req: Request, res: Response) => {
-```
     try {
       const user = (req.session as any)?.user;
       if (!user || (user.role !== "agency" && user.role !== "super_admin")) {
@@ -1136,7 +1135,7 @@ export function registerRoutes(app: Express) {
         for (const traveler of createdData) {
           await whatsappService.scheduleMessagesForTraveler(traveler.id);
         }
-        console.log(`✅ Scheduled WhatsApp messages for ${createdData.length} travelers`);
+        console.log(`Scheduled WhatsApp messages for ${createdData.length} travelers`);
       } catch (error) {
         console.error('Error scheduling WhatsApp messages:', error);
         // Continue with upload even if scheduling fails
@@ -1680,26 +1679,26 @@ export function registerRoutes(app: Express) {
       }
 
       // Create personalized test message
-      const personalizedMessage = `🎉 Dear ${traveler.travelerName},
+      const personalizedMessage = `Dear ${traveler.travelerName},
 
 Greetings from ${agency.name}! 
 
 This is a TEST MESSAGE from TravelFlow Admin.
 
-✅ Your booking details:
-🚌 Bus: ${bus?.name || 'Bus Service'}
-📍 Route: ${bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Route'}
-📅 Travel Date: ${traveler.travelDate ? new Date(traveler.travelDate).toLocaleDateString() : 'Travel Date'}
-🎟️ Your Coupon: ${traveler.couponCode}
+Your booking details:
+Bus: ${bus?.name || 'Bus Service'}
+Route: ${bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Route'}
+Travel Date: ${traveler.travelDate ? new Date(traveler.travelDate).toLocaleDateString() : 'Travel Date'}
+Your Coupon: ${traveler.couponCode}
 
-💰 Use your coupon for special discounts!
-🌐 Book at: ${agency.bookingWebsite || 'https://your-booking-website.com'}
+Use your coupon for special discounts!
+Book at: ${agency.bookingWebsite || 'https://your-booking-website.com'}
 
 This was a test message to verify WhatsApp delivery.
 
 To stop receiving messages, reply STOP.
 
-Happy Travels! 🌟`;
+Happy Travels!`;
 
       // Send via BhashSMS API with activated utility endpoint
       const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
@@ -1791,19 +1790,19 @@ Happy Travels! 🌟`;
         cleanPhone = cleanPhone.substring(2);
       }
 
-      const testMessage = message || `🎉 Greetings from ${agencyName || 'TravelFlow'}! 
+      const testMessage = message || `Greetings from ${agencyName || 'TravelFlow'}! 
 
 Thank you for choosing us for your travel needs. Here's your special coupon code: TRAVEL2025
 
-💰 Get 15% off on your next booking!
-🚌 Valid for all bus routes
-📅 Valid till 31st March 2025
+Get 15% off on your next booking!
+Valid for all bus routes
+Valid till 31st March 2025
 
 Book now at: https://your-booking-website.com
 
 To stop receiving messages, reply STOP.
 
-Happy Travels! 🌟`;
+Happy Travels!`;
 
       // Send via BhashSMS API with activated utility endpoint
       const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
@@ -1913,21 +1912,21 @@ Happy Travels! 🌟`;
             cleanPhone = cleanPhone.substring(2);
           }
 
-          const personalizedMessage = message || `🎉 Dear ${traveler.travelerName},
+          const personalizedMessage = message || `Dear ${traveler.travelerName},
 
 Greetings from ${agency.name}! 
 
 Thank you for traveling with us. Here's your exclusive coupon code: ${traveler.couponCode}
 
-💰 Get special discounts on your next booking!
-🚌 Valid for all our routes
-📅 Limited time offer
+Get special discounts on your next booking!
+Valid for all our routes
+Limited time offer
 
 Book now at: ${agency.bookingWebsite || 'https://your-booking-website.com'}
 
 To stop receiving messages, reply STOP.
 
-Happy Travels! 🌟`;
+Happy Travels!`;
 
           // Send via BhashSMS API with activated utility endpoint
           const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';

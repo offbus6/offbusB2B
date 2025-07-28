@@ -277,7 +277,7 @@ export class WhatsappService {
 
       // Check if message was sent successfully
       if (result.startsWith('S.')) {
-        console.log(`✅ WhatsApp message ${imageUrl ? 'with image ' : ''}sent successfully to ${cleanPhone}. ID: ${result}`);
+        console.log(`WhatsApp message ${imageUrl ? 'with image ' : ''}sent successfully to ${cleanPhone}. ID: ${result}`);
         return true;
       } else {
         // Log failed attempts for monitoring
@@ -294,7 +294,7 @@ export class WhatsappService {
           severity: 'MEDIUM'
         });
 
-        console.error(`❌ Failed to send WhatsApp message. Response: ${result}`);
+        console.error(`Failed to send WhatsApp message. Response: ${result}`);
         return false;
       }
     } catch (error) {
