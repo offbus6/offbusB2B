@@ -195,6 +195,16 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - Added comprehensive status tracking (sent, failed, pending, template_approval_pending)
 - System handles BhashSMS credential management (user=BhashWapAi, pass=bwap@123$, sender=BUZWAP)
 - Ready for production use once BhashSMS templates are approved by provider
+- **IMPLEMENTED: Manual WhatsApp Messaging System (July 28, 2025)**
+- Added manual WhatsApp send buttons for agencies (no automatic sending)
+- Created "Send WhatsApp to All" button that only sends to users without successful WhatsApp status
+- Individual send buttons for each traveler with status icons (send, sent, failed, retry)
+- Approved template system with dynamic variable replacement from database
+- Template: "Hi {{1}}, thanks for Traveling with us at {{2}}! Get 20% off on your next trip – use Coupon Code {{3}} 🚀 Valid for Next 90 days at: {{4}} ✨ Hurry Up."
+- Agencies can manually send messages after uploading data, with status tracking
+- System uses BhashSMS API with utility templates for approved messaging
+- Individual retry functionality for failed messages
+- WhatsApp status tracking (pending, sent, failed) with visual indicators
 - **PERMANENT FIX: Port conflict and backend restart issues (July 26, 2025)**
 - Fixed recurring EADDRINUSE port 5000 conflicts that occurred after code updates
 - Added graceful shutdown handlers for SIGTERM, SIGINT, and SIGUSR2 signals

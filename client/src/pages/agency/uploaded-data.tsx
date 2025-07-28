@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertTravelerDataSchema } from "@shared/schema";
-import { Search, Edit, Download, Trash2 } from "lucide-react";
+import { Search, Edit, Download, Trash2, MessageCircle, Send, CheckCircle, XCircle, Clock } from "lucide-react";
 import { z } from "zod";
 
 const travelerFormSchema = insertTravelerDataSchema.omit({ 
@@ -56,6 +56,54 @@ export default function UploadedData() {
   const { data: buses = [], isLoading: busesLoading } = useQuery({
     queryKey: ["/api/buses"],
     retry: false,
+  });
+
+  // WhatsApp send all mutation
+  const sendAllWhatsAppMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('/api/agency/whatsapp/send-all', {
+        method: 'POST'
+      });
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "WhatsApp Messages Sent",
+        description: data.message,
+        variant: data.success ? "default" : "destructive",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/traveler-data"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Send Messages",
+        description: error.message || "Failed to send WhatsApp messages",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // WhatsApp send individual mutation
+  const sendIndividualWhatsAppMutation = useMutation({
+    mutationFn: async (travellerId: number) => {
+      return await apiRequest(`/api/agency/whatsapp/send-individual/${travellerId}`, {
+        method: 'POST'
+      });
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: data.success ? "Message Sent" : "Message Failed",
+        description: data.message,
+        variant: data.success ? "default" : "destructive",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/traveler-data"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Send Message",
+        description: error.message || "Failed to send WhatsApp message",
+        variant: "destructive",
+      });
+    },
   });
 
   const updateTravelerMutation = useMutation({
@@ -270,6 +318,7 @@ export default function UploadedData() {
     return matchesSearch && matchesBus && matchesStatus && matchesDate;
   }) || [];
 
+  const unsentCount = filteredData.filter(t => !t.whatsappStatus || t.whatsappStatus === 'failed').length;
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
@@ -277,12 +326,30 @@ export default function UploadedData() {
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-[var(--airbnb-dark)] mb-2">
-          Uploaded Data
-        </h2>
-        <p className="text-[var(--airbnb-gray)]">
-          View and manage all uploaded traveler information
-        </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="text-3xl font-bold text-[var(--airbnb-dark)] mb-2">
+              Uploaded Data
+            </h2>
+            <p className="text-[var(--airbnb-gray)]">
+              View and manage all uploaded traveler information
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button 
+              onClick={() => sendAllWhatsAppMutation.mutate()} 
+              disabled={sendAllWhatsAppMutation.isPending || unsentCount === 0}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              {sendAllWhatsAppMutation.isPending ? 'Sending...' : `Send WhatsApp to All (${unsentCount})`}
+            </Button>
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -357,18 +424,9 @@ export default function UploadedData() {
       {/* Data Table */}
       <Card className="airbnb-shadow">
         <CardHeader className="border-b border-[var(--airbnb-border)]">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-xl font-semibold text-[var(--airbnb-dark)]">
-              Traveler Data
-            </CardTitle>
-            <Button
-              onClick={handleExport}
-              className="bg-[var(--airbnb-teal)] hover:bg-[var(--airbnb-teal)]/90 text-white"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
-          </div>
+          <CardTitle className="text-xl font-semibold text-[var(--airbnb-dark)]">
+            Traveler Data ({filteredData.length} total, {unsentCount} unsent WhatsApp)
+          </CardTitle>
         </CardHeader>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -433,6 +491,42 @@ export default function UploadedData() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
+                        {(!traveler.whatsappStatus || traveler.whatsappStatus === 'failed') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => sendIndividualWhatsAppMutation.mutate(traveler.id)}
+                            disabled={sendIndividualWhatsAppMutation.isPending}
+                            className="text-green-600 hover:text-green-700"
+                            title="Send WhatsApp Message"
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {traveler.whatsappStatus === 'sent' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled
+                            className="text-green-600"
+                            title="Message Already Sent"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {traveler.whatsappStatus === 'failed' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => sendIndividualWhatsAppMutation.mutate(traveler.id)}
+                            disabled={sendIndividualWhatsAppMutation.isPending}
+                            className="text-orange-600 hover:text-orange-700 mr-1"
+                            title="Retry WhatsApp Message"
+                          >
+                            <XCircle className="w-3 h-3" />
+                            <Send className="w-3 h-3 ml-1" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
