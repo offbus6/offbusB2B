@@ -61,6 +61,11 @@ export default function Sidebar() {
       icon: MessageSquare, 
       label: "WhatsApp Testing" 
     },
+    { 
+      href: "/admin/whatsapp-test", 
+      icon: MessageSquare, 
+      label: "WhatsApp Test Tool" 
+    },
   ];
 
   const agencyNavItems = [

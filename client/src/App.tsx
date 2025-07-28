@@ -65,6 +65,7 @@ function AppContent() {
                   <Route path="/admin/agencies/:id" component={AgencyDetails} />
                   <Route path="/admin/whatsapp-config" component={WhatsappConfig} />
                   <Route path="/admin/whatsapp-testing" component={WhatsAppTesting} />
+                  <Route path="/admin/whatsapp-test" component={WhatsAppTest} />
                   <Route path="/admin/profile" component={AdminProfile} />
                   <Route path="/admin/accounts" component={AdminAccounts} />
                   <Route path="/admin/user-data" component={AdminUserData} />
