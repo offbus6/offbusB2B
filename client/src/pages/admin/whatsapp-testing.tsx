@@ -22,6 +22,7 @@ export default function WhatsAppTesting() {
   const [testMessage, setTestMessage] = useState("");
   const [testImageUrl, setTestImageUrl] = useState("");
   const [selectedAgencyForBulk, setSelectedAgencyForBulk] = useState("");
+  const [selectedDatabaseUser, setSelectedDatabaseUser] = useState("");
 
   // Bulk testing state
   const [bulkMessage, setBulkMessage] = useState("");
@@ -89,6 +90,33 @@ export default function WhatsAppTesting() {
       toast({
         title: "Bulk WhatsApp Test Failed",
         description: error.message || "Failed to send bulk messages",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Database user test mutation  
+  const testDatabaseUserMutation = useMutation({
+    mutationFn: async ({ userId }: { userId: number }) => {
+      return await apiRequest('/api/admin/whatsapp/test-database-user', {
+        method: 'POST',
+        body: JSON.stringify({ userId }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/user-data"] });
+      toast({
+        title: data.success ? "Database User Test Completed" : "Database User Test Issue",
+        description: data.message,
+        variant: data.success ? "default" : "destructive",
+      });
+      setSelectedDatabaseUser("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Database User Test Failed",
+        description: error.message || "Failed to send test message to database user",
         variant: "destructive",
       });
     },
@@ -265,6 +293,50 @@ export default function WhatsAppTesting() {
                   {testWhatsAppMutation.isPending ? "Sending..." : testImageUrl ? "Send Test Message with Image" : "Send Test Message"}
                   {testImageUrl ? <Image className="ml-2 h-4 w-4" /> : <Send className="ml-2 h-4 w-4" />}
                 </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="database" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Database User Test
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Select User from Database</label>
+                <Select value={selectedDatabaseUser} onValueChange={setSelectedDatabaseUser}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a traveler..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.isArray(userData) && userData.map((traveler: any) => (
+                      <SelectItem key={traveler.id} value={traveler.id.toString()}>
+                        {traveler.travelerName} - {traveler.phone} ({traveler.agencyName})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Alert>
+                <MessageSquare className="h-4 w-4" />
+                <AlertDescription>
+                  This will send a personalized test message to the selected traveler using their actual data (name, agency, bus, coupon code).
+                </AlertDescription>
+              </Alert>
+              <Button
+                onClick={() => testDatabaseUserMutation.mutate({ 
+                  userId: parseInt(selectedDatabaseUser)
+                })}
+                disabled={!selectedDatabaseUser || testDatabaseUserMutation.isPending}
+                className="w-full bg-purple-600 hover:bg-purple-700"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                {testDatabaseUserMutation.isPending ? "Sending..." : "Test Selected User"}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

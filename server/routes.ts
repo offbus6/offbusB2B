@@ -1645,7 +1645,14 @@ export function registerRoutes(app: Express) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const { userId } = req.body;
+      let body;
+      try {
+        body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      } catch (parseError) {
+        return res.status(400).json({ message: "Invalid JSON format" });
+      }
+
+      const { userId } = body;
 
       if (!userId) {
         return res.status(400).json({ message: "User ID is required" });
