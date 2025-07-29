@@ -1805,16 +1805,17 @@ To stop receiving messages, reply STOP.
 
 Happy Travels!`;
 
-      // Send via BhashSMS API with activated utility endpoint
-      const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
+      // Send via BhashSMS API with new endpoint
+      const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
       const params = new URLSearchParams({
-        user: 'BhashWapAi',
-        pass: 'bwap@123$',
+        user: 'eddygoo1',
+        pass: '123456',
         sender: 'BUZWAP',
         phone: cleanPhone,
         text: testMessage,
         priority: 'wa',
-        stype: 'utility'  // Templates are now approved
+        stype: 'normal',
+        Params: '54,877,966,52'
       });
 
       // Add image parameters if image URL is provided
@@ -2189,16 +2190,17 @@ Happy Travels!`;
       // Default test message if none provided
       const testMessage = message || "Test message from TravelFlow WhatsApp system - Hello from BhashSMS API!";
 
-      // Use your exact API credentials and endpoint
-      const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
+      // Use the new BhashSMS API endpoint and credentials
+      const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
       const params = new URLSearchParams({
-        user: 'BhashWapAi',
-        pass: 'bwap@123$',
+        user: 'eddygoo1',
+        pass: '123456',
         sender: 'BUZWAP',
         phone: cleanPhone,
         text: testMessage,
         priority: 'wa',
-        stype: 'utility'
+        stype: 'normal',
+        Params: '54,877,966,52'
       });
 
       // Add image parameters if image URL is provided

@@ -30,16 +30,17 @@ export async function testWhatsAppMessage(
       finalPhone = cleanPhone.substring(2);
     }
 
-    // Use the approved BhashSMS API endpoint
-    const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
+    // Use the new BhashSMS API endpoint with updated credentials
+    const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
     const params = new URLSearchParams({
-      user: 'BhashWapAi',
-      pass: 'bwap@123$',
+      user: 'eddygoo1',
+      pass: '123456',
       sender: 'BUZWAP',
       phone: finalPhone,
       text: message,
       priority: 'wa',
-      stype: 'utility'
+      stype: 'normal',
+      Params: '54,877,966,52'
     });
 
     // Add image parameters if provided
@@ -69,12 +70,8 @@ export async function testWhatsAppMessage(
 
     if (response.ok) {
       // Parse response to check if message was sent successfully
-      const isSuccess = responseText.toLowerCase().includes('success') || 
-                       responseText.toLowerCase().includes('sent') ||
-                       responseText.toLowerCase().includes('delivered') ||
-                       responseText.toLowerCase().includes('queued') ||
-                       (!responseText.toLowerCase().includes('error') && 
-                        !responseText.toLowerCase().includes('fail'));
+      // BhashSMS returns "S.XXXXXX" for successful messages
+      const isSuccess = responseText.trim().startsWith('S.');
 
       if (isSuccess) {
         console.log('=== WhatsApp Message Sent Successfully ===');
@@ -139,9 +136,9 @@ export async function sendWhatsAppToTraveler(
  * Test WhatsApp with image using the provided example
  */
 export async function testWhatsAppWithImage(phone: string): Promise<WhatsAppTestResult> {
-  const message = 'bsl_image';
+  const message = 'eddygoo_2807';
   const imageUrl = 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
   
-  console.log('Testing WhatsApp with image...');
+  console.log('Testing WhatsApp with image using updated API...');
   return await testWhatsAppMessage(phone, message, imageUrl);
 }

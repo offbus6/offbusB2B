@@ -229,14 +229,16 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - Text messages require pre-approved utility templates (documentation updated)
 - Added comprehensive WhatsApp testing system with real API responses
 
-## BhashSMS API Configuration (ACTIVE)
-- **API URL:** http://bhashsms.com/api/sendmsgutil.php
-- **User:** BhashWapAi
-- **Password:** bwap@123$
+## BhashSMS API Configuration (UPDATED & ACTIVE)
+- **API URL:** http://bhashsms.com/api/sendmsg.php
+- **User:** eddygoo1
+- **Password:** 123456
 - **Sender:** BUZWAP
-- **Status:** APPROVED and WORKING ✅
-- **Image Messaging:** Fully functional
-- **Text Messaging:** Requires utility templates
+- **Parameters:** 54,877,966,52
+- **Status:** FULLY WORKING ✅
+- **Text Messaging:** Fully functional (S.496827 confirmed)
+- **Image Messaging:** Fully functional (S.155793 confirmed)
+- **Template Support:** Both text and image messages working
 
 ## Test Agency Credentials
 For testing the agency login and features:
