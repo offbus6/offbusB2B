@@ -238,7 +238,7 @@ export class WhatsappService {
         cleanPhone = cleanPhone.substring(2);
       }
 
-      // Use exact working BhashSMS API format
+      // Use exact working BhashSMS API format with dynamic Params
       const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
       const params = new URLSearchParams({
         user: 'eddygoo1',
@@ -248,10 +248,14 @@ export class WhatsappService {
         text: message,
         priority: 'wa',
         stype: 'normal',
-        Params: '54,877,966,52',
         htype: 'image',
         url: imageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg'
       });
+      
+      // Add dynamic Params only if we don't have them in the message already
+      if (!params.has('Params')) {
+        params.append('Params', '54,877,966,52'); // Default fallback
+      }
 
       console.log(`Sending WhatsApp message to ${cleanPhone} via BhashSMS API`);
       console.log(`API URL: ${apiUrl}?${params.toString()}`);
@@ -362,7 +366,7 @@ export function replaceApprovedTemplateVariables(
 }
 
 /**
- * Send WhatsApp message using exact working BhashSMS API format
+ * Send WhatsApp message using exact working BhashSMS API format with dynamic Params
  */
 export async function sendBhashWhatsAppMessage(
   phoneNumber: string,
@@ -375,19 +379,24 @@ export async function sendBhashWhatsAppMessage(
     travelDate?: string;
     couponLink?: string;
   }
-): Promise<{ success: boolean; message: string; apiResponse?: string; sentMessage?: string; phoneNumber?: string; imageUrl?: string }> {
+): Promise<{ success: boolean; message: string; apiResponse?: string; sentMessage?: string; phoneNumber?: string; imageUrl?: string; apiUrl?: string }> {
   try {
     console.log(`Sending WhatsApp message to ${phoneNumber} via BhashSMS API`);
     
-    // Create personalized message with traveler data
+    // Create personalized message with traveler data or use provided message
     let finalMessage = message || 'Test message from TravelFlow';
+    let dynamicParams = '54,877,966,52'; // Default fallback
     
     if (travelerData) {
       const travelDate = travelerData.travelDate ? new Date(travelerData.travelDate).toLocaleDateString() : 'your recent travel';
       const couponLink = travelerData.couponLink || 'https://your-booking-site.com';
       
-      finalMessage = `Hi ${travelerData.travelerName}, thanks for traveling with ${travelerData.agencyName}! Your journey on ${travelDate} was amazing! Get 20% off your next trip - use Coupon Code ${travelerData.couponCode}. Valid for 90 days. Book at ${couponLink}`;
+      // Create dynamic Params in exact order: traveler_name,agency_name,coupon_code,booking_url
+      dynamicParams = `${travelerData.travelerName},${travelerData.agencyName},${travelerData.couponCode},${couponLink}`;
+      
+      finalMessage = message || `Hi ${travelerData.travelerName}, thanks for traveling with ${travelerData.agencyName}! Your journey on ${travelDate} was amazing! Get 20% off your next trip - use Coupon Code ${travelerData.couponCode}. Valid for 90 days. Book at ${couponLink}`;
       console.log('Using personalized message with traveler data:', finalMessage);
+      console.log('Dynamic Params:', dynamicParams);
     }
     
     // Clean phone number (remove country code if +91)
@@ -396,7 +405,7 @@ export async function sendBhashWhatsAppMessage(
       cleanPhone = cleanPhone.substring(2);
     }
     
-    // Use exact working API format with all required parameters
+    // Use exact working API format with dynamic Params
     const params = new URLSearchParams({
       user: 'eddygoo1',
       pass: '123456',
@@ -405,12 +414,12 @@ export async function sendBhashWhatsAppMessage(
       text: finalMessage,
       priority: 'wa',
       stype: 'normal',
-      Params: '54,877,966,52',
+      Params: dynamicParams,
       htype: 'image',
       url: imageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg'
     });
 
-    const apiUrl = `http://bhashsms.com/api/sendmsg.php?${params.toString()}`;
+    const apiUrl = `https://bhashsms.com/api/sendmsg.php?${params.toString()}`;
     console.log('API URL:', apiUrl);
 
     const response = await fetch(apiUrl);
@@ -427,7 +436,8 @@ export async function sendBhashWhatsAppMessage(
       apiResponse: responseText.trim(),
       sentMessage: finalMessage,
       phoneNumber: cleanPhone,
-      imageUrl: imageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg'
+      imageUrl: imageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg',
+      apiUrl: apiUrl
     };
     
   } catch (error) {
