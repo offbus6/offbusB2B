@@ -253,16 +253,16 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - Recent successful sends: S.835969 (Hari batch), S.238923 (Hari test), S.814148, S.669098, S.165772
 - All technical components verified and working correctly
 - WhatsApp configuration added to database, batch messaging operational
-- **IMPLEMENTED: Profile-Based Dynamic WhatsApp System (July 29, 2025)**
-- Added booking website URL and WhatsApp image URL fields to agency profile page
-- Updated database schema with whatsapp_image_url column for agencies table
-- Modified /api/test/bhash-whatsapp endpoint to use dynamic agency profile data
-- System now fetches booking URL and image URL from agency profiles instead of hardcoded values
-- API format with profile data: https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=[NUMBER]&text=[MESSAGE]&priority=wa&stype=normal&Params=[TRAVELER],[AGENCY],[COUPON],[PROFILE_BOOKING_URL]&htype=image&url=[PROFILE_IMAGE_URL]
-- Recent successful tests: S.748200 (Shubin with profile data), S.453949 (Hari with profile data)
-- Dynamic Params now pull from agency profiles: Shubin,Intercity Travels,Save10,https://intercitytravels.com/book
-- All WhatsApp messages use agency-specific booking and image URLs from their profile settings
-- Agencies can now customize their booking website and WhatsApp image through profile page
+- **FIXED: URL Encoding and Profile Display Issues (July 29, 2025)**
+- Fixed HTML encoding issue where URLs were stored as `&#x2F;` instead of plain text
+- Removed duplicate "Website (optional)" field from agency profile form
+- Updated backend URL validation to use proper URL validation instead of HTML escaping
+- Backend now stores and returns clean URLs: `https://book.testtravelagency.com`
+- Fixed profile form to display current booking website and WhatsApp image URLs from database
+- Enhanced agency signup and update routes with proper URL validation
+- System verified working with clean URLs: API test S.612763 successful
+- Profile page now shows both fields with their actual database values
+- All WhatsApp messaging uses clean, unescaped URLs from agency profiles
 
 ## BhashSMS API Configuration (UPDATED & ACTIVE)
 - **API URL:** http://bhashsms.com/api/sendmsg.php

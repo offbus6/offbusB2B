@@ -410,6 +410,28 @@ export function registerRoutes(app: Express) {
         }
       }
 
+      // URL validation for booking website and logo URL
+      let validatedBookingWebsite = undefined;
+      let validatedLogoUrl = undefined;
+      
+      if (mappedData.bookingWebsite) {
+        const bookingWebsite = mappedData.bookingWebsite.trim();
+        if (validator.isURL(bookingWebsite, { protocols: ['http', 'https'] })) {
+          validatedBookingWebsite = bookingWebsite;
+        } else {
+          return res.status(400).json({ message: "Invalid booking website URL format" });
+        }
+      }
+      
+      if (mappedData.logoUrl) {
+        const logoUrl = mappedData.logoUrl.trim();
+        if (validator.isURL(logoUrl, { protocols: ['http', 'https'] })) {
+          validatedLogoUrl = logoUrl;
+        } else {
+          return res.status(400).json({ message: "Invalid logo URL format" });
+        }
+      }
+
       // Create agency with proper data structure
       const agencyData = {
         userId: `agency_${Date.now()}`, // Generate a temporary userId
@@ -420,8 +442,8 @@ export function registerRoutes(app: Express) {
         city: sanitizeInput(mappedData.city),
         state: mappedData.state ? sanitizeInput(mappedData.state) : undefined,
         website: mappedData.website ? sanitizeInput(mappedData.website) : undefined,
-        bookingWebsite: mappedData.bookingWebsite ? sanitizeInput(mappedData.bookingWebsite) : undefined,
-        logoUrl: mappedData.logoUrl ? sanitizeInput(mappedData.logoUrl) : undefined,
+        bookingWebsite: validatedBookingWebsite,
+        logoUrl: validatedLogoUrl,
         password: mappedData.password,
         status: "pending" as const
       };
@@ -2105,6 +2127,28 @@ Happy Travels!`;
         }
       }
 
+      // URL validation for booking website and WhatsApp image URL
+      let validatedBookingWebsite = undefined;
+      let validatedWhatsappImageUrl = undefined;
+      
+      if (req.body.bookingWebsite) {
+        const bookingWebsite = req.body.bookingWebsite.trim();
+        if (validator.isURL(bookingWebsite, { protocols: ['http', 'https'] })) {
+          validatedBookingWebsite = bookingWebsite;
+        } else {
+          return res.status(400).json({ message: "Invalid booking website URL format" });
+        }
+      }
+      
+      if (req.body.whatsappImageUrl) {
+        const whatsappImageUrl = req.body.whatsappImageUrl.trim();
+        if (validator.isURL(whatsappImageUrl, { protocols: ['http', 'https'] })) {
+          validatedWhatsappImageUrl = whatsappImageUrl;
+        } else {
+          return res.status(400).json({ message: "Invalid WhatsApp image URL format" });
+        }
+      }
+
       const updateData = {
         name: name ? sanitizeInput(name) : undefined,
         email: email ? sanitizeInput(email) : undefined,
@@ -2113,8 +2157,8 @@ Happy Travels!`;
         city: city ? sanitizeInput(city) : undefined,
         state: state ? sanitizeInput(state) : undefined,
         website: website ? sanitizeInput(website) : undefined,
-        bookingWebsite: req.body.bookingWebsite ? sanitizeInput(req.body.bookingWebsite) : undefined,
-        whatsappImageUrl: req.body.whatsappImageUrl ? sanitizeInput(req.body.whatsappImageUrl) : undefined,
+        bookingWebsite: validatedBookingWebsite,
+        whatsappImageUrl: validatedWhatsappImageUrl,
       };
 
       // Remove undefined values
@@ -2124,13 +2168,21 @@ Happy Travels!`;
 
       await storage.updateAgency(agencyId, updateData);
 
-      // Update session with new data
+      // Update session with fresh agency data from database
       if (req.session) {
         const updatedAgency = await storage.getAgencyById(agencyId);
         if (updatedAgency) {
           (req.session as any).user.agency = {
-            ...user.agency,
-            ...updateData
+            id: updatedAgency.id,
+            name: updatedAgency.name,
+            email: updatedAgency.email,
+            status: updatedAgency.status,
+            contactPerson: updatedAgency.contactPerson,
+            phone: updatedAgency.phone,
+            city: updatedAgency.city,
+            state: updatedAgency.state,
+            bookingWebsite: updatedAgency.bookingWebsite,
+            whatsappImageUrl: updatedAgency.whatsappImageUrl
           };
         }
       }
