@@ -2560,50 +2560,50 @@ Happy Travels!`;
       // Get upload history for this agency
       const uploadHistory = await storage.getUploadHistory(agencyId);
       
-      // Group by upload date and calculate WhatsApp status
-      const batchMap = new Map();
+      // Create batches from actual upload history records
+      const batches = [];
       
       for (const upload of uploadHistory) {
-        const uploadDate = upload.createdAt ? upload.createdAt.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]; // Group by date
-        const key = `${uploadDate}_${upload.busId}`;
+        // Get bus info
+        const bus = await storage.getBus(upload.busId);
         
-        if (!batchMap.has(key)) {
-          // Get bus info
-          const bus = await storage.getBus(upload.busId);
-          
-          // Get all travelers for this upload
-          const travelers = await storage.getTravelerDataByUpload(upload.id);
-          
-          // Calculate WhatsApp status
-          const sentCount = travelers.filter(t => t.whatsappStatus === 'sent').length;
-          const totalCount = travelers.length;
-          
-          let whatsappStatus: 'pending' | 'sent' | 'partial' = 'pending';
-          if (sentCount === totalCount && totalCount > 0) {
-            whatsappStatus = 'sent';
-          } else if (sentCount > 0) {
-            whatsappStatus = 'partial';
-          }
-          
-          // Get unique routes and coupons
-          const routeSet = new Set(travelers.map(t => bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Unknown Route'));
-          const couponSet = new Set(travelers.map(t => t.couponCode).filter(Boolean));
-          const routes = Array.from(routeSet);
-          const coupons = Array.from(couponSet);
-          
-          batchMap.set(key, {
-            uploadId: upload.id,
-            uploadDate: upload.createdAt || new Date(),
-            travelerCount: totalCount,
-            routes,
-            coupons,
-            whatsappStatus,
-            sentCount
-          });
+        // Get all travelers for this specific upload
+        const travelers = await storage.getTravelerDataByUpload(upload.id);
+        
+        if (travelers.length === 0) continue; // Skip empty uploads
+        
+        // Calculate WhatsApp status
+        const sentCount = travelers.filter(t => t.whatsappStatus === 'sent').length;
+        const totalCount = travelers.length;
+        
+        let whatsappStatus: 'pending' | 'sent' | 'partial' = 'pending';
+        if (sentCount === totalCount && totalCount > 0) {
+          whatsappStatus = 'sent';
+        } else if (sentCount > 0) {
+          whatsappStatus = 'partial';
         }
+        
+        // Get unique routes and coupons for this specific upload
+        const routeSet = new Set(travelers.map(t => bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Unknown Route'));
+        const couponSet = new Set(travelers.map(t => t.couponCode).filter(Boolean));
+        const routes = Array.from(routeSet);
+        const coupons = Array.from(couponSet);
+        
+        batches.push({
+          uploadId: upload.id, // Use actual upload ID instead of batch format
+          uploadDate: upload.createdAt || new Date(),
+          travelerCount: totalCount,
+          routes,
+          coupons,
+          whatsappStatus,
+          sentCount,
+          fileName: upload.fileName, // Add filename for better identification
+          busName: bus?.name || 'Unknown Bus'
+        });
       }
       
-      const batches = Array.from(batchMap.values()).sort((a, b) => 
+      // Sort batches by upload date (newest first)
+      batches.sort((a, b) => 
         new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
       );
       
@@ -2629,26 +2629,25 @@ Happy Travels!`;
         return res.status(404).json({ error: 'Agency not found' });
       }
 
-      // Extract date from uploadId (format: batch_YYYYMMDD)
-      const dateStr = uploadId.replace('batch_', '');
-      const uploadDate = `${dateStr.slice(0,4)}-${dateStr.slice(4,6)}-${dateStr.slice(6,8)}`;
+      // Get travelers for this specific upload ID only
+      const uploadIdNum = parseInt(uploadId);
+      if (isNaN(uploadIdNum)) {
+        return res.status(400).json({ error: 'Invalid upload ID' });
+      }
       
-      // Get all travelers for this upload date that haven't been sent WhatsApp
-      const allTravelers = await storage.getTravelerDataByAgency(agencyId);
-      const batchTravelers = allTravelers.filter(t => {
-        const travelerUploadDate = t.createdAt ? new Date(t.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-        return travelerUploadDate === uploadDate && t.whatsappStatus !== 'sent';
-      });
+      // Get travelers for this specific upload that haven't been sent WhatsApp
+      const batchTravelers = await storage.getTravelerDataByUpload(uploadIdNum);
+      const pendingTravelers = batchTravelers.filter(t => t.whatsappStatus !== 'sent');
 
-      if (batchTravelers.length === 0) {
+      if (pendingTravelers.length === 0) {
         return res.json({ success: true, message: 'No pending travelers to send WhatsApp', sentCount: 0 });
       }
 
       let sentCount = 0;
       const agency = user.agency;
 
-      // Send WhatsApp to each traveler
-      for (const traveler of batchTravelers) {
+      // Send WhatsApp to each pending traveler in this specific upload
+      for (const traveler of pendingTravelers) {
         try {
           // Clean phone number
           const cleanPhone = traveler.phone.replace(/\D/g, '');
@@ -2698,7 +2697,7 @@ Happy Travels!`;
         success: true, 
         message: `WhatsApp messages sent successfully to ${sentCount} travelers`,
         sentCount,
-        totalCount: batchTravelers.length
+        totalCount: pendingTravelers.length
       });
 
     } catch (error) {

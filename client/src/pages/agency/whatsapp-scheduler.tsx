@@ -16,6 +16,8 @@ interface UploadBatch {
   coupons: string[];
   whatsappStatus: 'pending' | 'sent' | 'partial';
   sentCount: number;
+  fileName?: string;
+  busName?: string;
 }
 
 export default function WhatsAppScheduler() {
