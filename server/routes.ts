@@ -2915,7 +2915,13 @@ Hurry Up!`;
           // Create simplified message for better delivery
           const message = `Hi ${traveler.travelerName}, thanks for traveling with ${agency.name}! Get 20% off your next trip with code ${traveler.couponCode || 'SAVE20'}. Valid for 90 days. Book at ${agency.website || agency.bookingWebsite || 'our website'}`;
 
-          console.log(`Sending WhatsApp to ${traveler.travelerName} at +91${finalPhone}`);
+          console.log('=== WHATSAPP BATCH SEND DEBUG ===');
+          console.log(`Traveler: ${traveler.travelerName}`);
+          console.log(`Original Phone: ${traveler.phone}`);
+          console.log(`Cleaned Phone: ${cleanPhone}`);
+          console.log(`Final Phone: +91${finalPhone}`);
+          console.log(`Message Length: ${message.length} chars`);
+          console.log(`Message: ${message}`);
 
           try {
             // Send via BhashSMS API with timeout
@@ -2945,12 +2951,18 @@ Hurry Up!`;
             clearTimeout(timeoutId);
             const responseText = await response.text().then(text => text.trim());
             
-            console.log(`WhatsApp API Response for ${finalPhone}:`, responseText);
+            console.log(`API Response Status: ${response.status}`);
+            console.log(`API Response OK: ${response.ok}`);
+            console.log(`Raw API Response: "${responseText}"`);
+            console.log(`Response Length: ${responseText.length}`);
+            console.log(`Starts with S.: ${responseText.startsWith('S.')}`);
+            console.log(`Full API URL: ${apiUrl}?${params.toString()}`);
 
             // More strict success checking
             if (response.ok && responseText.startsWith('S.') && responseText.length > 2) {
               const messageId = responseText;
-              console.log(`✅ WhatsApp sent successfully to ${traveler.travelerName} (+91${finalPhone}): ${messageId}`);
+              console.log(`✅ SUCCESS: WhatsApp sent to ${traveler.travelerName} (+91${finalPhone}) - Message ID: ${messageId}`);
+              console.log(`⚠️  IMPORTANT: User should receive WhatsApp message at +91${finalPhone} in 1-2 minutes`);
               await storage.updateTravelerData(traveler.id, { whatsappStatus: 'sent' });
               sentCount++;
             } else {
