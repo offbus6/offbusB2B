@@ -21,6 +21,7 @@ import {
 } from "./security-config";
 import { securityMonitor, createSecurityMiddleware } from "./security-monitor";
 import { whatsappService, sendBhashWhatsAppMessage, replaceApprovedTemplateVariables } from "./whatsapp-service";
+import { testWhatsAppMessage, sendWhatsAppToTraveler, testWhatsAppWithImage } from "./whatsapp-test";
 
 // Rate limiting configurations from security config
 const authLimiter = createAuthLimiter();
@@ -2462,6 +2463,81 @@ Happy Travels!`;
       res.status(500).json({ 
         success: false, 
         message: "Internal server error" 
+      });
+    }
+  });
+
+  // Simple WhatsApp Test Endpoint
+  app.post("/api/whatsapp/test-message", async (req: Request, res: Response) => {
+    try {
+      console.log("=== WhatsApp Test Request ===");
+      const { phone, message, imageUrl } = req.body;
+
+      if (!phone || !message) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Phone number and message are required" 
+        });
+      }
+
+      const result = await testWhatsAppMessage(phone, message, imageUrl);
+      
+      console.log("Test result:", result);
+      res.json(result);
+
+    } catch (error) {
+      console.error("WhatsApp test endpoint error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Unknown error occurred" 
+      });
+    }
+  });
+
+  // Test WhatsApp with Traveler Template
+  app.post("/api/whatsapp/test-traveler", async (req: Request, res: Response) => {
+    try {
+      const { travelerName, agencyName, couponCode, bookingWebsite, phone } = req.body;
+
+      if (!travelerName || !agencyName || !couponCode || !bookingWebsite || !phone) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "All fields are required: travelerName, agencyName, couponCode, bookingWebsite, phone" 
+        });
+      }
+
+      const result = await sendWhatsAppToTraveler(travelerName, agencyName, couponCode, bookingWebsite, phone);
+      res.json(result);
+
+    } catch (error) {
+      console.error("WhatsApp traveler test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Unknown error occurred" 
+      });
+    }
+  });
+
+  // Test WhatsApp with Image (using your provided example)
+  app.post("/api/whatsapp/test-image", async (req: Request, res: Response) => {
+    try {
+      const { phone } = req.body;
+
+      if (!phone) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Phone number is required" 
+        });
+      }
+
+      const result = await testWhatsAppWithImage(phone);
+      res.json(result);
+
+    } catch (error) {
+      console.error("WhatsApp image test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Unknown error occurred" 
       });
     }
   });
