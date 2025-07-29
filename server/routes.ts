@@ -2307,18 +2307,31 @@ Happy Travels!`;
 
       for (const traveler of unsentTravelers) {
         try {
+          // Get bus information for route details
+          const bus = await storage.getBus(traveler.busId);
+          
           // Clean phone number
           let cleanPhone = traveler.phone.replace(/\D/g, '');
           if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
             cleanPhone = cleanPhone.substring(2);
           }
 
-          // Replace template variables with actual data
-          const personalizedMessage = approvedTemplate
-            .replace('{{1}}', traveler.travelerName)
-            .replace('{{2}}', agency.name)
-            .replace('{{3}}', traveler.couponCode || 'SAVE20')
-            .replace('{{4}}', agency.bookingWebsite || 'https://your-booking-site.com');
+          // Create fully dynamic personalized message with route information
+          const route = bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'your route';
+          const busName = bus ? bus.name : 'Bus Service';
+          const travelDate = traveler.travelDate ? new Date(traveler.travelDate).toLocaleDateString() : '';
+          
+          const personalizedMessage = `Hi ${traveler.travelerName}, thanks for traveling with us at ${agency.name}! 
+          
+Your ${route} journey on ${busName} (${travelDate}) was amazing! 🚌
+
+Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 
+
+Valid for Next 90 days at: ${agency.website || agency.bookingWebsite || 'https://testtravelagency.com'} ✨ 
+
+Book your next ${route} trip or explore new routes! 
+
+Hurry Up!`;
 
           // Send via BhashSMS API
           const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
@@ -2423,13 +2436,25 @@ Happy Travels!`;
         cleanPhone = cleanPhone.substring(2);
       }
 
-      // Create personalized message
-      const approvedTemplate = "Hi {{1}}, thanks for Traveling with us at {{2}}! Get 20% off on your next trip – use Coupon Code {{3}} 🚀 Valid for Next 90 days at: {{4}} ✨ Hurry Up.";
-      const personalizedMessage = approvedTemplate
-        .replace('{{1}}', traveler.travelerName)
-        .replace('{{2}}', agency.name)
-        .replace('{{3}}', traveler.couponCode || 'SAVE20')
-        .replace('{{4}}', agency.bookingWebsite || 'https://your-booking-site.com');
+      // Get bus information for route details
+      const bus = await storage.getBus(traveler.busId);
+      
+      // Create fully dynamic personalized message with route information
+      const route = bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'your route';
+      const busName = bus ? bus.name : 'Bus Service';
+      const travelDate = traveler.travelDate ? new Date(traveler.travelDate).toLocaleDateString() : '';
+      
+      const personalizedMessage = `Hi ${traveler.travelerName}, thanks for traveling with us at ${agency.name}! 
+      
+Your ${route} journey on ${busName} (${travelDate}) was amazing! 🚌
+
+Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 
+
+Valid for Next 90 days at: ${agency.website || agency.bookingWebsite || 'https://testtravelagency.com'} ✨ 
+
+Book your next ${route} trip or explore new routes! 
+
+Hurry Up!`;
 
       // Send via BhashSMS API
       const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
@@ -2664,6 +2689,9 @@ Happy Travels!`;
       // Send WhatsApp to each pending traveler in this specific upload
       for (const traveler of pendingTravelers) {
         try {
+          // Get bus information for this traveler's route
+          const bus = await storage.getBus(traveler.busId);
+          
           // Clean phone number
           const cleanPhone = traveler.phone.replace(/\D/g, '');
           let finalPhone = cleanPhone;
@@ -2671,8 +2699,22 @@ Happy Travels!`;
             finalPhone = cleanPhone.substring(2);
           }
 
-          // Create personalized message
-          const message = `Hi ${traveler.travelerName}, thanks for Traveling with us at ${agency.name}! Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 Valid for Next 90 days at: ${agency.website || 'https://testtravelagency.com'} ✨ Hurry Up.`;
+          // Create fully dynamic personalized message with route information
+          const route = bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'your route';
+          const busName = bus ? bus.name : 'Bus Service';
+          const travelDate = traveler.travelDate ? new Date(traveler.travelDate).toLocaleDateString() : '';
+          
+          const message = `Hi ${traveler.travelerName}, thanks for traveling with us at ${agency.name}! 
+          
+Your ${route} journey on ${busName} (${travelDate}) was amazing! 🚌
+
+Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 
+
+Valid for Next 90 days at: ${agency.website || agency.bookingWebsite || 'https://testtravelagency.com'} ✨ 
+
+Book your next ${route} trip or explore new routes! 
+
+Hurry Up!`;
 
           // Send via BhashSMS API
           const apiUrl = 'http://bhashsms.com/api/sendmsg.php';

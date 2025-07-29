@@ -237,6 +237,17 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - Fixed all WhatsApp API endpoints to use working credentials (eddygoo1/123456) instead of failing ones
 - Now WhatsApp Scheduler sends messages only to the specific upload batch selected, not all data from that date
 - API test confirmation: S.388703 - all endpoints working correctly with proper batch isolation
+- **IMPLEMENTED: Fully Dynamic WhatsApp Message System (July 29, 2025)**
+- All WhatsApp messages now pull dynamic data from database for each user:
+  * Traveler Name: From uploaded traveler data (td.traveler_name)
+  * Agency Name: From agency database (a.name)  
+  * Route Information: From bus data (b.from_location to b.to_location)
+  * Bus Name: From bus data (b.name)
+  * Travel Date: From traveler data (td.travel_date)
+  * Coupon Code: From traveler's specific coupon (td.coupon_code)
+  * Booking Website: From agency's website URL (a.website or a.booking_website)
+- Template format: "Hi [Name], thanks for traveling with us at [Agency]! Your [Route] journey on [Bus] ([Date]) was amazing! Get 20% off - use Coupon Code [Coupon] at [Website]"
+- API test confirmation: S.213166 - dynamic personalization working correctly
 
 ## BhashSMS API Configuration (UPDATED & ACTIVE)
 - **API URL:** http://bhashsms.com/api/sendmsg.php
