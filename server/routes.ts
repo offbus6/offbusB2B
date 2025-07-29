@@ -2630,7 +2630,7 @@ Hurry Up!`;
         const coupons = Array.from(couponSet);
         
         batches.push({
-          uploadId: upload.id, // Use actual upload ID instead of batch format
+          uploadId: upload.id.toString(), // Ensure it's a string for consistency
           uploadDate: upload.createdAt || new Date(),
           travelerCount: totalCount,
           routes,
@@ -2640,6 +2640,64 @@ Hurry Up!`;
           fileName: upload.fileName, // Add filename for better identification
           busName: bus?.name || 'Unknown Bus'
         });
+      }
+
+      // If no upload history but there's traveler data, create legacy batches
+      if (batches.length === 0) {
+        const allTravelers = await storage.getTravelerDataByAgency(agencyId);
+        
+        // Group legacy travelers by bus and creation date (without uploadId)
+        const legacyTravelers = allTravelers.filter(t => !t.uploadId);
+        
+        if (legacyTravelers.length > 0) {
+          // Group by bus and day
+          const travelerGroups = new Map();
+          
+          for (const traveler of legacyTravelers) {
+            const date = new Date(traveler.createdAt || new Date()).toDateString();
+            const key = `${traveler.busId}-${date}`;
+            
+            if (!travelerGroups.has(key)) {
+              travelerGroups.set(key, []);
+            }
+            travelerGroups.get(key).push(traveler);
+          }
+          
+          // Create batches for each group
+          for (const [key, travelers] of travelerGroups) {
+            const firstTraveler = travelers[0];
+            const bus = await storage.getBus(firstTraveler.busId);
+            
+            // Calculate WhatsApp status
+            const sentCount = travelers.filter(t => t.whatsappStatus === 'sent').length;
+            const totalCount = travelers.length;
+            
+            let whatsappStatus: 'pending' | 'sent' | 'partial' = 'pending';
+            if (sentCount === totalCount && totalCount > 0) {
+              whatsappStatus = 'sent';
+            } else if (sentCount > 0) {
+              whatsappStatus = 'partial';
+            }
+            
+            // Get unique routes and coupons
+            const routeSet = new Set(travelers.map(t => bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Unknown Route'));
+            const couponSet = new Set(travelers.map(t => t.couponCode).filter(Boolean));
+            const routes = Array.from(routeSet);
+            const coupons = Array.from(couponSet);
+            
+            batches.push({
+              uploadId: `legacy-${key}`, // Use legacy identifier
+              uploadDate: firstTraveler.createdAt || new Date(),
+              travelerCount: totalCount,
+              routes,
+              coupons,
+              whatsappStatus,
+              sentCount,
+              fileName: 'Legacy Upload',
+              busName: bus?.name || 'Unknown Bus'
+            });
+          }
+        }
       }
       
       // Sort batches by upload date (newest first)
@@ -2669,14 +2727,33 @@ Hurry Up!`;
         return res.status(404).json({ error: 'Agency not found' });
       }
 
-      // Get travelers for this specific upload ID only
-      const uploadIdNum = parseInt(uploadId);
-      if (isNaN(uploadIdNum)) {
-        return res.status(400).json({ error: 'Invalid upload ID' });
+      let batchTravelers = [];
+
+      // Handle legacy batches vs normal upload batches
+      if (uploadId.startsWith('legacy-')) {
+        // Extract bus ID and date from legacy key
+        const [, busIdStr, dateStr] = uploadId.split('-');
+        const busId = parseInt(busIdStr);
+        const targetDate = new Date(dateStr).toDateString();
+        
+        // Get all travelers for this agency and filter by bus and date
+        const allTravelers = await storage.getTravelerDataByAgency(agencyId);
+        batchTravelers = allTravelers.filter(t => 
+          t.busId === busId && 
+          !t.uploadId && // Legacy data doesn't have uploadId
+          new Date(t.createdAt || new Date()).toDateString() === targetDate
+        );
+      } else {
+        // Normal upload batch
+        const uploadIdNum = parseInt(uploadId);
+        if (isNaN(uploadIdNum)) {
+          return res.status(400).json({ error: 'Invalid upload ID' });
+        }
+        
+        // Get travelers for this specific upload that haven't been sent WhatsApp
+        batchTravelers = await storage.getTravelerDataByUpload(uploadIdNum);
       }
       
-      // Get travelers for this specific upload that haven't been sent WhatsApp
-      const batchTravelers = await storage.getTravelerDataByUpload(uploadIdNum);
       const pendingTravelers = batchTravelers.filter(t => t.whatsappStatus !== 'sent');
 
       if (pendingTravelers.length === 0) {

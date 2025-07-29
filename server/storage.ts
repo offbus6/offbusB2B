@@ -668,7 +668,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTravelerDataByUpload(uploadId: number): Promise<TravelerData[]> {
-    // Now we can directly query by uploadId since we added the column
+    // Query by uploadId, handling both new uploads with uploadId and legacy data
     return await db
       .select()
       .from(travelerData)
