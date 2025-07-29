@@ -24,7 +24,6 @@ export default function AgencyProfile() {
     phone: "",
     city: "",
     state: "",
-    website: "",
     bookingWebsite: "",
     whatsappImageUrl: "",
   });
@@ -44,7 +43,6 @@ export default function AgencyProfile() {
         phone: agency.phone || "",
         city: agency.city || "",
         state: agency.state || "",
-        website: agency.website || "",
         bookingWebsite: agency.bookingWebsite || "",
         whatsappImageUrl: agency.whatsappImageUrl || "",
       });
@@ -273,17 +271,6 @@ export default function AgencyProfile() {
                       placeholder="Enter state"
                     />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="website">Website (Optional)</Label>
-                  <Input
-                    id="website"
-                    type="url"
-                    value={formData.website}
-                    onChange={(e) => handleInputChange("website", e.target.value)}
-                    placeholder="Enter website URL"
-                  />
                 </div>
 
                 <div className="space-y-2">

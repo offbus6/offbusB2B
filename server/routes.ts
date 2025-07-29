@@ -195,7 +195,9 @@ export function registerRoutes(app: Express) {
               contactPerson: agency.contactPerson,
               phone: agency.phone,
               city: agency.city,
-              state: agency.state
+              state: agency.state,
+              bookingWebsite: agency.bookingWebsite,
+              whatsappImageUrl: agency.whatsappImageUrl
             }
           };
 
@@ -213,7 +215,9 @@ export function registerRoutes(app: Express) {
                 contactPerson: agency.contactPerson,
                 phone: agency.phone,
                 city: agency.city,
-                state: agency.state
+                state: agency.state,
+                bookingWebsite: agency.bookingWebsite,
+                whatsappImageUrl: agency.whatsappImageUrl
               }
             }
           });
@@ -322,7 +326,9 @@ export function registerRoutes(app: Express) {
             contactPerson: agency.contactPerson,
             phone: agency.phone,
             city: agency.city,
-            state: agency.state
+            state: agency.state,
+            bookingWebsite: agency.bookingWebsite,
+            whatsappImageUrl: agency.whatsappImageUrl
           }
         };
 
@@ -340,7 +346,9 @@ export function registerRoutes(app: Express) {
               contactPerson: agency.contactPerson,
               phone: agency.phone,
               city: agency.city,
-              state: agency.state
+              state: agency.state,
+              bookingWebsite: agency.bookingWebsite,
+              whatsappImageUrl: agency.whatsappImageUrl
             }
           }
         });
@@ -621,7 +629,9 @@ export function registerRoutes(app: Express) {
             contactPerson: agency.contactPerson,
             phone: agency.phone,
             city: agency.city,
-            state: agency.state
+            state: agency.state,
+            bookingWebsite: agency.bookingWebsite,
+            whatsappImageUrl: agency.whatsappImageUrl
           };
         }
       } catch (error) {
