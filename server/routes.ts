@@ -2646,10 +2646,9 @@ Hurry Up!`;
 
       const testMessage = message || `DEBUG TEST: Hi! This is a test from TravelFlow at ${new Date().toLocaleTimeString()}. Please reply if you receive this.`;
 
-      // Send via BhashSMS API using the working format with image
-      const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
-      const imageUrl = 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
-      const baseParams = `user=BhashWapAi&pass=bwap@123$&sender=BUZWAP&phone=${finalPhone}&text=${encodeURIComponent(testMessage)}&priority=wa&stype=normal&htype=image&url=${imageUrl}`;
+      // Send via BhashSMS API using your exact working format
+      const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
+      const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${finalPhone}&text=${encodeURIComponent(testMessage)}&priority=wa&stype=normal&Params=54,877,966,52&htype=image&url=https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg`;
       const finalUrl = `${apiUrl}?${baseParams}`;
       
       console.log(`API URL: ${finalUrl}`);
@@ -2917,10 +2916,9 @@ Hurry Up!`;
           console.log(`Message: ${message}`);
 
           try {
-            // Send via BhashSMS API using the working format with image
-            const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
-            const imageUrl = 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
-            const baseParams = `user=BhashWapAi&pass=bwap@123$&sender=BUZWAP&phone=${finalPhone}&text=${encodeURIComponent(message)}&priority=wa&stype=normal&htype=image&url=${imageUrl}`;
+            // Send via BhashSMS API using your exact working format
+            const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
+            const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${finalPhone}&text=${encodeURIComponent(message)}&priority=wa&stype=normal&Params=54,877,966,52&htype=image&url=https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg`;
             const finalUrl = `${apiUrl}?${baseParams}`;
 
             const controller = new AbortController();

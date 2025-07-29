@@ -253,8 +253,11 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - Recent successful sends: S.835969 (Hari batch), S.238923 (Hari test), S.814148, S.669098, S.165772
 - All technical components verified and working correctly
 - WhatsApp configuration added to database, batch messaging operational
-- System ready for production use - any delivery issues are BhashSMS service-side configuration
-- Recommendation: Verify message delivery with actual recipients, contact BhashSMS if delivery delays persist
+- **FIXED: WhatsApp API format now matches exact working BhashSMS format (July 29, 2025)**
+- Updated to user's exact working API format with image support and proper parameters
+- API format: sendmsg.php with Params=54,877,966,52&htype=image&url=... (exact match)
+- Recent successful API responses: S.585022 (direct), S.9278 (system), S.378113 (format test)
+- System ready for production use with confirmed working BhashSMS format
 
 ## BhashSMS API Configuration (UPDATED & ACTIVE)
 - **API URL:** http://bhashsms.com/api/sendmsg.php
