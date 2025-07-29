@@ -238,16 +238,17 @@ export class WhatsappService {
         cleanPhone = cleanPhone.substring(2);
       }
 
-      // BhashSMS API integration with activated utility endpoint
-      const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
+      // BhashSMS API integration with working credentials
+      const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
       const params = new URLSearchParams({
-        user: 'BhashWapAi',
-        pass: 'bwap@123$',
+        user: 'eddygoo1',
+        pass: '123456',
         sender: 'BUZWAP',
         phone: cleanPhone,
         text: message,
         priority: 'wa',
-        stype: 'utility'
+        stype: 'normal',
+        Params: '54,877,966,52'
       });
 
       // Add image parameters if image URL is provided

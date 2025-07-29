@@ -658,29 +658,21 @@ export class DatabaseStorage implements IStorage {
     return await this.getUploadHistoryByAgency(agencyId);
   }
 
+  async updateUploadHistory(id: number, updates: Partial<InsertUploadHistory>): Promise<UploadHistory> {
+    const [updatedHistory] = await db
+      .update(uploadHistory)
+      .set(updates)
+      .where(eq(uploadHistory.id, id))
+      .returning();
+    return updatedHistory;
+  }
+
   async getTravelerDataByUpload(uploadId: number): Promise<TravelerData[]> {
-    // Since travelerData doesn't have uploadId, we'll get travelers created around the same time as the upload
-    const upload = await db.select().from(uploadHistory).where(eq(uploadHistory.id, uploadId)).limit(1);
-    if (!upload[0]) return [];
-    
-    const uploadDate = upload[0].createdAt;
-    if (!uploadDate) return [];
-    
-    // Get travelers from the same day for this agency and bus
-    const startOfDay = new Date(uploadDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(uploadDate);
-    endOfDay.setHours(23, 59, 59, 999);
-    
+    // Now we can directly query by uploadId since we added the column
     return await db
       .select()
       .from(travelerData)
-      .where(and(
-        eq(travelerData.agencyId, upload[0].agencyId),
-        eq(travelerData.busId, upload[0].busId),
-        sql`${travelerData.createdAt} >= ${startOfDay.toISOString()}`,
-        sql`${travelerData.createdAt} <= ${endOfDay.toISOString()}`
-      ));
+      .where(eq(travelerData.uploadId, uploadId));
   }
 
   async getSystemStats(): Promise<{

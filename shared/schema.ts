@@ -85,6 +85,7 @@ export const travelerData = pgTable("traveler_data", {
   id: serial("id").primaryKey(),
   busId: integer("bus_id").notNull().references(() => buses.id),
   agencyId: integer("agency_id").notNull().references(() => agencies.id),
+  uploadId: integer("upload_id").references(() => uploadHistory.id),
   travelerName: varchar("traveler_name").notNull(),
   phone: varchar("phone").notNull(),
   travelDate: date("travel_date").notNull(),

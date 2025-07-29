@@ -230,6 +230,13 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - Added WhatsApp Scheduler page for agencies to send batch messages to uploaded data
 - One-click batch messaging system with status tracking (pending/sent/partial)
 - Real-time WhatsApp status updates and comprehensive batch management
+- **FIXED: WhatsApp batch messaging and upload linking system (July 29, 2025)**
+- Fixed critical issue where WhatsApp messages were sent to all uploaded data instead of specific batches
+- Added uploadId column to travelerData table to properly link travelers to their upload batches
+- Updated upload process to create upload history first, then link travelers with uploadId
+- Fixed all WhatsApp API endpoints to use working credentials (eddygoo1/123456) instead of failing ones
+- Now WhatsApp Scheduler sends messages only to the specific upload batch selected, not all data from that date
+- API test confirmation: S.388703 - all endpoints working correctly with proper batch isolation
 
 ## BhashSMS API Configuration (UPDATED & ACTIVE)
 - **API URL:** http://bhashsms.com/api/sendmsg.php

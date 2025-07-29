@@ -1123,8 +1123,23 @@ export function registerRoutes(app: Express) {
       const duplicatesInFile = travelerDataArray.length - uniqueTravelerData.length;
       const duplicatesInDB = uniqueTravelerData.length - finalTravelerData.length;
 
+      // Create upload history record first
+      const uploadRecord = await storage.createUploadHistory({
+        agencyId: user.id,
+        busId: parseInt(busId),
+        fileName: req.file.originalname,
+        travelerCount: finalTravelerData.length,
+        status: "processing"
+      });
+
+      // Add uploadId to each traveler data record
+      const travelerDataWithUploadId = finalTravelerData.map(data => ({
+        ...data,
+        uploadId: uploadRecord.id
+      }));
+
       // Validate each record
-      const validatedData = finalTravelerData.map(data => 
+      const validatedData = travelerDataWithUploadId.map(data => 
         insertTravelerDataSchema.parse(data)
       );
 
@@ -1142,13 +1157,10 @@ export function registerRoutes(app: Express) {
         // Continue with upload even if scheduling fails
       }
 
-      // Create upload history record
-      await storage.createUploadHistory({
-        agencyId: user.id,
-        busId: parseInt(busId),
-        fileName: req.file.originalname,
-        travelerCount: createdData.length,
-        status: "completed"
+      // Update upload history record status to completed
+      await storage.updateUploadHistory(uploadRecord.id, {
+        status: "completed",
+        travelerCount: createdData.length
       });
 
       let message = "Data uploaded successfully";
@@ -1701,16 +1713,17 @@ To stop receiving messages, reply STOP.
 
 Happy Travels!`;
 
-      // Send via BhashSMS API with activated utility endpoint
-      const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
+      // Send via BhashSMS API with working credentials
+      const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
       const params = new URLSearchParams({
-        user: 'BhashWapAi',
-        pass: 'bwap@123$',
+        user: 'eddygoo1',
+        pass: '123456',
         sender: 'BUZWAP',
         phone: cleanPhone,
         text: personalizedMessage,
         priority: 'wa',
-        stype: 'utility'
+        stype: 'normal',
+        Params: '54,877,966,52'
       });
 
       const controller = new AbortController();
@@ -2308,15 +2321,16 @@ Happy Travels!`;
             .replace('{{4}}', agency.bookingWebsite || 'https://your-booking-site.com');
 
           // Send via BhashSMS API
-          const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
+          const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
           const params = new URLSearchParams({
-            user: 'BhashWapAi',
-            pass: 'bwap@123$',
+            user: 'eddygoo1',
+            pass: '123456',
             sender: 'BUZWAP',
             phone: cleanPhone,
             text: personalizedMessage,
             priority: 'wa',
-            stype: 'utility'
+            stype: 'normal',
+            Params: '54,877,966,52'
           });
 
           const controller = new AbortController();
@@ -2418,15 +2432,16 @@ Happy Travels!`;
         .replace('{{4}}', agency.bookingWebsite || 'https://your-booking-site.com');
 
       // Send via BhashSMS API
-      const apiUrl = 'http://bhashsms.com/api/sendmsgutil.php';
+      const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
       const params = new URLSearchParams({
-        user: 'BhashWapAi',
-        pass: 'bwap@123$',
+        user: 'eddygoo1',
+        pass: '123456',
         sender: 'BUZWAP',
         phone: cleanPhone,
         text: personalizedMessage,
         priority: 'wa',
-        stype: 'utility'
+        stype: 'normal',
+        Params: '54,877,966,52'
       });
 
       const controller = new AbortController();
