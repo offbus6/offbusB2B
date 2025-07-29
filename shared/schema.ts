@@ -49,6 +49,7 @@ export const agencies = pgTable("agencies", {
   city: varchar("city").notNull(),
   website: varchar("website"),
   bookingWebsite: varchar("booking_website"),
+  whatsappImageUrl: varchar("whatsapp_image_url"),
   logoUrl: varchar("logo_url"),
   username: varchar("username").unique(),
   password: varchar("password"),
@@ -147,6 +148,7 @@ export const insertAgencySchema = createInsertSchema(agencies).omit({
   updatedAt: true,
 }).extend({
   bookingWebsite: z.string().url("Please enter a valid booking website URL").optional(),
+  whatsappImageUrl: z.string().url("Please enter a valid WhatsApp image URL").optional(),
 });
 
 export const insertBusSchema = createInsertSchema(buses).omit({

@@ -253,13 +253,16 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - Recent successful sends: S.835969 (Hari batch), S.238923 (Hari test), S.814148, S.669098, S.165772
 - All technical components verified and working correctly
 - WhatsApp configuration added to database, batch messaging operational
-- **FINAL: Perfect Dynamic Params API Implementation (July 29, 2025)**
-- Implemented exact working BhashSMS API format with dynamic Params in precise order: traveler_name,agency_name,coupon_code,booking_url
-- API format confirmed: https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=[NUMBER]&text=[MESSAGE]&priority=wa&stype=normal&Params=Shubin,Intercity%20Travels,Save10,https://intercitytravels.com/book&htype=image&url=...
-- Recent successful tests: S.542725 (browser direct), S.145997 (system integration), S.868683 (format test)
-- Dynamic Params pull real database data: Shubin,Intercity Travels,Save10,https://intercitytravels.com/book
-- Updated Shubin's test number to 9962837985 for testing purposes
-- System matches browser format exactly - ready for production messaging
+- **IMPLEMENTED: Profile-Based Dynamic WhatsApp System (July 29, 2025)**
+- Added booking website URL and WhatsApp image URL fields to agency profile page
+- Updated database schema with whatsapp_image_url column for agencies table
+- Modified /api/test/bhash-whatsapp endpoint to use dynamic agency profile data
+- System now fetches booking URL and image URL from agency profiles instead of hardcoded values
+- API format with profile data: https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=[NUMBER]&text=[MESSAGE]&priority=wa&stype=normal&Params=[TRAVELER],[AGENCY],[COUPON],[PROFILE_BOOKING_URL]&htype=image&url=[PROFILE_IMAGE_URL]
+- Recent successful tests: S.748200 (Shubin with profile data), S.453949 (Hari with profile data)
+- Dynamic Params now pull from agency profiles: Shubin,Intercity Travels,Save10,https://intercitytravels.com/book
+- All WhatsApp messages use agency-specific booking and image URLs from their profile settings
+- Agencies can now customize their booking website and WhatsApp image through profile page
 
 ## BhashSMS API Configuration (UPDATED & ACTIVE)
 - **API URL:** http://bhashsms.com/api/sendmsg.php

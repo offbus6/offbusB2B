@@ -2103,6 +2103,8 @@ Happy Travels!`;
         city: city ? sanitizeInput(city) : undefined,
         state: state ? sanitizeInput(state) : undefined,
         website: website ? sanitizeInput(website) : undefined,
+        bookingWebsite: req.body.bookingWebsite ? sanitizeInput(req.body.bookingWebsite) : undefined,
+        whatsappImageUrl: req.body.whatsappImageUrl ? sanitizeInput(req.body.whatsappImageUrl) : undefined,
       };
 
       // Remove undefined values
@@ -2185,10 +2187,10 @@ Happy Travels!`;
     }
   });
 
-  // Direct BhashSMS WhatsApp API Test Route
+  // Direct BhashSMS WhatsApp API Test Route with Dynamic Agency Profile Data
   app.post("/api/test/bhash-whatsapp", async (req: Request, res: Response) => {
     try {
-      const { phoneNumber, message, imageUrl } = req.body;
+      const { phoneNumber, message, travelerId } = req.body;
 
       if (!phoneNumber) {
         return res.status(400).json({ message: "Phone number is required" });
@@ -2201,7 +2203,41 @@ Happy Travels!`;
       }
 
       // Default test message if none provided
-      const testMessage = message || "Test message from TravelFlow WhatsApp system - Hello from BhashSMS API!";
+      const testMessage = message || "eddygoo_2807";
+
+      let dynamicParams = '54,877,966,52'; // Fallback to static params
+      let agencyImageUrl = 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg'; // Default image
+
+      // If travelerId provided, fetch dynamic data from database
+      if (travelerId) {
+        try {
+          // Get traveler data
+          const traveler = await storage.getTravelerData(travelerId);
+          if (traveler) {
+            // Get agency data  
+            const agency = await storage.getAgency(traveler.agencyId);
+            if (agency) {
+              // Create dynamic Params: traveler_name,agency_name,coupon_code,booking_url
+              const travelerName = encodeURIComponent(traveler.travelerName || 'Traveler');
+              const agencyName = encodeURIComponent(agency.name || 'Travel Agency');  
+              const couponCode = encodeURIComponent(traveler.couponCode || 'SAVE10');
+              const bookingUrl = encodeURIComponent(agency.bookingWebsite || 'https://travelflow.com/book');
+              
+              dynamicParams = `${travelerName},${agencyName},${couponCode},${bookingUrl}`;
+              
+              // Use agency's WhatsApp image URL if available
+              if (agency.whatsappImageUrl) {
+                agencyImageUrl = agency.whatsappImageUrl;
+              }
+              
+              console.log(`Dynamic Params created: ${dynamicParams}`);
+              console.log(`Agency Image URL: ${agencyImageUrl}`);
+            }
+          }
+        } catch (error) {
+          console.log(`Error fetching dynamic data: ${error}. Using fallback params.`);
+        }
+      }
 
       // Use the new BhashSMS API endpoint and credentials
       const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
@@ -2213,14 +2249,12 @@ Happy Travels!`;
         text: testMessage,
         priority: 'wa',
         stype: 'normal',
-        Params: '54,877,966,52'
+        Params: dynamicParams
       });
 
-      // Add image parameters if image URL is provided
-      if (imageUrl) {
-        params.append('htype', 'image');
-        params.append('url', imageUrl);
-      }
+      // Always add image parameters with dynamic agency image URL
+      params.append('htype', 'image');
+      params.append('url', agencyImageUrl);
 
       console.log(`Sending WhatsApp message to ${cleanPhone} via BhashSMS API`);
       console.log(`API URL: ${apiUrl}?${params.toString()}`);
@@ -2251,7 +2285,9 @@ Happy Travels!`;
           apiResponse: result,
           phoneNumber: cleanPhone,
           sentMessage: testMessage,
-          imageUrl: imageUrl || null
+          imageUrl: agencyImageUrl,
+          dynamicParams: dynamicParams,
+          apiUrl: `${apiUrl}?${params.toString()}`
         });
 
       } catch (fetchError) {

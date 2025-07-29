@@ -25,6 +25,8 @@ export default function AgencyProfile() {
     city: "",
     state: "",
     website: "",
+    bookingWebsite: "",
+    whatsappImageUrl: "",
   });
   
   const [passwordData, setPasswordData] = useState({
@@ -43,6 +45,8 @@ export default function AgencyProfile() {
         city: agency.city || "",
         state: agency.state || "",
         website: agency.website || "",
+        bookingWebsite: agency.bookingWebsite || "",
+        whatsappImageUrl: agency.whatsappImageUrl || "",
       });
     }
   }, [agency]);
@@ -280,6 +284,32 @@ export default function AgencyProfile() {
                     onChange={(e) => handleInputChange("website", e.target.value)}
                     placeholder="Enter website URL"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bookingWebsite">Booking Website URL</Label>
+                  <Input
+                    id="bookingWebsite"
+                    type="url"
+                    value={formData.bookingWebsite}
+                    onChange={(e) => handleInputChange("bookingWebsite", e.target.value)}
+                    placeholder="Enter booking website URL (used in WhatsApp messages)"
+                    required
+                  />
+                  <p className="text-sm text-[var(--airbnb-gray)]">This URL will be sent to travelers in WhatsApp messages</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappImageUrl">WhatsApp Image URL</Label>
+                  <Input
+                    id="whatsappImageUrl"
+                    type="url"
+                    value={formData.whatsappImageUrl}
+                    onChange={(e) => handleInputChange("whatsappImageUrl", e.target.value)}
+                    placeholder="Enter image URL for WhatsApp messages"
+                    required
+                  />
+                  <p className="text-sm text-[var(--airbnb-gray)]">This image will be attached to WhatsApp messages sent to travelers</p>
                 </div>
 
                 <Button
