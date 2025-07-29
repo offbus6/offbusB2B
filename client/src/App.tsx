@@ -27,9 +27,11 @@ import BusManagement from "@/pages/agency/bus-management";
 import UploadData from "@/pages/agency/upload-data";
 import UploadedData from "@/pages/agency/uploaded-data";
 import WhatsAppSchedule from "@/pages/agency/whatsapp-schedule";
+import WhatsAppScheduler from "@/pages/agency/whatsapp-scheduler";
 import AgencyPayments from "@/pages/agency/payments";
 import AgencyRegister from "@/pages/agency/register";
 import AgencyPending from "@/pages/agency/pending";
+import AgencyProfile from "@/pages/agency/profile";
 import RoleSelection from "@/pages/role-selection";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
@@ -96,9 +98,9 @@ function AppContent() {
                   <Route path="/agency/bus-management" component={BusManagement} />
                   <Route path="/agency/upload-data" component={UploadData} />
                   <Route path="/agency/uploaded-data" component={UploadedData} />
-                  <Route path="/agency/whatsapp-scheduler" component={lazy(() => import("@/pages/agency/whatsapp-scheduler"))} />
+                  <Route path="/agency/whatsapp-scheduler" component={WhatsAppScheduler} />
                   <Route path="/agency/payments" component={AgencyPayments} />
-                  <Route path="/agency/profile" component={lazy(() => import("@/pages/agency/profile"))} />
+                  <Route path="/agency/profile" component={AgencyProfile} />
                   <Route path="/agency/pending" component={AgencyPending} />
                   <Route path="/agency/register" component={AgencyRegister} />
                   <Route component={NotFound} />

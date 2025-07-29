@@ -470,14 +470,7 @@ export class DatabaseStorage implements IStorage {
     return agency;
   }
 
-  async updateAgency(id: number, updates: Partial<InsertAgency>): Promise<Agency> {
-    const [agency] = await db
-      .update(agencies)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(agencies.id, id))
-      .returning();
-    return agency;
-  }
+
 
   async deleteAgency(id: number): Promise<void> {
     await db.delete(agencies).where(eq(agencies.id, id));
@@ -612,21 +605,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(travelerData.id, id));
   }
 
-  async updateAgency(id: number, data: Partial<{
-    name: string;
-    email: string;
-    contactPerson: string;
-    phone: string;
-    city: string;
-    state: string;
-    website: string;
-    password: string;
-    status: string;
-  }>): Promise<void> {
-    await db
+  async updateAgency(id: number, updates: Partial<InsertAgency>): Promise<Agency> {
+    const [agency] = await db
       .update(agencies)
-      .set(data)
-      .where(eq(agencies.id, id));
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(agencies.id, id))
+      .returning();
+    return agency;
   }
 
 

@@ -2545,7 +2545,7 @@ Happy Travels!`;
   });
 
   // Get upload batches with WhatsApp status for scheduler
-  app.get('/api/agency/upload-batches', requireAuth, async (req, res) => {
+  app.get('/api/agency/upload-batches', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
       const user = req.session.user;
       if (!user || user.role !== 'agency') {
@@ -2565,7 +2565,7 @@ Happy Travels!`;
       const batchMap = new Map();
       
       for (const traveler of travelerData) {
-        const uploadDate = traveler.uploadDate || new Date().toISOString().split('T')[0];
+        const uploadDate = traveler.createdAt ? new Date(traveler.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
         const key = uploadDate;
         
         if (!batchMap.has(key)) {
@@ -2583,8 +2583,9 @@ Happy Travels!`;
         
         // Add route info
         const bus = buses.find(b => b.id === traveler.busId);
-        if (bus?.route) {
-          batch.routes.add(bus.route);
+        if (bus) {
+          const route = `${bus.fromLocation} to ${bus.toLocation}`;
+          batch.routes.add(route);
         }
         
         // Add coupon info
@@ -2595,7 +2596,7 @@ Happy Travels!`;
 
       // Convert to array format with WhatsApp status
       const uploadBatches = Array.from(batchMap.values()).map(batch => {
-        const sentCount = batch.travelers.filter(t => t.whatsappStatus === 'sent').length;
+        const sentCount = batch.travelers.filter((t: any) => t.whatsappStatus === 'sent').length;
         const totalCount = batch.travelers.length;
         
         let whatsappStatus = 'pending';
@@ -2624,7 +2625,7 @@ Happy Travels!`;
   });
 
   // Send WhatsApp to all travelers in a batch
-  app.post('/api/agency/whatsapp/send-batch/:uploadId', requireAuth, async (req, res) => {
+  app.post('/api/agency/whatsapp/send-batch/:uploadId', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
       const user = req.session.user;
       if (!user || user.role !== 'agency') {
@@ -2644,10 +2645,10 @@ Happy Travels!`;
       
       // Get all travelers for this upload date that haven't been sent WhatsApp
       const allTravelers = await storage.getTravelerDataByAgency(agencyId);
-      const batchTravelers = allTravelers.filter(t => 
-        (t.uploadDate || new Date().toISOString().split('T')[0]) === uploadDate &&
-        t.whatsappStatus !== 'sent'
-      );
+      const batchTravelers = allTravelers.filter(t => {
+        const travelerUploadDate = t.createdAt ? new Date(t.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        return travelerUploadDate === uploadDate && t.whatsappStatus !== 'sent';
+      });
 
       if (batchTravelers.length === 0) {
         return res.json({ success: true, message: 'No pending travelers to send WhatsApp', sentCount: 0 });
