@@ -915,7 +915,8 @@ export class DatabaseStorage implements IStorage {
 
   // Tax configuration operations
   async getTaxConfig(): Promise<TaxConfig | undefined> {
-    const [config] = await db
+    const [config]``````
+ = await db
       .select()
       .from(taxConfig)
       .where(eq(taxConfig.isActive, true))
@@ -1081,6 +1082,23 @@ export class DatabaseStorage implements IStorage {
         overdueCount: 0
       };
     }
+  }
+
+  async getTravelerDataByBus(busId: number): Promise<TravelerData[]> {
+    return await db
+      .select()
+      .from(travelerData)
+      .where(eq(travelerData.busId, busId))
+      .orderBy(desc(travelerData.createdAt));
+  }
+
+  // Added function to get travelers by upload ID
+  async getTravelerDataByUpload(uploadId: number): Promise<TravelerData[]> {
+      return await db
+          .select()
+          .from(travelerData)
+          .where(eq(travelerData.uploadId, uploadId))
+          .orderBy(desc(travelerData.createdAt));
   }
 }
 

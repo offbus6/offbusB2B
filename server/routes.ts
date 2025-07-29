@@ -2557,6 +2557,57 @@ Happy Travels!`;
         return res.status(404).json({ error: 'Agency not found' });
       }
 
+      // Get upload history for this agency
+      const uploadHistory = await storage.getUploadHistory(agencyId);
+      
+      // Group by upload date and calculate WhatsApp status
+      const batchMap = new Map();
+      
+      for (const upload of uploadHistory) {
+        const uploadDate = upload.uploadDate.toISOString().split('T')[0]; // Group by date
+        const key = `${uploadDate}_${upload.busId}`;
+        
+        if (!batchMap.has(key)) {
+          // Get bus info
+          const bus = await storage.getBus(upload.busId);
+          
+          // Get all travelers for this upload
+          const travelers = await storage.getTravelerDataByUpload(upload.id);
+          
+          // Calculate WhatsApp status
+          const sentCount = travelers.filter(t => t.whatsappStatus === 'sent').length;
+          const totalCount = travelers.length;
+          
+          let whatsappStatus: 'pending' | 'sent' | 'partial' = 'pending';
+          if (sentCount === totalCount && totalCount > 0) {
+            whatsappStatus = 'sent';
+          } else if (sentCount > 0) {
+            whatsappStatus = 'partial';
+          }
+          
+          // Get unique routes and coupons
+          const routes = [...new Set(travelers.map(t => bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Unknown Route'))];
+          const coupons = [...new Set(travelers.map(t => t.couponCode).filter(Boolean))];
+          
+          batchMap.set(key, {
+            uploadId: upload.id,
+            uploadDate: upload.uploadDate,
+            travelerCount: totalCount,
+            routes,
+            coupons,
+            whatsappStatus,
+            sentCount
+          });
+        }
+      }
+      
+      const batches = Array.from(batchMap.values()).sort((a, b) => 
+        new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
+      );
+      
+      res.json(batches);d' });
+      }
+
       // Get traveler data and buses for the agency
       const travelerData = await storage.getTravelerDataByAgency(agencyId);
       const buses = await storage.getBusesByAgency(agencyId);

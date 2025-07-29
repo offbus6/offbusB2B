@@ -5,7 +5,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, MapPin, Gift, Send, CheckCircle, Clock } from "lucide-react";
+import { Calendar, Users, MapPin, Gift, Send, CheckCircle, Clock, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 
 interface UploadBatch {
@@ -23,9 +23,11 @@ export default function WhatsAppScheduler() {
   const { user } = useAuth();
 
   // Fetch upload batches with WhatsApp status
-  const { data: uploadBatches = [], isLoading } = useQuery<UploadBatch[]>({
+  const { data: uploadBatches = [], isLoading, refetch } = useQuery<UploadBatch[]>({
     queryKey: ["/api/agency/upload-batches"],
     retry: false,
+    refetchInterval: 10000, // Refresh every 10 seconds
+    refetchOnWindowFocus: true, // Refresh when window gains focus
   });
 
   // Send WhatsApp to all travelers in a batch
@@ -94,6 +96,15 @@ export default function WhatsAppScheduler() {
           <h1 className="text-3xl font-bold text-gray-900">WhatsApp Scheduler</h1>
           <p className="text-gray-600 mt-1">Send WhatsApp messages to uploaded traveler data</p>
         </div>
+        <Button
+          onClick={() => refetch()}
+          variant="outline"
+          className="flex items-center gap-2"
+          disabled={isLoading}
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          {isLoading ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
       {uploadBatches.length === 0 ? (
