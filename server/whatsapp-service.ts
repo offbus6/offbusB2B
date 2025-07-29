@@ -204,7 +204,7 @@ export class WhatsappService {
   }
 
   /**
-   * Send WhatsApp message using BhashSMS API with security measures and image support
+   * Send WhatsApp message using exact working BhashSMS API format with image support
    */
   private async sendWhatsappMessage(phoneNumber: string, message: string, config: any, imageUrl?: string): Promise<boolean> {
     try {
@@ -238,7 +238,7 @@ export class WhatsappService {
         cleanPhone = cleanPhone.substring(2);
       }
 
-      // BhashSMS API integration with working credentials
+      // Use exact working BhashSMS API format
       const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
       const params = new URLSearchParams({
         user: 'eddygoo1',
@@ -248,17 +248,16 @@ export class WhatsappService {
         text: message,
         priority: 'wa',
         stype: 'normal',
-        Params: '54,877,966,52'
+        Params: '54,877,966,52',
+        htype: 'image',
+        url: imageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg'
       });
 
-      // Add image parameters if image URL is provided
-      if (imageUrl) {
-        params.append('htype', 'image');
-        params.append('url', imageUrl);
-      }
+      console.log(`Sending WhatsApp message to ${cleanPhone} via BhashSMS API`);
+      console.log(`API URL: ${apiUrl}?${params.toString()}`);
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for images
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const response = await fetch(`${apiUrl}?${params}`, {
         method: 'GET',
@@ -275,10 +274,11 @@ export class WhatsappService {
       }
 
       const result = await response.text();
+      console.log(`BhashSMS API Response: ${result}`);
 
       // Check if message was sent successfully
       if (result.startsWith('S.')) {
-        console.log(`WhatsApp message ${imageUrl ? 'with image ' : ''}sent successfully to ${cleanPhone}. ID: ${result}`);
+        console.log(`WhatsApp message with image sent successfully to ${cleanPhone}. ID: ${result}`);
         return true;
       } else {
         // Log failed attempts for monitoring
@@ -362,7 +362,7 @@ export function replaceApprovedTemplateVariables(
 }
 
 /**
- * Send WhatsApp message using BhashSMS API with approved template
+ * Send WhatsApp message using exact working BhashSMS API format
  */
 export async function sendBhashWhatsAppMessage(
   phoneNumber: string,
@@ -372,24 +372,22 @@ export async function sendBhashWhatsAppMessage(
     travelerName: string;
     agencyName: string;
     couponCode: string;
+    travelDate?: string;
     couponLink?: string;
   }
-): Promise<{ success: boolean; message: string; apiResponse?: string; sentMessage?: string }> {
+): Promise<{ success: boolean; message: string; apiResponse?: string; sentMessage?: string; phoneNumber?: string; imageUrl?: string }> {
   try {
     console.log(`Sending WhatsApp message to ${phoneNumber} via BhashSMS API`);
     
-    // Use approved template with variables if traveler data is provided
-    let finalMessage = message || 'bsl_image';
+    // Create personalized message with traveler data
+    let finalMessage = message || 'Test message from TravelFlow';
     
-    if (travelerData && (message === 'template' || message === 'approved_template')) {
+    if (travelerData) {
+      const travelDate = travelerData.travelDate ? new Date(travelerData.travelDate).toLocaleDateString() : 'your recent travel';
       const couponLink = travelerData.couponLink || 'https://your-booking-site.com';
-      finalMessage = replaceApprovedTemplateVariables(
-        travelerData.travelerName,
-        travelerData.agencyName,
-        travelerData.couponCode,
-        couponLink
-      );
-      console.log('Using approved template with variables:', finalMessage);
+      
+      finalMessage = `Hi ${travelerData.travelerName}, thanks for traveling with ${travelerData.agencyName}! Your journey on ${travelDate} was amazing! Get 20% off your next trip - use Coupon Code ${travelerData.couponCode}. Valid for 90 days. Book at ${couponLink}`;
+      console.log('Using personalized message with traveler data:', finalMessage);
     }
     
     // Clean phone number (remove country code if +91)
@@ -398,22 +396,21 @@ export async function sendBhashWhatsAppMessage(
       cleanPhone = cleanPhone.substring(2);
     }
     
+    // Use exact working API format with all required parameters
     const params = new URLSearchParams({
-      user: 'BhashWapAi',
-      pass: 'bwap@123$',
+      user: 'eddygoo1',
+      pass: '123456',
       sender: 'BUZWAP',
       phone: cleanPhone,
       text: finalMessage,
       priority: 'wa',
-      stype: 'normal'
+      stype: 'normal',
+      Params: '54,877,966,52',
+      htype: 'image',
+      url: imageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg'
     });
 
-    if (imageUrl) {
-      params.append('htype', 'image');
-      params.append('url', imageUrl);
-    }
-
-    const apiUrl = `http://bhashsms.com/api/sendmsgutil.php?${params.toString()}`;
+    const apiUrl = `http://bhashsms.com/api/sendmsg.php?${params.toString()}`;
     console.log('API URL:', apiUrl);
 
     const response = await fetch(apiUrl);
@@ -428,7 +425,9 @@ export async function sendBhashWhatsAppMessage(
       success: isSuccess,
       message: isSuccess ? 'WhatsApp message sent successfully!' : `Failed to send message. API Response: ${responseText.trim()}`,
       apiResponse: responseText.trim(),
-      sentMessage: finalMessage
+      sentMessage: finalMessage,
+      phoneNumber: cleanPhone,
+      imageUrl: imageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg'
     };
     
   } catch (error) {
