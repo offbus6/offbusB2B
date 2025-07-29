@@ -2430,31 +2430,38 @@ Hurry Up!`;
         return res.status(404).json({ message: "Agency not found" });
       }
 
-      // Clean phone number
+      // Clean and validate phone number
       let cleanPhone = traveler.phone.replace(/\D/g, '');
+      
+      // Ensure it's a valid Indian mobile number
+      let finalPhone = cleanPhone;
       if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
-        cleanPhone = cleanPhone.substring(2);
+        finalPhone = cleanPhone.substring(2);
+      } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
+        finalPhone = cleanPhone.substring(1);
+      }
+      
+      // Validate final phone number (should be 10 digits starting with 6-9)
+      if (!/^[6-9]\d{9}$/.test(finalPhone)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid phone number format: ${traveler.phone}`,
+          travelerData: {
+            id: traveler.id,
+            name: traveler.travelerName,
+            phone: traveler.phone,
+            status: 'failed'
+          }
+        });
       }
 
       // Get bus information for route details
       const bus = await storage.getBus(traveler.busId);
       
-      // Create fully dynamic personalized message with route information
-      const route = bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'your route';
-      const busName = bus ? bus.name : 'Bus Service';
-      const travelDate = traveler.travelDate ? new Date(traveler.travelDate).toLocaleDateString() : '';
-      
-      const personalizedMessage = `Hi ${traveler.travelerName}, thanks for traveling with us at ${agency.name}! 
-      
-Your ${route} journey on ${busName} (${travelDate}) was amazing! 🚌
+      // Create simplified message for better delivery
+      const personalizedMessage = `Hi ${traveler.travelerName}, thanks for traveling with ${agency.name}! Get 20% off your next trip with code ${traveler.couponCode || 'SAVE20'}. Valid for 90 days. Book at ${agency.website || agency.bookingWebsite || 'our website'}`;
 
-Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 
-
-Valid for Next 90 days at: ${agency.website || agency.bookingWebsite || 'https://testtravelagency.com'} ✨ 
-
-Book your next ${route} trip or explore new routes! 
-
-Hurry Up!`;
+      console.log(`Sending individual WhatsApp to ${traveler.travelerName} at +91${finalPhone}`);
 
       // Send via BhashSMS API
       const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
@@ -2462,7 +2469,7 @@ Hurry Up!`;
         user: 'eddygoo1',
         pass: '123456',
         sender: 'BUZWAP',
-        phone: cleanPhone,
+        phone: finalPhone,
         text: personalizedMessage,
         priority: 'wa',
         stype: 'normal',
@@ -2472,15 +2479,19 @@ Hurry Up!`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-      const response = await fetch(`${apiUrl}?${params}`, {
+      const response = await fetch(`${apiUrl}?${params.toString()}`, {
         method: 'GET',
         headers: { 'User-Agent': 'TravelFlow-WhatsApp-Service/1.0' },
         signal: controller.signal
       });
 
       clearTimeout(timeoutId);
-      const result = await response.text();
-      const success = result.startsWith('S.');
+      const result = await response.text().then(text => text.trim());
+      
+      console.log(`WhatsApp API Response for individual send to ${finalPhone}:`, result);
+      
+      // More strict success checking
+      const success = response.ok && result.startsWith('S.') && result.length > 2;
 
       // Update traveler WhatsApp status
       await storage.updateTravelerData(traveler.id, { 
@@ -2489,15 +2500,20 @@ Hurry Up!`;
 
       res.json({
         success,
-        message: success ? "WhatsApp message sent successfully" : `Failed to send message: ${result}`,
+        message: success ? `WhatsApp message sent successfully to +91${finalPhone}` : `Failed to send message: ${result}`,
         travelerData: {
           id: traveler.id,
           name: traveler.travelerName,
-          phone: `+91${cleanPhone}`,
+          phone: `+91${finalPhone}`,
           status: success ? 'sent' : 'failed'
         },
         apiResponse: result,
-        sentMessage: personalizedMessage
+        sentMessage: personalizedMessage,
+        phoneValidation: {
+          original: traveler.phone,
+          cleaned: finalPhone,
+          isValid: true
+        }
       });
 
     } catch (error) {
@@ -2577,6 +2593,115 @@ Hurry Up!`;
 
     } catch (error) {
       console.error("WhatsApp image test error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Unknown error occurred" 
+      });
+    }
+  });
+
+  // Debug WhatsApp test endpoint with detailed logging
+  app.post("/api/whatsapp/debug-test", async (req: Request, res: Response) => {
+    try {
+      const { phone, message } = req.body;
+
+      if (!phone) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Phone number is required" 
+        });
+      }
+
+      // Clean and validate phone number
+      let cleanPhone = phone.replace(/\D/g, '');
+      let finalPhone = cleanPhone;
+      
+      if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+        finalPhone = cleanPhone.substring(2);
+      } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
+        finalPhone = cleanPhone.substring(1);
+      }
+
+      console.log(`=== DEBUG WhatsApp Test ===`);
+      console.log(`Original phone: ${phone}`);
+      console.log(`Cleaned phone: ${cleanPhone}`);
+      console.log(`Final phone: ${finalPhone}`);
+
+      // Validate phone number
+      const isValidPhone = /^[6-9]\d{9}$/.test(finalPhone);
+      console.log(`Phone validation: ${isValidPhone}`);
+
+      if (!isValidPhone) {
+        return res.json({
+          success: false,
+          error: `Invalid phone number format. Must be 10 digits starting with 6-9. Got: ${finalPhone}`,
+          phoneValidation: {
+            original: phone,
+            cleaned: cleanPhone,
+            final: finalPhone,
+            isValid: false
+          }
+        });
+      }
+
+      const testMessage = message || `DEBUG TEST: Hi! This is a test from TravelFlow at ${new Date().toLocaleTimeString()}. Please reply if you receive this.`;
+
+      // Send via BhashSMS API
+      const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
+      const params = new URLSearchParams({
+        user: 'eddygoo1',
+        pass: '123456',
+        sender: 'BUZWAP',
+        phone: finalPhone,
+        text: testMessage,
+        priority: 'wa',
+        stype: 'normal',
+        Params: '54,877,966,52'
+      });
+
+      console.log(`API URL: ${apiUrl}?${params.toString()}`);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const response = await fetch(`${apiUrl}?${params.toString()}`, {
+        method: 'GET',
+        headers: { 'User-Agent': 'TravelFlow-Debug/1.0' },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      const result = await response.text().then(text => text.trim());
+
+      console.log(`API Response: "${result}"`);
+      console.log(`Response starts with S.: ${result.startsWith('S.')}`);
+      console.log(`Response length: ${result.length}`);
+
+      const success = response.ok && result.startsWith('S.') && result.length > 2;
+
+      console.log(`Final success status: ${success}`);
+      console.log(`=== END DEBUG ===`);
+
+      res.json({
+        success,
+        message: success ? `Test message sent successfully to +91${finalPhone}` : `Failed to send test message`,
+        apiResponse: result,
+        phoneValidation: {
+          original: phone,
+          cleaned: cleanPhone,
+          final: finalPhone,
+          isValid: true
+        },
+        apiDetails: {
+          url: `${apiUrl}?${params.toString()}`,
+          responseStatus: response.status,
+          responseOk: response.ok
+        },
+        testMessage
+      });
+
+    } catch (error) {
+      console.error("Debug WhatsApp test error:", error);
       res.status(500).json({ 
         success: false, 
         error: error instanceof Error ? error.message : "Unknown error occurred" 
@@ -2769,52 +2894,72 @@ Hurry Up!`;
           // Get bus information for this traveler's route
           const bus = await storage.getBus(traveler.busId);
           
-          // Clean phone number
-          const cleanPhone = traveler.phone.replace(/\D/g, '');
+          // Clean and validate phone number
+          let cleanPhone = traveler.phone.replace(/\D/g, '');
+          
+          // Ensure it's a valid Indian mobile number
           let finalPhone = cleanPhone;
           if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
             finalPhone = cleanPhone.substring(2);
+          } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
+            finalPhone = cleanPhone.substring(1);
+          }
+          
+          // Validate final phone number (should be 10 digits starting with 6-9)
+          if (!/^[6-9]\d{9}$/.test(finalPhone)) {
+            console.error(`Invalid phone number format for ${traveler.travelerName}: ${traveler.phone} -> ${finalPhone}`);
+            await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
+            continue;
           }
 
-          // Create fully dynamic personalized message with route information
-          const route = bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'your route';
-          const busName = bus ? bus.name : 'Bus Service';
-          const travelDate = traveler.travelDate ? new Date(traveler.travelDate).toLocaleDateString() : '';
-          
-          const message = `Hi ${traveler.travelerName}, thanks for traveling with us at ${agency.name}! 
-          
-Your ${route} journey on ${busName} (${travelDate}) was amazing! 🚌
+          // Create simplified message for better delivery
+          const message = `Hi ${traveler.travelerName}, thanks for traveling with ${agency.name}! Get 20% off your next trip with code ${traveler.couponCode || 'SAVE20'}. Valid for 90 days. Book at ${agency.website || agency.bookingWebsite || 'our website'}`;
 
-Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 
+          console.log(`Sending WhatsApp to ${traveler.travelerName} at +91${finalPhone}`);
 
-Valid for Next 90 days at: ${agency.website || agency.bookingWebsite || 'https://testtravelagency.com'} ✨ 
+          try {
+            // Send via BhashSMS API with timeout
+            const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
+            const params = new URLSearchParams({
+              user: 'eddygoo1',
+              pass: '123456',
+              sender: 'BUZWAP',
+              phone: finalPhone,
+              text: message,
+              priority: 'wa',
+              stype: 'normal',
+              Params: '54,877,966,52'
+            });
 
-Book your next ${route} trip or explore new routes! 
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-Hurry Up!`;
+            const response = await fetch(`${apiUrl}?${params.toString()}`, {
+              method: 'GET',
+              signal: controller.signal,
+              headers: {
+                'User-Agent': 'TravelFlow-WhatsApp/1.0'
+              }
+            });
 
-          // Send via BhashSMS API
-          const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
-          const params = new URLSearchParams({
-            user: 'eddygoo1',
-            pass: '123456',
-            sender: 'BUZWAP',
-            phone: finalPhone,
-            text: message,
-            priority: 'wa',
-            stype: 'normal',
-            Params: '54,877,966,52'
-          });
+            clearTimeout(timeoutId);
+            const responseText = await response.text().then(text => text.trim());
+            
+            console.log(`WhatsApp API Response for ${finalPhone}:`, responseText);
 
-          const response = await fetch(`${apiUrl}?${params.toString()}`);
-          const responseText = await response.text();
+            // More strict success checking
+            if (response.ok && responseText.startsWith('S.') && responseText.length > 2) {
+              const messageId = responseText;
+              console.log(`✅ WhatsApp sent successfully to ${traveler.travelerName} (+91${finalPhone}): ${messageId}`);
+              await storage.updateTravelerData(traveler.id, { whatsappStatus: 'sent' });
+              sentCount++;
+            } else {
+              console.log(`❌ WhatsApp failed for ${traveler.travelerName} (+91${finalPhone}): ${responseText}`);
+              await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
+            }
 
-          if (response.ok && responseText.trim().startsWith('S.')) {
-            // Update traveler WhatsApp status to sent
-            await storage.updateTravelerData(traveler.id, { whatsappStatus: 'sent' });
-            sentCount++;
-          } else {
-            // Update status to failed
+          } catch (fetchError) {
+            console.error(`Network error sending to ${traveler.travelerName} (+91${finalPhone}):`, fetchError);
             await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
           }
 
