@@ -2648,23 +2648,16 @@ Hurry Up!`;
 
       // Send via BhashSMS API
       const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
-      const params = new URLSearchParams({
-        user: 'eddygoo1',
-        pass: '123456',
-        sender: 'BUZWAP',
-        phone: finalPhone,
-        text: testMessage,
-        priority: 'wa',
-        stype: 'normal',
-        Params: '54,877,966,52'
-      });
-
-      console.log(`API URL: ${apiUrl}?${params.toString()}`);
+      // Manually construct URL to avoid encoding commas in Params
+      const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${finalPhone}&text=${encodeURIComponent(testMessage)}&priority=wa&stype=normal&Params=54,877,966,52`;
+      const finalUrl = `${apiUrl}?${baseParams}`;
+      
+      console.log(`API URL: ${finalUrl}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-      const response = await fetch(`${apiUrl}?${params.toString()}`, {
+      const response = await fetch(finalUrl, {
         method: 'GET',
         headers: { 'User-Agent': 'TravelFlow-Debug/1.0' },
         signal: controller.signal
@@ -2693,7 +2686,7 @@ Hurry Up!`;
           isValid: true
         },
         apiDetails: {
-          url: `${apiUrl}?${params.toString()}`,
+          url: finalUrl,
           responseStatus: response.status,
           responseOk: response.ok
         },
@@ -2926,21 +2919,14 @@ Hurry Up!`;
           try {
             // Send via BhashSMS API with timeout
             const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
-            const params = new URLSearchParams({
-              user: 'eddygoo1',
-              pass: '123456',
-              sender: 'BUZWAP',
-              phone: finalPhone,
-              text: message,
-              priority: 'wa',
-              stype: 'normal',
-              Params: '54,877,966,52'
-            });
+            // Manually construct URL to avoid encoding commas in Params  
+            const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${finalPhone}&text=${encodeURIComponent(message)}&priority=wa&stype=normal&Params=54,877,966,52`;
+            const finalUrl = `${apiUrl}?${baseParams}`;
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-            const response = await fetch(`${apiUrl}?${params.toString()}`, {
+            const response = await fetch(finalUrl, {
               method: 'GET',
               signal: controller.signal,
               headers: {
@@ -2956,7 +2942,7 @@ Hurry Up!`;
             console.log(`Raw API Response: "${responseText}"`);
             console.log(`Response Length: ${responseText.length}`);
             console.log(`Starts with S.: ${responseText.startsWith('S.')}`);
-            console.log(`Full API URL: ${apiUrl}?${params.toString()}`);
+            console.log(`Full API URL: ${finalUrl}`);
 
             // More strict success checking
             if (response.ok && responseText.startsWith('S.') && responseText.length > 2) {
