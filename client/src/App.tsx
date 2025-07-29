@@ -96,6 +96,7 @@ function AppContent() {
                   <Route path="/agency/bus-management" component={BusManagement} />
                   <Route path="/agency/upload-data" component={UploadData} />
                   <Route path="/agency/uploaded-data" component={UploadedData} />
+                  <Route path="/agency/whatsapp-scheduler" component={lazy(() => import("@/pages/agency/whatsapp-scheduler"))} />
                   <Route path="/agency/payments" component={AgencyPayments} />
                   <Route path="/agency/profile" component={lazy(() => import("@/pages/agency/profile"))} />
                   <Route path="/agency/pending" component={AgencyPending} />

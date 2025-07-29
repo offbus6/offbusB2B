@@ -2544,5 +2544,177 @@ Happy Travels!`;
     }
   });
 
+  // Get upload batches with WhatsApp status for scheduler
+  app.get('/api/agency/upload-batches', requireAuth, async (req, res) => {
+    try {
+      const user = req.session.user;
+      if (!user || user.role !== 'agency') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const agencyId = user.agency?.id;
+      if (!agencyId) {
+        return res.status(404).json({ error: 'Agency not found' });
+      }
+
+      // Get traveler data and buses for the agency
+      const travelerData = await storage.getTravelerDataByAgency(agencyId);
+      const buses = await storage.getBusesByAgency(agencyId);
+
+      // Group travelers by upload date to create batches
+      const batchMap = new Map();
+      
+      for (const traveler of travelerData) {
+        const uploadDate = traveler.uploadDate || new Date().toISOString().split('T')[0];
+        const key = uploadDate;
+        
+        if (!batchMap.has(key)) {
+          batchMap.set(key, {
+            uploadId: `batch_${uploadDate.replace(/-/g, '')}`,
+            uploadDate: uploadDate,
+            travelers: [],
+            routes: new Set(),
+            coupons: new Set()
+          });
+        }
+        
+        const batch = batchMap.get(key);
+        batch.travelers.push(traveler);
+        
+        // Add route info
+        const bus = buses.find(b => b.id === traveler.busId);
+        if (bus?.route) {
+          batch.routes.add(bus.route);
+        }
+        
+        // Add coupon info
+        if (traveler.couponCode) {
+          batch.coupons.add(traveler.couponCode);
+        }
+      }
+
+      // Convert to array format with WhatsApp status
+      const uploadBatches = Array.from(batchMap.values()).map(batch => {
+        const sentCount = batch.travelers.filter(t => t.whatsappStatus === 'sent').length;
+        const totalCount = batch.travelers.length;
+        
+        let whatsappStatus = 'pending';
+        if (sentCount === totalCount && totalCount > 0) {
+          whatsappStatus = 'sent';
+        } else if (sentCount > 0) {
+          whatsappStatus = 'partial';
+        }
+
+        return {
+          uploadId: batch.uploadId,
+          uploadDate: batch.uploadDate,
+          travelerCount: totalCount,
+          routes: Array.from(batch.routes),
+          coupons: Array.from(batch.coupons),
+          whatsappStatus,
+          sentCount
+        };
+      }).sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime());
+
+      res.json(uploadBatches);
+    } catch (error) {
+      console.error('Error fetching upload batches:', error);
+      res.status(500).json({ error: 'Failed to fetch upload batches' });
+    }
+  });
+
+  // Send WhatsApp to all travelers in a batch
+  app.post('/api/agency/whatsapp/send-batch/:uploadId', requireAuth, async (req, res) => {
+    try {
+      const user = req.session.user;
+      if (!user || user.role !== 'agency') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const { uploadId } = req.params;
+      const agencyId = user.agency?.id;
+      
+      if (!agencyId) {
+        return res.status(404).json({ error: 'Agency not found' });
+      }
+
+      // Extract date from uploadId (format: batch_YYYYMMDD)
+      const dateStr = uploadId.replace('batch_', '');
+      const uploadDate = `${dateStr.slice(0,4)}-${dateStr.slice(4,6)}-${dateStr.slice(6,8)}`;
+      
+      // Get all travelers for this upload date that haven't been sent WhatsApp
+      const allTravelers = await storage.getTravelerDataByAgency(agencyId);
+      const batchTravelers = allTravelers.filter(t => 
+        (t.uploadDate || new Date().toISOString().split('T')[0]) === uploadDate &&
+        t.whatsappStatus !== 'sent'
+      );
+
+      if (batchTravelers.length === 0) {
+        return res.json({ success: true, message: 'No pending travelers to send WhatsApp', sentCount: 0 });
+      }
+
+      let sentCount = 0;
+      const agency = user.agency;
+
+      // Send WhatsApp to each traveler
+      for (const traveler of batchTravelers) {
+        try {
+          // Clean phone number
+          const cleanPhone = traveler.phone.replace(/\D/g, '');
+          let finalPhone = cleanPhone;
+          if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+            finalPhone = cleanPhone.substring(2);
+          }
+
+          // Create personalized message
+          const message = `Hi ${traveler.travelerName}, thanks for Traveling with us at ${agency.name}! Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 Valid for Next 90 days at: ${agency.website || 'https://testtravelagency.com'} ✨ Hurry Up.`;
+
+          // Send via BhashSMS API
+          const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
+          const params = new URLSearchParams({
+            user: 'eddygoo1',
+            pass: '123456',
+            sender: 'BUZWAP',
+            phone: finalPhone,
+            text: message,
+            priority: 'wa',
+            stype: 'normal',
+            Params: '54,877,966,52'
+          });
+
+          const response = await fetch(`${apiUrl}?${params.toString()}`);
+          const responseText = await response.text();
+
+          if (response.ok && responseText.trim().startsWith('S.')) {
+            // Update traveler WhatsApp status to sent
+            await storage.updateTravelerData(traveler.id, { whatsappStatus: 'sent' });
+            sentCount++;
+          } else {
+            // Update status to failed
+            await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
+          }
+
+          // Add delay between messages
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+        } catch (error) {
+          console.error(`Failed to send WhatsApp to ${traveler.phone}:`, error);
+          await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: `WhatsApp messages sent successfully to ${sentCount} travelers`,
+        sentCount,
+        totalCount: batchTravelers.length
+      });
+
+    } catch (error) {
+      console.error('Error sending batch WhatsApp:', error);
+      res.status(500).json({ error: 'Failed to send WhatsApp messages' });
+    }
+  });
+
   return app;
 }

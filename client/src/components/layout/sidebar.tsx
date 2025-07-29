@@ -90,6 +90,11 @@ export default function Sidebar() {
       label: "Uploaded Data" 
     },
     { 
+      href: "/agency/whatsapp-scheduler", 
+      icon: MessageSquare, 
+      label: "WhatsApp Scheduler" 
+    },
+    { 
       href: "/agency/payments",
       icon: CreditCard,
       label: "Payments"
@@ -99,11 +104,7 @@ export default function Sidebar() {
       icon: User, 
       label: "Profile" 
     },
-    { 
-      href: "/agency/whatsapp-schedule", 
-      icon: MessageSquare, 
-      label: "WhatsApp Schedule" 
-    },
+
   ];
 
   const navItems = isSuperAdmin ? superAdminNavItems : agencyNavItems;
