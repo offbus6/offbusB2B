@@ -2547,7 +2547,7 @@ Happy Travels!`;
   // Get upload batches with WhatsApp status for scheduler
   app.get('/api/agency/upload-batches', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
-      const user = req.session.user;
+      const user = (req.session as any).user;
       if (!user || user.role !== 'agency') {
         return res.status(403).json({ error: 'Access denied' });
       }
@@ -2564,7 +2564,7 @@ Happy Travels!`;
       const batchMap = new Map();
       
       for (const upload of uploadHistory) {
-        const uploadDate = upload.uploadDate.toISOString().split('T')[0]; // Group by date
+        const uploadDate = upload.createdAt ? upload.createdAt.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]; // Group by date
         const key = `${uploadDate}_${upload.busId}`;
         
         if (!batchMap.has(key)) {
@@ -2586,12 +2586,14 @@ Happy Travels!`;
           }
           
           // Get unique routes and coupons
-          const routes = [...new Set(travelers.map(t => bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Unknown Route'))];
-          const coupons = [...new Set(travelers.map(t => t.couponCode).filter(Boolean))];
+          const routeSet = new Set(travelers.map(t => bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Unknown Route'));
+          const couponSet = new Set(travelers.map(t => t.couponCode).filter(Boolean));
+          const routes = Array.from(routeSet);
+          const coupons = Array.from(couponSet);
           
           batchMap.set(key, {
             uploadId: upload.id,
-            uploadDate: upload.uploadDate,
+            uploadDate: upload.createdAt || new Date(),
             travelerCount: totalCount,
             routes,
             coupons,
@@ -2605,70 +2607,7 @@ Happy Travels!`;
         new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
       );
       
-      res.json(batches);d' });
-      }
-
-      // Get traveler data and buses for the agency
-      const travelerData = await storage.getTravelerDataByAgency(agencyId);
-      const buses = await storage.getBusesByAgency(agencyId);
-
-      // Group travelers by upload date to create batches
-      const batchMap = new Map();
-      
-      for (const traveler of travelerData) {
-        const uploadDate = traveler.createdAt ? new Date(traveler.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-        const key = uploadDate;
-        
-        if (!batchMap.has(key)) {
-          batchMap.set(key, {
-            uploadId: `batch_${uploadDate.replace(/-/g, '')}`,
-            uploadDate: uploadDate,
-            travelers: [],
-            routes: new Set(),
-            coupons: new Set()
-          });
-        }
-        
-        const batch = batchMap.get(key);
-        batch.travelers.push(traveler);
-        
-        // Add route info
-        const bus = buses.find(b => b.id === traveler.busId);
-        if (bus) {
-          const route = `${bus.fromLocation} to ${bus.toLocation}`;
-          batch.routes.add(route);
-        }
-        
-        // Add coupon info
-        if (traveler.couponCode) {
-          batch.coupons.add(traveler.couponCode);
-        }
-      }
-
-      // Convert to array format with WhatsApp status
-      const uploadBatches = Array.from(batchMap.values()).map(batch => {
-        const sentCount = batch.travelers.filter((t: any) => t.whatsappStatus === 'sent').length;
-        const totalCount = batch.travelers.length;
-        
-        let whatsappStatus = 'pending';
-        if (sentCount === totalCount && totalCount > 0) {
-          whatsappStatus = 'sent';
-        } else if (sentCount > 0) {
-          whatsappStatus = 'partial';
-        }
-
-        return {
-          uploadId: batch.uploadId,
-          uploadDate: batch.uploadDate,
-          travelerCount: totalCount,
-          routes: Array.from(batch.routes),
-          coupons: Array.from(batch.coupons),
-          whatsappStatus,
-          sentCount
-        };
-      }).sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime());
-
-      res.json(uploadBatches);
+      res.json(batches);
     } catch (error) {
       console.error('Error fetching upload batches:', error);
       res.status(500).json({ error: 'Failed to fetch upload batches' });
@@ -2678,7 +2617,7 @@ Happy Travels!`;
   // Send WhatsApp to all travelers in a batch
   app.post('/api/agency/whatsapp/send-batch/:uploadId', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
-      const user = req.session.user;
+      const user = (req.session as any).user;
       if (!user || user.role !== 'agency') {
         return res.status(403).json({ error: 'Access denied' });
       }

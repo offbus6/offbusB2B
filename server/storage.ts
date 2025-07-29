@@ -127,7 +127,9 @@ export interface IStorage {
 
   // Upload history operations
   createUploadHistory(history: InsertUploadHistory): Promise<UploadHistory>;
+  getUploadHistory(agencyId: number): Promise<UploadHistory[]>;
   getUploadHistoryByAgency(agencyId: number): Promise<UploadHistory[]>;
+  getTravelerDataByUpload(uploadId: number): Promise<TravelerData[]>;
 
   // Stats operations
   getSystemStats(): Promise<{
@@ -652,6 +654,35 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(uploadHistory.createdAt));
   }
 
+  async getUploadHistory(agencyId: number): Promise<UploadHistory[]> {
+    return await this.getUploadHistoryByAgency(agencyId);
+  }
+
+  async getTravelerDataByUpload(uploadId: number): Promise<TravelerData[]> {
+    // Since travelerData doesn't have uploadId, we'll get travelers created around the same time as the upload
+    const upload = await db.select().from(uploadHistory).where(eq(uploadHistory.id, uploadId)).limit(1);
+    if (!upload[0]) return [];
+    
+    const uploadDate = upload[0].createdAt;
+    if (!uploadDate) return [];
+    
+    // Get travelers from the same day for this agency and bus
+    const startOfDay = new Date(uploadDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(uploadDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    return await db
+      .select()
+      .from(travelerData)
+      .where(and(
+        eq(travelerData.agencyId, upload[0].agencyId),
+        eq(travelerData.busId, upload[0].busId),
+        sql`${travelerData.createdAt} >= ${startOfDay.toISOString()}`,
+        sql`${travelerData.createdAt} <= ${endOfDay.toISOString()}`
+      ));
+  }
+
   async getSystemStats(): Promise<{
     totalAgencies: number;
     totalBuses: number;
@@ -915,8 +946,7 @@ export class DatabaseStorage implements IStorage {
 
   // Tax configuration operations
   async getTaxConfig(): Promise<TaxConfig | undefined> {
-    const [config]``````
- = await db
+    const [config] = await db
       .select()
       .from(taxConfig)
       .where(eq(taxConfig.isActive, true))
@@ -1084,22 +1114,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getTravelerDataByBus(busId: number): Promise<TravelerData[]> {
-    return await db
-      .select()
-      .from(travelerData)
-      .where(eq(travelerData.busId, busId))
-      .orderBy(desc(travelerData.createdAt));
-  }
 
-  // Added function to get travelers by upload ID
-  async getTravelerDataByUpload(uploadId: number): Promise<TravelerData[]> {
-      return await db
-          .select()
-          .from(travelerData)
-          .where(eq(travelerData.uploadId, uploadId))
-          .orderBy(desc(travelerData.createdAt));
-  }
 }
 
 export const storage = new DatabaseStorage();
