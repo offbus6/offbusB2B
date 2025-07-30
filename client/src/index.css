@@ -15,19 +15,20 @@
   --card-foreground: hsl(20, 14.3%, 4.1%);
   --border: hsl(20, 5.9%, 90%);
   --input: hsl(20, 5.9%, 90%);
-  --primary: hsl(355, 70%, 54%);
+  --primary: hsl(332, 67%, 29%);
   --primary-foreground: hsl(0, 0%, 100%);
-  --secondary: hsl(60, 4.8%, 95.9%);
-  --secondary-foreground: hsl(24, 9.8%, 10%);
-  --accent: hsl(60, 4.8%, 95.9%);
-  --accent-foreground: hsl(24, 9.8%, 10%);
+  --secondary: hsl(332, 67%, 29%);
+  --secondary-foreground: hsl(0, 0%, 100%);
+  --accent: hsl(332, 48%, 46%);
+  --accent-foreground: hsl(0, 0%, 100%);
   --destructive: hsl(0, 84.2%, 60.2%);
   --destructive-foreground: hsl(60, 9.1%, 97.8%);
-  --ring: hsl(20, 14.3%, 4.1%);
+  --ring: hsl(332, 67%, 29%);
   --radius: 0.5rem;
   
-  /* Airbnb-inspired colors */
-  --airbnb-primary: hsl(355, 70%, 54%);
+  /* OffBus Brand Colors */
+  --airbnb-primary: hsl(332, 67%, 29%);  /* #7a1940 */
+  --airbnb-secondary: hsl(332, 48%, 46%);  /* #ac3c69 */
   --airbnb-dark: hsl(0, 0%, 28%);
   --airbnb-teal: hsl(180, 100%, 33%);
   --airbnb-orange: hsl(18, 95%, 58%);
@@ -47,7 +48,7 @@
   --card-foreground: hsl(0, 0%, 98%);
   --border: hsl(240, 3.7%, 15.9%);
   --input: hsl(240, 3.7%, 15.9%);
-  --primary: hsl(355, 70%, 54%);
+  --primary: hsl(332, 67%, 29%);
   --primary-foreground: hsl(0, 0%, 100%);
   --secondary: hsl(240, 3.7%, 15.9%);
   --secondary-foreground: hsl(0, 0%, 98%);
