@@ -263,6 +263,10 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - System verified working with clean URLs: API test S.612763 successful
 - Profile page now shows both fields with their actual database values
 - All WhatsApp messaging uses clean, unescaped URLs from agency profiles
+- **UPDATED: Application branding changed from "Off Bus" to "OffBus" everywhere (July 30, 2025)**
+- Fixed all instances across frontend components: header, footer, landing page, admin setup
+- Updated branding to use single word "OffBus" without space for consistency
+- Company name now appears correctly in all authentication and landing pages
 
 ## BhashSMS API Configuration (UPDATED & ACTIVE)
 - **API URL:** http://bhashsms.com/api/sendmsg.php

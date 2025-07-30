@@ -55,7 +55,7 @@ export default function Footer({ variant = 'landing' }: FooterProps) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
-            <h3 className="text-2xl font-bold text-[var(--airbnb-primary)]">Off Bus</h3>
+            <h3 className="text-2xl font-bold text-[var(--airbnb-primary)]">OffBus</h3>
             <p className="text-gray-300 text-sm leading-relaxed">
               Revolutionizing travel agency management with smart automation, 
               comprehensive fleet management, and seamless customer communication.

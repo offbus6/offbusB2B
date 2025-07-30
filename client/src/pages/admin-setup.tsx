@@ -122,7 +122,7 @@ export default function AdminSetup() {
                 Admin Setup
               </CardTitle>
               <CardDescription className="text-[var(--airbnb-gray)]">
-                Create the first admin account for Off Bus
+                Create the first admin account for OffBus
               </CardDescription>
             </CardHeader>
             <CardContent>
