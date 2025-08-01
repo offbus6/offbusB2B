@@ -104,6 +104,7 @@ export default function BusManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/buses"] });
+      queryClient.refetchQueries({ queryKey: ["/api/buses"] });
       setIsDialogOpen(false);
       form.reset();
       setEditingBus(null);
