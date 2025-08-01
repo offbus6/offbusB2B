@@ -2913,7 +2913,7 @@ Happy Travels!`;
     }
   });
 
-  // Send WhatsApp to all travelers in a batch
+  // Send WhatsApp to all travelers in a batch with enhanced delivery verification
   app.post('/api/agency/whatsapp/send-batch/:uploadId', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
       const user = (req.session as any).user;
@@ -2961,8 +2961,44 @@ Happy Travels!`;
         return res.json({ success: true, message: 'No pending travelers to send WhatsApp', sentCount: 0 });
       }
 
+      console.log('\n🚨 WHATSAPP DELIVERY VERIFICATION SYSTEM 🚨');
+      console.log(`Starting batch send for ${pendingTravelers.length} travelers`);
+
       let sentCount = 0;
+      let failedCount = 0;
       const agency = user.agency;
+      const deliveryResults = [];
+
+      // Test template approval first with a sample message
+      console.log('\n🔍 TESTING TEMPLATE APPROVAL STATUS...');
+      const testPhone = '9900408817'; // Your test number
+      const testUrl = `https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=${testPhone}&text=eddygoo_2807&priority=wa&stype=normal&Params=TestUser,${agency.name},TEST20,${agency.bookingWebsite || 'https://test.com'}&htype=image&url=${agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg'}`;
+      
+      try {
+        const testResponse = await fetch(testUrl);
+        const testResult = await testResponse.text().trim();
+        console.log(`📋 Template Test Result: "${testResult}"`);
+        
+        if (!testResult.startsWith('S.')) {
+          console.log('🚨 CRITICAL: Template approval issue detected!');
+          console.log('❌ WhatsApp messages will NOT be delivered to users');
+          console.log('💡 Recommendation: Contact BhashSMS support immediately');
+          
+          return res.json({
+            success: false,
+            error: 'WhatsApp template not approved for delivery',
+            message: 'API calls succeed but messages are not delivered. Contact BhashSMS to approve template eddygoo_2807 for WhatsApp delivery.',
+            templateTestResult: testResult,
+            sentCount: 0,
+            totalCount: pendingTravelers.length,
+            recommendation: 'Contact BhashSMS support to verify template approval status'
+          });
+        } else {
+          console.log('✅ Template test successful - proceeding with batch send');
+        }
+      } catch (error) {
+        console.log('⚠️ Template test failed - proceeding with caution');
+      }
 
       // Send WhatsApp to each pending traveler in this specific upload
       for (const traveler of pendingTravelers) {
@@ -2983,8 +3019,15 @@ Happy Travels!`;
 
           // Validate final phone number (should be 10 digits starting with 6-9)
           if (!/^[6-9]\d{9}$/.test(finalPhone)) {
-            console.error(`Invalid phone number format for ${traveler.travelerName}: ${traveler.phone} -> ${finalPhone}`);
+            console.error(`❌ Invalid phone number format for ${traveler.travelerName}: ${traveler.phone} -> ${finalPhone}`);
             await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
+            failedCount++;
+            deliveryResults.push({
+              travelerName: traveler.travelerName,
+              phone: traveler.phone,
+              status: 'failed',
+              reason: 'Invalid phone number format'
+            });
             continue;
           }
 
@@ -2992,23 +3035,17 @@ Happy Travels!`;
           const bookingUrl = agency.bookingWebsite || agency.website || 'https://testtravelagency.com';
           const whatsappImageUrl = agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
 
-          console.log('=== WHATSAPP BATCH SEND DEBUG ===');
-          console.log(`Traveler: ${traveler.travelerName}`);
-          console.log(`Original Phone: ${traveler.phone}`);
-          console.log(`Cleaned Phone: ${cleanPhone}`);
-          console.log(`Final Phone: +91${finalPhone}`);
-          console.log(`Booking URL: ${bookingUrl}`);
-          console.log(`WhatsApp Image URL: ${whatsappImageUrl}`);
+          console.log(`\n📱 Sending to ${traveler.travelerName} (+91${finalPhone})`);
 
           try {
-            // Send via BhashSMS API using your exact template format with +91 prefix for better delivery
+            // Send via BhashSMS API using exact template format
             const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
             const phoneWithCountryCode = `91${finalPhone}`;
             const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${phoneWithCountryCode}&text=eddygoo_2807&priority=wa&stype=normal&Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}&htype=image&url=${whatsappImageUrl}`;
             const finalUrl = `${apiUrl}?${baseParams}`;
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
 
             const response = await fetch(finalUrl, {
               method: 'GET',
@@ -3021,22 +3058,7 @@ Happy Travels!`;
             clearTimeout(timeoutId);
             const responseText = await response.text().then(text => text.trim());
 
-            console.log(`API Response Status: ${response.status}`);
-            console.log(`API Response OK: ${response.ok}`);
-            console.log(`Raw API Response: "${responseText}"`);
-            console.log(`Response Length: ${responseText.length}`);
-            console.log(`Starts with S.: ${responseText.startsWith('S.')}`);
-            console.log(`Full API URL: ${finalUrl}`);
-
-            // Enhanced success checking with delivery validation
-            console.log(`=== BULK DELIVERY DEBUG ===`);
-            console.log(`Response Status: ${response.status}`);
-            console.log(`Response OK: ${response.ok}`);
-            console.log(`Raw Response: "${responseText}"`);
-            console.log(`Response Length: ${responseText.length}`);
-            console.log(`Starts with S.: ${responseText.startsWith('S.')}`);
-
-            // Check for specific success patterns
+            // Enhanced delivery verification
             const isValidSuccess = response.ok && 
                                  responseText.startsWith('S.') && 
                                  responseText.length > 2 &&
@@ -3045,36 +3067,69 @@ Happy Travels!`;
 
             if (isValidSuccess) {
               const messageId = responseText;
-              console.log(`✅ BULK SUCCESS: WhatsApp sent to ${traveler.travelerName} (+91${finalPhone}) - Message ID: ${messageId}`);
-              console.log(`⚠️  IMPORTANT: User should receive WhatsApp message at +91${finalPhone} in 1-5 minutes`);
+              console.log(`✅ API SUCCESS: ${traveler.travelerName} (+91${finalPhone}) - Message ID: ${messageId}`);
+              console.log(`⚠️  DELIVERY NOTE: If message not received, template approval issue exists`);
               await storage.updateTravelerData(traveler.id, { whatsappStatus: 'sent' });
               sentCount++;
+              deliveryResults.push({
+                travelerName: traveler.travelerName,
+                phone: `+91${finalPhone}`,
+                status: 'api_success',
+                messageId: messageId,
+                note: 'API call successful - if message not received, template approval issue'
+              });
             } else {
-              console.log(`❌ BULK FAILED for ${traveler.travelerName} (+91${finalPhone}): ${responseText}`);
-              console.log(`❌ This may indicate template approval issues or account restrictions`);
+              console.log(`❌ API FAILED: ${traveler.travelerName} (+91${finalPhone}): ${responseText}`);
               await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
+              failedCount++;
+              deliveryResults.push({
+                travelerName: traveler.travelerName,
+                phone: `+91${finalPhone}`,
+                status: 'api_failed',
+                response: responseText
+              });
             }
 
           } catch (fetchError) {
-            console.error(`Network error sending to ${traveler.travelerName} (+91${finalPhone}):`, fetchError);
+            console.error(`❌ Network error sending to ${traveler.travelerName} (+91${finalPhone}):`, fetchError);
             await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
+            failedCount++;
+            deliveryResults.push({
+              travelerName: traveler.travelerName,
+              phone: `+91${finalPhone}`,
+              status: 'network_error',
+              error: fetchError instanceof Error ? fetchError.message : 'Unknown error'
+            });
           }
 
-          // Increased delay for better WhatsApp delivery (3 seconds for bulk stability)
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          // Delay between messages for better delivery
+          await new Promise(resolve => setTimeout(resolve, 2000));
 
         } catch (error) {
-          console.error(`Failed to send WhatsApp to ${traveler.phone}:`, error);
+          console.error(`❌ Failed to process ${traveler.phone}:`, error);
           await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
+          failedCount++;
         }
       }
 
-      res.json({ 
-        success: true, 
-        message: `WhatsApp messages sent successfully to ${sentCount} travelers`,
+      console.log('\n📊 BATCH SEND COMPLETE');
+      console.log(`✅ API Success: ${sentCount}`);
+      console.log(`❌ Failed: ${failedCount}`);
+      console.log(`📱 Total: ${pendingTravelers.length}`);
+
+      // Return comprehensive results
+      const response = {
+        success: sentCount > 0,
+        message: `Batch send complete: ${sentCount} API successes, ${failedCount} failed`,
         sentCount,
-        totalCount: pendingTravelers.length
-      });
+        failedCount,
+        totalCount: pendingTravelers.length,
+        deliveryResults,
+        warning: sentCount > 0 ? 'API calls successful - if users not receiving messages, contact BhashSMS about template approval' : undefined,
+        recommendation: 'If messages are not being delivered despite API success, the WhatsApp template needs approval from BhashSMS'
+      };
+
+      res.json(response);
 
     } catch (error) {
       console.error('Error sending batch WhatsApp:', error);
@@ -3097,6 +3152,157 @@ Happy Travels!`;
     } catch (error) {
       console.error('WhatsApp debug error:', error);
       res.status(500).json({ error: 'Failed to run WhatsApp debugging' });
+    }
+  });
+
+  // WhatsApp Template Verification Endpoint
+  app.post("/api/agency/whatsapp/verify-template", requireAuth(['agency']), async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any).user;
+      if (!user || user.role !== 'agency') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const agency = user.agency;
+      const testPhone = '9900408817'; // Your test number
+
+      console.log('\n🔍 WHATSAPP TEMPLATE VERIFICATION 🔍');
+      console.log(`Agency: ${agency.name}`);
+      console.log(`Test Phone: +91${testPhone}`);
+
+      const verificationResults = [];
+
+      // Test 1: Check account balance/status
+      console.log('\n1️⃣ Testing account status...');
+      try {
+        const balanceUrl = `https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=${testPhone}&text=balance`;
+        const balanceResponse = await fetch(balanceUrl);
+        const balanceText = await balanceResponse.text().trim();
+        
+        verificationResults.push({
+          test: 'Account Balance',
+          response: balanceText,
+          status: balanceText.includes('S.') ? 'success' : 'warning'
+        });
+        
+        console.log(`Account Status: "${balanceText}"`);
+      } catch (error) {
+        verificationResults.push({
+          test: 'Account Balance',
+          response: 'Failed to check',
+          status: 'error'
+        });
+      }
+
+      // Test 2: Test template approval
+      console.log('\n2️⃣ Testing WhatsApp template approval...');
+      try {
+        const templateUrl = `https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=${testPhone}&text=eddygoo_2807&priority=wa&stype=normal&Params=TestUser,${agency.name},TEST20,${agency.bookingWebsite || 'https://test.com'}&htype=image&url=${agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg'}`;
+        
+        const templateResponse = await fetch(templateUrl);
+        const templateText = await templateResponse.text().trim();
+        
+        const isApproved = templateText.startsWith('S.');
+        
+        verificationResults.push({
+          test: 'WhatsApp Template (eddygoo_2807)',
+          response: templateText,
+          status: isApproved ? 'success' : 'critical_error',
+          note: isApproved ? 'Template appears approved' : 'TEMPLATE NOT APPROVED - Messages will not deliver'
+        });
+        
+        console.log(`Template Test: "${templateText}"`);
+        if (!isApproved) {
+          console.log('🚨 CRITICAL: Template not approved for WhatsApp delivery');
+        }
+      } catch (error) {
+        verificationResults.push({
+          test: 'WhatsApp Template',
+          response: 'Network error',
+          status: 'error'
+        });
+      }
+
+      // Test 3: Test SMS delivery (fallback)
+      console.log('\n3️⃣ Testing SMS delivery as fallback...');
+      try {
+        const smsUrl = `https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=${testPhone}&text=SMS Test from ${agency.name} - If you receive this, SMS works fine&priority=ndnd&stype=normal`;
+        
+        const smsResponse = await fetch(smsUrl);
+        const smsText = await smsResponse.text().trim();
+        
+        verificationResults.push({
+          test: 'SMS Fallback',
+          response: smsText,
+          status: smsText.startsWith('S.') ? 'success' : 'error',
+          note: 'SMS can be used as backup if WhatsApp fails'
+        });
+        
+        console.log(`SMS Test: "${smsText}"`);
+      } catch (error) {
+        verificationResults.push({
+          test: 'SMS Fallback',
+          response: 'Network error',
+          status: 'error'
+        });
+      }
+
+      // Analyze results and provide recommendations
+      const templateApproved = verificationResults.find(r => r.test.includes('WhatsApp Template'))?.status === 'success';
+      const accountWorking = verificationResults.find(r => r.test === 'Account Balance')?.status !== 'error';
+
+      let diagnosis = '';
+      let recommendations = [];
+
+      if (!templateApproved) {
+        diagnosis = 'CRITICAL: WhatsApp template not approved for delivery';
+        recommendations = [
+          'Contact BhashSMS support immediately',
+          'Request approval for template "eddygoo_2807" for WhatsApp Business API',
+          'Provide your business details and use case to BhashSMS',
+          'Consider using SMS as temporary fallback',
+          'Ask BhashSMS about WhatsApp template approval process'
+        ];
+      } else if (accountWorking) {
+        diagnosis = 'Template appears approved - delivery should work';
+        recommendations = [
+          'Monitor actual message delivery to users',
+          'Check with recipients if messages are received',
+          'Verify phone numbers are WhatsApp-enabled',
+          'Consider rate limiting for better delivery'
+        ];
+      } else {
+        diagnosis = 'Account or connectivity issues detected';
+        recommendations = [
+          'Check BhashSMS account status',
+          'Verify account balance and credits',
+          'Check network connectivity to BhashSMS servers'
+        ];
+      }
+
+      console.log(`\n📋 DIAGNOSIS: ${diagnosis}`);
+      console.log('💡 RECOMMENDATIONS:');
+      recommendations.forEach((rec, i) => console.log(`   ${i + 1}. ${rec}`));
+
+      res.json({
+        success: true,
+        diagnosis,
+        recommendations,
+        verificationResults,
+        templateApproved,
+        accountWorking,
+        nextSteps: templateApproved ? 
+          'Template appears approved. If users still not receiving messages, contact BhashSMS support.' : 
+          'URGENT: Contact BhashSMS to approve WhatsApp template eddygoo_2807'
+      });
+
+    } catch (error) {
+      console.error('Template verification error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to verify template',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

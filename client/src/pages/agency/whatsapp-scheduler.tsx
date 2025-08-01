@@ -5,7 +5,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, MapPin, Gift, Send, CheckCircle, Clock, RefreshCw } from "lucide-react";
+import { Calendar, Users, MapPin, Gift, Send, CheckCircle, Clock, RefreshCw, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 
 interface UploadBatch {
@@ -56,8 +56,43 @@ export default function WhatsAppScheduler() {
     },
   });
 
+  // Template verification mutation
+  const verifyTemplateMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('/api/agency/whatsapp/verify-template', {
+        method: 'POST'
+      });
+    },
+    onSuccess: (data: any) => {
+      if (data.templateApproved) {
+        toast({
+          title: "Template Verification Success",
+          description: "WhatsApp template appears to be approved",
+        });
+      } else {
+        toast({
+          title: "Template NOT Approved",
+          description: "Contact BhashSMS to approve template for WhatsApp delivery",
+          variant: "destructive",
+        });
+      }
+      console.log('Template Verification Results:', data);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Verification Failed",
+        description: error.message || "Could not verify template",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSendBatch = (uploadId: string) => {
     sendWhatsAppBatchMutation.mutate(uploadId);
+  };
+
+  const verifyTemplate = () => {
+    verifyTemplateMutation.mutate();
   };
 
   const getStatusBadge = (status: string, sentCount: number, totalCount: number) => {
@@ -98,15 +133,26 @@ export default function WhatsAppScheduler() {
           <h1 className="text-3xl font-bold text-gray-900">WhatsApp Scheduler</h1>
           <p className="text-gray-600 mt-1">Send WhatsApp messages to uploaded traveler data</p>
         </div>
-        <Button
-          onClick={() => refetch()}
-          variant="outline"
-          className="flex items-center gap-2"
-          disabled={isLoading}
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          {isLoading ? 'Refreshing...' : 'Refresh'}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => verifyTemplate()}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={verifyTemplateMutation.isPending}
+          >
+            <MessageSquare className="h-4 w-4" />
+            {verifyTemplateMutation.isPending ? 'Verifying...' : 'Verify Template'}
+          </Button>
+          <Button
+            onClick={() => refetch()}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        </div>
       </div>
 
       {uploadBatches.length === 0 ? (
