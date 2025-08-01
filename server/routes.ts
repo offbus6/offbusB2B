@@ -2569,6 +2569,7 @@ Happy Travels!`;
       console.log(`Sending individual WhatsApp to ${traveler.travelerName} at +91${finalPhone}`);
       console.log(`Using booking URL: ${bookingUrl}`);
       console.log(`Using WhatsApp image: ${whatsappImageUrl}`);
+      console.log(`🎯 Individual WhatsApp Template: ${agency.whatsappTemplate || 'eddygoo_2807'}`);
 
       // Send via BhashSMS API using your exact template format
       const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
@@ -2992,7 +2993,13 @@ Happy Travels!`;
 
       let sentCount = 0;
       let failedCount = 0;
-      const agency = user.agency;
+      // Get fresh agency data from database to ensure we have latest whatsappTemplate
+      const agency = await storage.getAgencyById(user.agency.id);
+      if (!agency) {
+        return res.status(404).json({ error: 'Agency not found' });
+      }
+      console.log(`🔄 FRESH AGENCY DATA - WhatsApp Template: '${agency.whatsappTemplate}' (fallback: 'eddygoo_2807')`);
+      console.log(`📊 Agency ID: ${agency.id}, Name: ${agency.name}`);
       const deliveryResults = [];
 
       // Process each traveler individually with personalized API calls
@@ -3037,6 +3044,7 @@ Happy Travels!`;
 
           console.log(`Booking URL: ${bookingUrl}`);
           console.log(`WhatsApp Image URL: ${whatsappImageUrl}`);
+          console.log(`🎯 WhatsApp Template: ${agency.whatsappTemplate || 'eddygoo_2807'}`);
 
           // Create INDIVIDUAL API call with PERSONALIZED data for THIS traveler
           const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
