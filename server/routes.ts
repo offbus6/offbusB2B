@@ -2990,9 +2990,10 @@ Happy Travels!`;
           console.log(`WhatsApp Image URL: ${whatsappImageUrl}`);
 
           try {
-            // Send via BhashSMS API using your exact template format
+            // Send via BhashSMS API using your exact template format with +91 prefix for better delivery
             const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
-            const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${finalPhone}&text=eddygoo_2807&priority=wa&stype=normal&Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}&htype=image&url=${whatsappImageUrl}`;
+            const phoneWithCountryCode = `91${finalPhone}`;
+            const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${phoneWithCountryCode}&text=eddygoo_2807&priority=wa&stype=normal&Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}&htype=image&url=${whatsappImageUrl}`;
             const finalUrl = `${apiUrl}?${baseParams}`;
 
             const controller = new AbortController();
@@ -3033,8 +3034,8 @@ Happy Travels!`;
             await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
           }
 
-          // Add delay between messages
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Add longer delay between messages for better WhatsApp delivery (recommended: 3-5 seconds)
+          await new Promise(resolve => setTimeout(resolve, 5000));
 
         } catch (error) {
           console.error(`Failed to send WhatsApp to ${traveler.phone}:`, error);
