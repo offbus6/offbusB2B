@@ -2581,7 +2581,7 @@ Happy Travels!`;
           status: success ? 'sent' : 'failed'
         },
         apiResponse: result,
-        sentMessage: personalizedMessage,
+        sentMessage: `Hi ${traveler.travelerName}, thanks for Traveling with us at ${agency.name}! Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 Valid for Next 90 days at: ${bookingUrl} ✨ Hurry Up.`,
         phoneValidation: {
           original: traveler.phone,
           cleaned: finalPhone,
