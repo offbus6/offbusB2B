@@ -2417,7 +2417,7 @@ Happy Travels!`;
 
           // Use agency's booking website URL and WhatsApp image URL from profile
           const bookingUrl = agency.bookingWebsite || agency.website || 'https://testtravelagency.com';
-          const whatsappImageUrl = agency.whatsappImageUrl || bookingUrl;
+          const whatsappImageUrl = agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
 
           // Send via BhashSMS API using your exact template format
           const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
@@ -2538,7 +2538,7 @@ Happy Travels!`;
       
       // Use agency's booking website URL and WhatsApp image URL from profile
       const bookingUrl = agency.bookingWebsite || agency.website || 'https://testtravelagency.com';
-      const whatsappImageUrl = agency.whatsappImageUrl || bookingUrl;
+      const whatsappImageUrl = agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
 
       console.log(`Sending individual WhatsApp to ${traveler.travelerName} at +91${finalPhone}`);
       console.log(`Using booking URL: ${bookingUrl}`);
@@ -2979,7 +2979,7 @@ Happy Travels!`;
 
           // Use agency's booking website URL and WhatsApp image URL from profile
           const bookingUrl = agency.bookingWebsite || agency.website || 'https://testtravelagency.com';
-          const whatsappImageUrl = agency.whatsappImageUrl || bookingUrl;
+          const whatsappImageUrl = agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
           
           console.log('=== WHATSAPP BATCH SEND DEBUG ===');
           console.log(`Traveler: ${traveler.travelerName}`);
@@ -3034,8 +3034,8 @@ Happy Travels!`;
             await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
           }
 
-          // Add longer delay between messages for better WhatsApp delivery (recommended: 3-5 seconds)
-          await new Promise(resolve => setTimeout(resolve, 5000));
+          // Optimized delay for bulk messaging (200ms for high-volume processing)
+          await new Promise(resolve => setTimeout(resolve, 200));
 
         } catch (error) {
           console.error(`Failed to send WhatsApp to ${traveler.phone}:`, error);
