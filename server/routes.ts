@@ -1280,6 +1280,27 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // WhatsApp message processing endpoint (replaces background interval)
+  app.post("/api/whatsapp/process-messages", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      console.log("Processing pending WhatsApp messages via API endpoint");
+      await whatsappService.processPendingMessages();
+      
+      res.json({ 
+        message: "WhatsApp message processing completed successfully",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("WhatsApp message processing error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Test WhatsApp API endpoint (super admin only)
   app.post("/api/whatsapp/test", authLimiter, async (req: Request, res: Response) => {
     try {

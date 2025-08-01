@@ -35,6 +35,7 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - **Authentication**: Replit OpenID Connect provider, PostgreSQL session storage, role-based middleware, HTTP-only cookies, strong password policy, generic error messages for account protection.
 - **Data Flow**: Structured processes for agency registration, bus management, and traveler data uploads, including CSV/Excel processing and association with buses.
 - **WhatsApp Integration**: Manual and batch messaging capabilities for agencies, dynamic message templates, and status tracking for messages.
+- **Deployment Ready**: Compliant with Replit Autoscale requirements - no background intervals, uses process.env.PORT without fallback, API endpoint for message processing.
 
 ### Database Schema
 - **Users**: Profile information and roles.
@@ -55,3 +56,12 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - **Validation**: Zod
 - **UI Components**: Radix UI primitives
 - **WhatsApp API**: BhashSMS API (http://bhashsms.com/api/sendmsg.php, http://bhashsms.com/api/sendmsgutil.php)
+
+## Recent Changes (January 2025)
+
+### Deployment Fixes for Replit Autoscale
+- **Removed Background Interval**: Eliminated setInterval for WhatsApp message processing that violated Autoscale requirements
+- **Fixed Port Configuration**: Updated server to use `process.env.PORT!` without fallback to ensure proper port binding in production
+- **Added API Endpoint**: Created `/api/whatsapp/process-messages` endpoint for manual WhatsApp message processing
+- **Updated UI**: Added "Process Messages" button in admin WhatsApp configuration page for manual message processing
+- **Compliance**: System now fully complies with Replit Autoscale deployment requirements

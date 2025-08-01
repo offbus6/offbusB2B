@@ -117,7 +117,7 @@ app.use((req, res, next) => {
   });
 
   // Create HTTP server from Express app with error handling
-  const PORT = parseInt(process.env.PORT || '5000', 10);
+  const PORT = parseInt(process.env.PORT!, 10);
   const server = app.listen({
     port: PORT,
     host: "0.0.0.0",
@@ -146,11 +146,3 @@ app.use((req, res, next) => {
   }
 })();
 
-// Process WhatsApp messages every 5 minutes
-setInterval(async () => {
-  try {
-    await whatsappService.processPendingMessages();
-  } catch (error) {
-    console.error("Error processing WhatsApp messages:", error);
-  }
-}, 5 * 60 * 1000); // 5 minutes

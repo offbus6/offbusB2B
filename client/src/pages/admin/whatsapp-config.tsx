@@ -66,29 +66,29 @@ export default function WhatsappConfig() {
   });
 
   const { data: whatsappConfig, isLoading: configLoading } = useQuery({
-    queryKey: ["/api/admin/whatsapp-config"],
+    queryKey: ["/api/whatsapp/config"],
     retry: false,
   });
 
   const { data: templates, isLoading: templatesLoading } = useQuery({
-    queryKey: ["/api/admin/whatsapp-templates"],
+    queryKey: ["/api/whatsapp/templates"],
     retry: false,
   });
 
   const { data: queueStats } = useQuery({
-    queryKey: ["/api/admin/whatsapp-queue/stats"],
+    queryKey: ["/api/whatsapp/queue/stats"],
     retry: false,
   });
 
   const saveConfigMutation = useMutation({
     mutationFn: async (data: WhatsappConfigData) => {
-      await apiRequest("/api/admin/whatsapp-config", {
+      await apiRequest("/api/whatsapp/config", {
         method: "POST",
         body: data,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/whatsapp-config"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/config"] });
       setIsConfigDialogOpen(false);
       toast({
         title: "Success",
@@ -107,8 +107,8 @@ export default function WhatsappConfig() {
   const saveTemplateMutation = useMutation({
     mutationFn: async (data: TemplateData) => {
       const url = editingTemplate 
-        ? `/api/admin/whatsapp-templates/${editingTemplate.id}`
-        : "/api/admin/whatsapp-templates";
+        ? `/api/whatsapp/templates/${editingTemplate.id}`
+        : "/api/whatsapp/templates";
       const method = editingTemplate ? "PATCH" : "POST";
 
       await apiRequest(url, {
@@ -117,7 +117,7 @@ export default function WhatsappConfig() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/whatsapp-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/templates"] });
       setIsTemplateDialogOpen(false);
       setEditingTemplate(null);
       templateForm.reset();
@@ -137,12 +137,12 @@ export default function WhatsappConfig() {
 
   const deleteTemplateMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest(`/api/admin/whatsapp-templates/${id}`, {
+      await apiRequest(`/api/whatsapp/templates/${id}`, {
         method: "DELETE",
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/whatsapp-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/templates"] });
       toast({
         title: "Success",
         description: "Template deleted successfully",
@@ -157,10 +157,33 @@ export default function WhatsappConfig() {
     },
   });
 
+  const processMessagesMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("/api/whatsapp/process-messages", {
+        method: "POST",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/whatsapp/queue/stats"] });
+      toast({
+        title: "Success",
+        description: "WhatsApp messages processed successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to process WhatsApp messages",
+        variant: "destructive",
+      });
+    },
+  });
+
   const testMessageMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("/api/admin/whatsapp-test", {
+      await apiRequest("/api/whatsapp/test", {
         method: "POST",
+        body: { phoneNumber: "9900408817", message: "Test message from admin panel" },
       });
     },
     onSuccess: () => {
@@ -323,6 +346,14 @@ export default function WhatsappConfig() {
                     >
                       <TestTube className="w-4 h-4 mr-2" />
                       Test Connection
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => processMessagesMutation.mutate()}
+                      disabled={processMessagesMutation.isPending}
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      {processMessagesMutation.isPending ? 'Processing...' : 'Process Messages'}
                     </Button>
                   </div>
                 </div>
