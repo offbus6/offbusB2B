@@ -26,6 +26,7 @@ export default function AgencyProfile() {
     state: "",
     bookingWebsite: "",
     whatsappImageUrl: "",
+    whatsappTemplate: "",
   });
   
   const [passwordData, setPasswordData] = useState({
@@ -45,6 +46,7 @@ export default function AgencyProfile() {
         state: agency.state || "",
         bookingWebsite: agency.bookingWebsite || "",
         whatsappImageUrl: agency.whatsappImageUrl || "",
+        whatsappTemplate: agency.whatsappTemplate || "eddygoo_2807",
       });
     }
   }, [agency]);
@@ -297,6 +299,19 @@ export default function AgencyProfile() {
                     required
                   />
                   <p className="text-sm text-[var(--airbnb-gray)]">This image will be attached to WhatsApp messages sent to travelers</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappTemplate">WhatsApp Template Name</Label>
+                  <Input
+                    id="whatsappTemplate"
+                    type="text"
+                    value={formData.whatsappTemplate}
+                    onChange={(e) => handleInputChange("whatsappTemplate", e.target.value)}
+                    placeholder="Enter your WhatsApp template name (e.g., eddygoo_2807)"
+                    required
+                  />
+                  <p className="text-sm text-[var(--airbnb-gray)]">This is your approved WhatsApp template name from BhashSMS</p>
                 </div>
 
                 <Button

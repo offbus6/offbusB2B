@@ -50,6 +50,7 @@ export const agencies = pgTable("agencies", {
   website: varchar("website"),
   bookingWebsite: varchar("booking_website"),
   whatsappImageUrl: varchar("whatsapp_image_url"),
+  whatsappTemplate: varchar("whatsapp_template").default("eddygoo_2807"),
   logoUrl: varchar("logo_url"),
   username: varchar("username").unique(),
   password: varchar("password"),

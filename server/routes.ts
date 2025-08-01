@@ -2430,6 +2430,7 @@ Happy Travels!`;
 
           // Send via BhashSMS API using your exact template format
           const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
+          const whatsappTemplate = agency.whatsappTemplate || 'eddygoo_2807';
           
           // Build URL manually without encoding to avoid %2C, %3A, %2F issues
           const cleanParams = [
@@ -2437,7 +2438,7 @@ Happy Travels!`;
             `pass=123456`,
             `sender=BUZWAP`,
             `phone=${cleanPhone}`,
-            `text=eddygoo_2807`,
+            `text=${whatsappTemplate}`,
             `priority=wa`,
             `stype=normal`,
             `Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}`,
@@ -2571,6 +2572,7 @@ Happy Travels!`;
 
       // Send via BhashSMS API using your exact template format
       const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
+      const whatsappTemplate = agency.whatsappTemplate || 'eddygoo_2807';
       
       // Build URL manually without encoding to avoid %2C, %3A, %2F issues
       const cleanParams = [
@@ -2578,7 +2580,7 @@ Happy Travels!`;
         `pass=123456`,
         `sender=BUZWAP`,
         `phone=${finalPhone}`,
-        `text=eddygoo_2807`,
+        `text=${whatsappTemplate}`,
         `priority=wa`,
         `stype=normal`,
         `Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}`,
@@ -3038,6 +3040,7 @@ Happy Travels!`;
 
           // Create INDIVIDUAL API call with PERSONALIZED data for THIS traveler
           const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
+          const whatsappTemplate = agency.whatsappTemplate || 'eddygoo_2807';
           
           // Build URL manually without encoding to avoid %2C, %3A, %2F issues
           const cleanParams = [
@@ -3045,7 +3048,7 @@ Happy Travels!`;
             `pass=123456`,
             `sender=BUZWAP`,
             `phone=${finalPhone}`,
-            `text=eddygoo_2807`,
+            `text=${whatsappTemplate}`,
             `priority=wa`,
             `stype=normal`,
             `Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}`,
