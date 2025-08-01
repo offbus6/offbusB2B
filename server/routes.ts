@@ -2417,28 +2417,11 @@ Happy Travels!`;
 
           // Use agency's booking website URL and WhatsApp image URL from profile
           const bookingUrl = agency.bookingWebsite || agency.website || 'https://testtravelagency.com';
-          const whatsappImageUrl = agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
-          
-          // Create fully dynamic personalized message with route information
-          const route = bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'your route';
-          const busName = bus ? bus.name : 'Bus Service';
-          const travelDate = traveler.travelDate ? new Date(traveler.travelDate).toLocaleDateString() : '';
-          
-          const personalizedMessage = `Hi ${traveler.travelerName}, thanks for traveling with us at ${agency.name}! 
-          
-Your ${route} journey on ${busName} (${travelDate}) was amazing! 🚌
+          const whatsappImageUrl = agency.whatsappImageUrl || bookingUrl;
 
-Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 
-
-Valid for Next 90 days at: ${bookingUrl} ✨ 
-
-Book your next ${route} trip or explore new routes! 
-
-Hurry Up!`;
-
-          // Send via BhashSMS API with image support
-          const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
-          const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${cleanPhone}&text=${encodeURIComponent(personalizedMessage)}&priority=wa&stype=normal&Params=54,877,966,52&htype=image&url=${encodeURIComponent(whatsappImageUrl)}`;
+          // Send via BhashSMS API using your exact template format
+          const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
+          const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${cleanPhone}&text=eddygoo_2807&priority=wa&stype=normal&Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}&htype=image&url=${whatsappImageUrl}`;
           const finalUrl = `${apiUrl}?${baseParams}`;
 
           const controller = new AbortController();
@@ -2555,18 +2538,15 @@ Hurry Up!`;
       
       // Use agency's booking website URL and WhatsApp image URL from profile
       const bookingUrl = agency.bookingWebsite || agency.website || 'https://testtravelagency.com';
-      const whatsappImageUrl = agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
-      
-      // Create simplified message for better delivery using proper URL from agency profile
-      const personalizedMessage = `Hi ${traveler.travelerName}, thanks for traveling with ${agency.name}! Get 20% off your next trip with code ${traveler.couponCode || 'SAVE20'}. Valid for 90 days. Book at ${bookingUrl}`;
+      const whatsappImageUrl = agency.whatsappImageUrl || bookingUrl;
 
       console.log(`Sending individual WhatsApp to ${traveler.travelerName} at +91${finalPhone}`);
       console.log(`Using booking URL: ${bookingUrl}`);
       console.log(`Using WhatsApp image: ${whatsappImageUrl}`);
 
-      // Send via BhashSMS API with image support
-      const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
-      const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${finalPhone}&text=${encodeURIComponent(personalizedMessage)}&priority=wa&stype=normal&Params=54,877,966,52&htype=image&url=${encodeURIComponent(whatsappImageUrl)}`;
+      // Send via BhashSMS API using your exact template format
+      const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
+      const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${finalPhone}&text=eddygoo_2807&priority=wa&stype=normal&Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}&htype=image&url=${whatsappImageUrl}`;
       const finalUrl = `${apiUrl}?${baseParams}`;
 
       const controller = new AbortController();
@@ -2999,11 +2979,8 @@ Hurry Up!`;
 
           // Use agency's booking website URL and WhatsApp image URL from profile
           const bookingUrl = agency.bookingWebsite || agency.website || 'https://testtravelagency.com';
-          const whatsappImageUrl = agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
+          const whatsappImageUrl = agency.whatsappImageUrl || bookingUrl;
           
-          // Create simplified message for better delivery using proper URLs from agency profile
-          const message = `Hi ${traveler.travelerName}, thanks for traveling with ${agency.name}! Get 20% off your next trip with code ${traveler.couponCode || 'SAVE20'}. Valid for 90 days. Book at ${bookingUrl}`;
-
           console.log('=== WHATSAPP BATCH SEND DEBUG ===');
           console.log(`Traveler: ${traveler.travelerName}`);
           console.log(`Original Phone: ${traveler.phone}`);
@@ -3011,13 +2988,11 @@ Hurry Up!`;
           console.log(`Final Phone: +91${finalPhone}`);
           console.log(`Booking URL: ${bookingUrl}`);
           console.log(`WhatsApp Image URL: ${whatsappImageUrl}`);
-          console.log(`Message Length: ${message.length} chars`);
-          console.log(`Message: ${message}`);
 
           try {
-            // Send via BhashSMS API using agency's custom image URL
-            const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
-            const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${finalPhone}&text=${encodeURIComponent(message)}&priority=wa&stype=normal&Params=54,877,966,52&htype=image&url=${encodeURIComponent(whatsappImageUrl)}`;
+            // Send via BhashSMS API using your exact template format
+            const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
+            const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${finalPhone}&text=eddygoo_2807&priority=wa&stype=normal&Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}&htype=image&url=${whatsappImageUrl}`;
             const finalUrl = `${apiUrl}?${baseParams}`;
 
             const controller = new AbortController();
