@@ -3010,21 +3010,8 @@ Happy Travels!`;
 
           // Create INDIVIDUAL API call with PERSONALIZED data for THIS traveler
           const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
-          const personalizedParams = new URLSearchParams({
-            user: 'eddygoo1',
-            pass: '123456',
-            sender: 'BUZWAP',
-            phone: finalPhone,
-            text: 'eddygoo_2807',
-            priority: 'wa',
-            stype: 'normal',
-            // PERSONALIZED Params for THIS specific traveler
-            Params: `${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}`,
-            htype: 'image',
-            url: whatsappImageUrl
-          });
-
-          const fullApiUrl = `${apiUrl}?${personalizedParams.toString()}`;
+          const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${finalPhone}&text=eddygoo_2807&priority=wa&stype=normal&Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}&htype=image&url=${whatsappImageUrl}`;
+          const fullApiUrl = `${apiUrl}?${baseParams}`;
 
           // Make INDIVIDUAL API call for THIS traveler
           console.log(`Making individual API call ${i + 1}/${pendingTravelers.length}`);
