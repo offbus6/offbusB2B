@@ -97,7 +97,10 @@ export default function BusManagement() {
         capacity: Number(data.capacity),
         amenities: data.amenities ? data.amenities.split(',').map(a => a.trim()) : [],
       };
-      await apiRequest("PUT", `/api/buses/${editingBus.id}`, payload);
+      await apiRequest(`/api/buses/${editingBus.id}`, {
+        method: "PUT",
+        body: payload,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/buses"] });
