@@ -3034,8 +3034,8 @@ Happy Travels!`;
             await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
           }
 
-          // Optimized delay for bulk messaging (200ms for high-volume processing)
-          await new Promise(resolve => setTimeout(resolve, 200));
+          // Increased delay for better WhatsApp delivery (1 second for bulk stability)
+          await new Promise(resolve => setTimeout(resolve, 1000));
 
         } catch (error) {
           console.error(`Failed to send WhatsApp to ${traveler.phone}:`, error);
@@ -3053,6 +3053,24 @@ Happy Travels!`;
     } catch (error) {
       console.error('Error sending batch WhatsApp:', error);
       res.status(500).json({ error: 'Failed to send WhatsApp messages' });
+    }
+  });
+
+  // WhatsApp delivery debugging route
+  app.post("/api/debug/whatsapp-delivery", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "agency") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { debugWhatsAppDelivery } = await import('./whatsapp-delivery-debug');
+      const result = await debugWhatsAppDelivery();
+      
+      res.json(result);
+    } catch (error) {
+      console.error('WhatsApp debug error:', error);
+      res.status(500).json({ error: 'Failed to run WhatsApp debugging' });
     }
   });
 

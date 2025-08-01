@@ -106,6 +106,29 @@ export default function UploadedData() {
     },
   });
 
+  // WhatsApp debug mutation
+  const debugWhatsAppMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('/api/debug/whatsapp-delivery', {
+        method: 'POST'
+      });
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Debug Complete",
+        description: "Check browser console for detailed results",
+      });
+      console.log('WhatsApp Debug Results:', data);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Debug Failed",
+        description: error.message || "Failed to run WhatsApp debugging",
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateTravelerMutation = useMutation({
     mutationFn: async (data: z.infer<typeof travelerFormSchema>) => {
       // Auto-format phone number for Indian numbers
@@ -344,6 +367,15 @@ export default function UploadedData() {
               <MessageCircle className="w-4 h-4 mr-2" />
               {sendAllWhatsAppMutation.isPending ? 'Sending...' : `Send WhatsApp to All (${unsentCount})`}
             </Button>
+            <Button 
+              variant="outline"
+              onClick={() => debugWhatsAppMutation.mutate()}
+              disabled={debugWhatsAppMutation.isPending}
+              className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              {debugWhatsAppMutation.isPending ? 'Debugging...' : 'Debug WhatsApp'}
+            </Button>
             <Button variant="outline" onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />
               Export CSV
@@ -490,41 +522,28 @@ export default function UploadedData() {
                       {getStatusBadge(traveler.whatsappStatus)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        {(!traveler.whatsappStatus || traveler.whatsappStatus === 'failed') && (
+                      <div className="flex space-x-1">
+                        {(!traveler.whatsappStatus || traveler.whatsappStatus === 'failed' || traveler.whatsappStatus === 'pending') && (
                           <Button
-                            variant="ghost"
                             size="sm"
                             onClick={() => sendIndividualWhatsAppMutation.mutate(traveler.id)}
                             disabled={sendIndividualWhatsAppMutation.isPending}
-                            className="text-green-600 hover:text-green-700"
-                            title="Send WhatsApp Message"
+                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1"
+                            title={traveler.whatsappStatus === 'failed' ? "Retry WhatsApp Message" : "Send WhatsApp Message"}
                           >
-                            <Send className="w-4 h-4" />
+                            <Send className="w-3 h-3 mr-1" />
+                            {traveler.whatsappStatus === 'failed' ? 'Retry' : 'Send'}
                           </Button>
                         )}
                         {traveler.whatsappStatus === 'sent' && (
                           <Button
-                            variant="ghost"
                             size="sm"
                             disabled
-                            className="text-green-600"
+                            className="bg-green-100 text-green-800 px-3 py-1"
                             title="Message Already Sent"
                           >
-                            <CheckCircle className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {traveler.whatsappStatus === 'failed' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => sendIndividualWhatsAppMutation.mutate(traveler.id)}
-                            disabled={sendIndividualWhatsAppMutation.isPending}
-                            className="text-orange-600 hover:text-orange-700 mr-1"
-                            title="Retry WhatsApp Message"
-                          >
-                            <XCircle className="w-3 h-3" />
-                            <Send className="w-3 h-3 ml-1" />
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Sent
                           </Button>
                         )}
                         <Button
