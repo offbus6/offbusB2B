@@ -654,7 +654,8 @@ export function registerRoutes(app: Express) {
             city: agency.city,
             state: agency.state,
             bookingWebsite: agency.bookingWebsite,
-            whatsappImageUrl: agency.whatsappImageUrl
+            whatsappImageUrl: agency.whatsappImageUrl,
+            whatsappTemplate: agency.whatsappTemplate
           };
         }
       } catch (error) {
@@ -2169,6 +2170,7 @@ Happy Travels!`;
         website: website ? sanitizeInput(website) : undefined,
         bookingWebsite: validatedBookingWebsite,
         whatsappImageUrl: validatedWhatsappImageUrl,
+        whatsappTemplate: req.body.whatsappTemplate ? sanitizeInput(req.body.whatsappTemplate) : undefined,
       };
 
       // Remove undefined values
@@ -2192,7 +2194,8 @@ Happy Travels!`;
             city: updatedAgency.city,
             state: updatedAgency.state,
             bookingWebsite: updatedAgency.bookingWebsite,
-            whatsappImageUrl: updatedAgency.whatsappImageUrl
+            whatsappImageUrl: updatedAgency.whatsappImageUrl,
+            whatsappTemplate: updatedAgency.whatsappTemplate
           };
         }
       }
