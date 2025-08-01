@@ -23,8 +23,14 @@ const signupSchema = z.object({
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   state: z.string().min(1, "State is required"),
   city: z.string().min(1, "City is required"),
-  logoUrl: z.string().optional(),
-  bookingWebsite: z.string().url("Please enter a valid booking website URL").min(1, "Booking website is required"),
+  logoUrl: z.string().optional().refine(
+    (val) => !val || val === "" || /^https?:\/\//.test(val) || /^data:image\//.test(val),
+    "Invalid logo URL format"
+  ),
+  bookingWebsite: z.string().min(1, "Booking website is required").refine(
+    (val) => !val || val === "" || /^https?:\/\//.test(val),
+    "Please enter a valid booking website URL"
+  ),
 });
 
 type SignupData = z.infer<typeof signupSchema>;

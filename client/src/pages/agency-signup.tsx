@@ -28,9 +28,18 @@ const agencySignupSchema = z.object({
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/[0-9]/, "Password must contain at least one number")
     .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
-  logoUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
-  website: z.string().url("Invalid URL").optional().or(z.literal("")),
-  bookingWebsite: z.string().url("Invalid URL").optional().or(z.literal("")),
+  logoUrl: z.string().optional().or(z.literal("")).refine(
+    (val) => !val || val === "" || /^https?:\/\//.test(val) || /^data:image\//.test(val),
+    "Invalid logo URL format"
+  ),
+  website: z.string().optional().or(z.literal("")).refine(
+    (val) => !val || val === "" || /^https?:\/\//.test(val),
+    "Invalid website URL format"
+  ),
+  bookingWebsite: z.string().optional().or(z.literal("")).refine(
+    (val) => !val || val === "" || /^https?:\/\//.test(val),
+    "Invalid booking website URL format"
+  ),
 });
 
 type AgencySignupData = z.infer<typeof agencySignupSchema>;
