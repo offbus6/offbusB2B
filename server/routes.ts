@@ -413,7 +413,7 @@ export function registerRoutes(app: Express) {
       // URL validation for booking website and logo URL
       let validatedBookingWebsite = undefined;
       let validatedLogoUrl = undefined;
-      
+
       if (mappedData.bookingWebsite) {
         const bookingWebsite = mappedData.bookingWebsite.trim();
         if (validator.isURL(bookingWebsite, { protocols: ['http', 'https'] })) {
@@ -422,7 +422,7 @@ export function registerRoutes(app: Express) {
           return res.status(400).json({ message: "Invalid booking website URL format" });
         }
       }
-      
+
       if (mappedData.logoUrl) {
         const logoUrl = mappedData.logoUrl.trim();
         // Accept both HTTP/HTTPS URLs and base64 data URLs
@@ -908,8 +908,7 @@ export function registerRoutes(app: Express) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const data = insertBusSchema.parse({
-        ...req.body,
+      const data = insertBusSchema.parse({        ...req.body,
         agencyId: user.id
       });
 
@@ -2008,20 +2007,30 @@ Happy Travels!`;
 
           if (result.startsWith('S.')) {
             successCount++;
-            results.push({
-              travelerName: traveler.travelerName,
-              phone: `+91${cleanPhone}`,
-              status: 'sent',
-              messageId: result
-            });
+            const sentMessage = `Hi ${traveler.travelerName}, thanks for Traveling with us at ${agency.name}! Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 Valid for Next 90 days at: ${agency.bookingWebsite || 'https://your-booking-website.com'} ✨ Hurry Up.`;
+
+          results.push({
+            travelerId: traveler.id,
+            travelerName: traveler.travelerName,
+            phone: `+91${cleanPhone}`,
+            success,
+            message: success ? "Message sent successfully" : `Failed: ${result}`,
+            apiResponse: result,
+            sentMessage: sentMessage
+          });
           } else {
             failCount++;
-            results.push({
-              travelerName: traveler.travelerName,
-              phone: `+91${cleanPhone}`,
-              status: 'failed',
-              error: result
-            });
+            const sentMessage = `Hi ${traveler.travelerName}, thanks for Traveling with us at ${agency.name}! Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 Valid for Next 90 days at: ${agency.bookingWebsite || 'https://your-booking-website.com'} ✨ Hurry Up.`;
+
+          results.push({
+            travelerId: traveler.id,
+            travelerName: traveler.travelerName,
+            phone: `+91${cleanPhone}`,
+            success,
+            message: success ? "Message sent successfully" : `Failed: ${result}`,
+            apiResponse: result,
+            sentMessage: sentMessage
+          });
           }
 
           // Add delay between messages to avoid rate limiting
@@ -2131,7 +2140,7 @@ Happy Travels!`;
       // URL validation for booking website and WhatsApp image URL
       let validatedBookingWebsite = undefined;
       let validatedWhatsappImageUrl = undefined;
-      
+
       if (req.body.bookingWebsite) {
         const bookingWebsite = req.body.bookingWebsite.trim();
         if (validator.isURL(bookingWebsite, { protocols: ['http', 'https'] })) {
@@ -2140,7 +2149,7 @@ Happy Travels!`;
           return res.status(400).json({ message: "Invalid booking website URL format" });
         }
       }
-      
+
       if (req.body.whatsappImageUrl) {
         const whatsappImageUrl = req.body.whatsappImageUrl.trim();
         if (validator.isURL(whatsappImageUrl, { protocols: ['http', 'https'] })) {
@@ -2285,14 +2294,14 @@ Happy Travels!`;
               const agencyName = encodeURIComponent(agency.name || 'Travel Agency');  
               const couponCode = encodeURIComponent(traveler.couponCode || 'SAVE10');
               const bookingUrl = encodeURIComponent(agency.bookingWebsite || 'https://travelflow.com/book');
-              
+
               dynamicParams = `${travelerName},${agencyName},${couponCode},${bookingUrl}`;
-              
+
               // Use agency's WhatsApp image URL if available
               if (agency.whatsappImageUrl) {
                 agencyImageUrl = agency.whatsappImageUrl;
               }
-              
+
               console.log(`Dynamic Params created: ${dynamicParams}`);
               console.log(`Agency Image URL: ${agencyImageUrl}`);
             }
@@ -2341,7 +2350,7 @@ Happy Travels!`;
 
         // Check if message was sent successfully
         const success = result.startsWith('S.');
-        
+
         res.json({
           success: success,
           message: success ? "WhatsApp message sent successfully!" : `Failed to send message. API Response: ${result}`,
@@ -2356,7 +2365,7 @@ Happy Travels!`;
       } catch (fetchError) {
         clearTimeout(timeoutId);
         console.error(`BhashSMS API Error:`, fetchError);
-        
+
         res.json({
           success: false,
           message: `API request failed: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`,
@@ -2408,7 +2417,7 @@ Happy Travels!`;
         try {
           // Get bus information for route details
           const bus = await storage.getBus(traveler.busId);
-          
+
           // Clean phone number
           let cleanPhone = traveler.phone.replace(/\D/g, '');
           if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
@@ -2442,6 +2451,8 @@ Happy Travels!`;
             whatsappStatus: success ? 'sent' : 'failed'
           });
 
+          const sentMessage = `Hi ${traveler.travelerName}, thanks for Traveling with us at ${agency.name}! Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 Valid for Next 90 days at: ${bookingUrl} ✨ Hurry Up.`;
+
           results.push({
             travelerId: traveler.id,
             travelerName: traveler.travelerName,
@@ -2449,7 +2460,7 @@ Happy Travels!`;
             success,
             message: success ? "Message sent successfully" : `Failed: ${result}`,
             apiResponse: result,
-            sentMessage: personalizedMessage
+            sentMessage: sentMessage
           });
 
         } catch (error) {
@@ -2495,7 +2506,7 @@ Happy Travels!`;
       }
 
       const { id } = req.params;
-      
+
       // Get traveler data
       const traveler = await storage.getTravelerData(parseInt(id));
       if (!traveler || traveler.agencyId !== user.id) {
@@ -2510,7 +2521,7 @@ Happy Travels!`;
 
       // Clean and validate phone number
       let cleanPhone = traveler.phone.replace(/\D/g, '');
-      
+
       // Ensure it's a valid Indian mobile number
       let finalPhone = cleanPhone;
       if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
@@ -2518,7 +2529,7 @@ Happy Travels!`;
       } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
         finalPhone = cleanPhone.substring(1);
       }
-      
+
       // Validate final phone number (should be 10 digits starting with 6-9)
       if (!/^[6-9]\d{9}$/.test(finalPhone)) {
         return res.status(400).json({
@@ -2535,7 +2546,7 @@ Happy Travels!`;
 
       // Get bus information for route details
       const bus = await storage.getBus(traveler.busId);
-      
+
       // Use agency's booking website URL and WhatsApp image URL from profile
       const bookingUrl = agency.bookingWebsite || agency.website || 'https://testtravelagency.com';
       const whatsappImageUrl = agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
@@ -2560,9 +2571,9 @@ Happy Travels!`;
 
       clearTimeout(timeoutId);
       const result = await response.text().then(text => text.trim());
-      
+
       console.log(`WhatsApp API Response for individual send to ${finalPhone}:`, result);
-      
+
       // More strict success checking
       const success = response.ok && result.startsWith('S.') && result.length > 2;
 
@@ -2612,7 +2623,7 @@ Happy Travels!`;
       }
 
       const result = await testWhatsAppMessage(phone, message, imageUrl);
-      
+
       console.log("Test result:", result);
       res.json(result);
 
@@ -2688,7 +2699,7 @@ Happy Travels!`;
       // Clean and validate phone number
       let cleanPhone = phone.replace(/\D/g, '');
       let finalPhone = cleanPhone;
-      
+
       if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
         finalPhone = cleanPhone.substring(2);
       } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
@@ -2723,7 +2734,7 @@ Happy Travels!`;
       const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
       const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${finalPhone}&text=${encodeURIComponent(testMessage)}&priority=wa&stype=normal&Params=54,877,966,52&htype=image&url=https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg`;
       const finalUrl = `${apiUrl}?${baseParams}`;
-      
+
       console.log(`API URL: ${finalUrl}`);
 
       const controller = new AbortController();
@@ -2789,36 +2800,36 @@ Happy Travels!`;
 
       // Get upload history for this agency
       const uploadHistory = await storage.getUploadHistory(agencyId);
-      
+
       // Create batches from actual upload history records
       const batches = [];
-      
+
       for (const upload of uploadHistory) {
         // Get bus info
         const bus = await storage.getBus(upload.busId);
-        
+
         // Get all travelers for this specific upload
         const travelers = await storage.getTravelerDataByUpload(upload.id);
-        
+
         if (travelers.length === 0) continue; // Skip empty uploads
-        
+
         // Calculate WhatsApp status
         const sentCount = travelers.filter(t => t.whatsappStatus === 'sent').length;
         const totalCount = travelers.length;
-        
+
         let whatsappStatus: 'pending' | 'sent' | 'partial' = 'pending';
         if (sentCount === totalCount && totalCount > 0) {
           whatsappStatus = 'sent';
         } else if (sentCount > 0) {
           whatsappStatus = 'partial';
         }
-        
+
         // Get unique routes and coupons for this specific upload
         const routeSet = new Set(travelers.map(t => bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Unknown Route'));
         const couponSet = new Set(travelers.map(t => t.couponCode).filter(Boolean));
         const routes = Array.from(routeSet);
         const coupons = Array.from(couponSet);
-        
+
         batches.push({
           uploadId: upload.id.toString(), // Ensure it's a string for consistency
           uploadDate: upload.createdAt || new Date(),
@@ -2835,46 +2846,46 @@ Happy Travels!`;
       // If no upload history but there's traveler data, create legacy batches
       if (batches.length === 0) {
         const allTravelers = await storage.getTravelerDataByAgency(agencyId);
-        
+
         // Group legacy travelers by bus and creation date (without uploadId)
         const legacyTravelers = allTravelers.filter(t => !t.uploadId);
-        
+
         if (legacyTravelers.length > 0) {
           // Group by bus and day
           const travelerGroups = new Map<string, any[]>();
-          
+
           for (const traveler of legacyTravelers) {
             const date = new Date(traveler.createdAt || new Date()).toDateString();
             const key = `${traveler.busId}-${date}`;
-            
+
             if (!travelerGroups.has(key)) {
               travelerGroups.set(key, []);
             }
             travelerGroups.get(key)!.push(traveler);
           }
-          
+
           // Create batches for each group
           for (const [key, travelers] of travelerGroups) {
             const firstTraveler = travelers[0];
             const bus = await storage.getBus(firstTraveler.busId);
-            
+
             // Calculate WhatsApp status
             const sentCount = travelers.filter((t: any) => t.whatsappStatus === 'sent').length;
             const totalCount = travelers.length;
-            
+
             let whatsappStatus: 'pending' | 'sent' | 'partial' = 'pending';
             if (sentCount === totalCount && totalCount > 0) {
               whatsappStatus = 'sent';
             } else if (sentCount > 0) {
               whatsappStatus = 'partial';
             }
-            
+
             // Get unique routes and coupons
             const routeSet = new Set(travelers.map((t: any) => bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Unknown Route'));
             const couponSet = new Set(travelers.map((t: any) => t.couponCode).filter(Boolean));
             const routes = Array.from(routeSet);
             const coupons = Array.from(couponSet);
-            
+
             batches.push({
               uploadId: `legacy-${key}`, // Use legacy identifier
               uploadDate: firstTraveler.createdAt || new Date(),
@@ -2889,12 +2900,12 @@ Happy Travels!`;
           }
         }
       }
-      
+
       // Sort batches by upload date (newest first)
       batches.sort((a, b) => 
         new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
       );
-      
+
       res.json(batches);
     } catch (error) {
       console.error('Error fetching upload batches:', error);
@@ -2912,7 +2923,7 @@ Happy Travels!`;
 
       const { uploadId } = req.params;
       const agencyId = user.agency?.id;
-      
+
       if (!agencyId) {
         return res.status(404).json({ error: 'Agency not found' });
       }
@@ -2925,7 +2936,7 @@ Happy Travels!`;
         const [, busIdStr, dateStr] = uploadId.split('-');
         const busId = parseInt(busIdStr);
         const targetDate = new Date(dateStr).toDateString();
-        
+
         // Get all travelers for this agency and filter by bus and date
         const allTravelers = await storage.getTravelerDataByAgency(agencyId);
         batchTravelers = allTravelers.filter(t => 
@@ -2939,11 +2950,11 @@ Happy Travels!`;
         if (isNaN(uploadIdNum)) {
           return res.status(400).json({ error: 'Invalid upload ID' });
         }
-        
+
         // Get travelers for this specific upload that haven't been sent WhatsApp
         batchTravelers = await storage.getTravelerDataByUpload(uploadIdNum);
       }
-      
+
       const pendingTravelers = batchTravelers.filter(t => t.whatsappStatus !== 'sent');
 
       if (pendingTravelers.length === 0) {
@@ -2958,10 +2969,10 @@ Happy Travels!`;
         try {
           // Get bus information for this traveler's route
           const bus = await storage.getBus(traveler.busId);
-          
+
           // Clean and validate phone number
           let cleanPhone = traveler.phone.replace(/\D/g, '');
-          
+
           // Ensure it's a valid Indian mobile number
           let finalPhone = cleanPhone;
           if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
@@ -2969,7 +2980,7 @@ Happy Travels!`;
           } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
             finalPhone = cleanPhone.substring(1);
           }
-          
+
           // Validate final phone number (should be 10 digits starting with 6-9)
           if (!/^[6-9]\d{9}$/.test(finalPhone)) {
             console.error(`Invalid phone number format for ${traveler.travelerName}: ${traveler.phone} -> ${finalPhone}`);
@@ -2980,7 +2991,7 @@ Happy Travels!`;
           // Use agency's booking website URL and WhatsApp image URL from profile
           const bookingUrl = agency.bookingWebsite || agency.website || 'https://testtravelagency.com';
           const whatsappImageUrl = agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
-          
+
           console.log('=== WHATSAPP BATCH SEND DEBUG ===');
           console.log(`Traveler: ${traveler.travelerName}`);
           console.log(`Original Phone: ${traveler.phone}`);
@@ -3009,7 +3020,7 @@ Happy Travels!`;
 
             clearTimeout(timeoutId);
             const responseText = await response.text().then(text => text.trim());
-            
+
             console.log(`API Response Status: ${response.status}`);
             console.log(`API Response OK: ${response.ok}`);
             console.log(`Raw API Response: "${responseText}"`);
@@ -3066,7 +3077,7 @@ Happy Travels!`;
 
       const { debugWhatsAppDelivery } = await import('./whatsapp-delivery-debug');
       const result = await debugWhatsAppDelivery();
-      
+
       res.json(result);
     } catch (error) {
       console.error('WhatsApp debug error:', error);
