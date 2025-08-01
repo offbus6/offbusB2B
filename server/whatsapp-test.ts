@@ -100,7 +100,7 @@ export async function testWhatsAppMessage(
     
     // Log security event for failed API calls
     securityMonitor.logSecurityEvent({
-      type: 'API_ERROR',
+      type: 'UNAUTHORIZED_ACCESS',
       ip: 'system',
       endpoint: '/whatsapp/send',
       details: { error: errorMessage, phone: phone.replace(/\d/g, '*') },
