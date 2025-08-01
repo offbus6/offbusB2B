@@ -2008,30 +2008,32 @@ Happy Travels!`;
 
           if (result.startsWith('S.')) {
             successCount++;
+            const success = true;
             const sentMessage = `Hi ${traveler.travelerName}, thanks for Traveling with us at ${agency.name}! Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 Valid for Next 90 days at: ${agency.bookingWebsite || 'https://your-booking-website.com'} ✨ Hurry Up.`;
 
-          results.push({
-            travelerId: traveler.id,
-            travelerName: traveler.travelerName,
-            phone: `+91${cleanPhone}`,
-            success,
-            message: success ? "Message sent successfully" : `Failed: ${result}`,
-            apiResponse: result,
-            sentMessage: sentMessage
-          });
+            results.push({
+              travelerId: traveler.id,
+              travelerName: traveler.travelerName,
+              phone: `+91${cleanPhone}`,
+              success,
+              message: success ? "Message sent successfully" : `Failed: ${result}`,
+              apiResponse: result,
+              sentMessage: sentMessage
+            });
           } else {
             failCount++;
+            const success = false;
             const sentMessage = `Hi ${traveler.travelerName}, thanks for Traveling with us at ${agency.name}! Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 Valid for Next 90 days at: ${agency.bookingWebsite || 'https://your-booking-website.com'} ✨ Hurry Up.`;
 
-          results.push({
-            travelerId: traveler.id,
-            travelerName: traveler.travelerName,
-            phone: `+91${cleanPhone}`,
-            success,
-            message: success ? "Message sent successfully" : `Failed: ${result}`,
-            apiResponse: result,
-            sentMessage: sentMessage
-          });
+            results.push({
+              travelerId: traveler.id,
+              travelerName: traveler.travelerName,
+              phone: `+91${cleanPhone}`,
+              success,
+              message: success ? "Message sent successfully" : `Failed: ${result}`,
+              apiResponse: result,
+              sentMessage: sentMessage
+            });
           }
 
           // Add delay between messages to avoid rate limiting
@@ -3228,7 +3230,7 @@ Happy Travels!`;
       try {
         const balanceUrl = `https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=${testPhone}&text=balance`;
         const balanceResponse = await fetch(balanceUrl);
-        const balanceText = await balanceResponse.text().trim();
+        const balanceText = (await balanceResponse.text()).trim();
         
         verificationResults.push({
           test: 'Account Balance',
@@ -3251,7 +3253,7 @@ Happy Travels!`;
         const templateUrl = `https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=${testPhone}&text=eddygoo_2807&priority=wa&stype=normal&Params=TestUser,${agency.name},TEST20,${agency.bookingWebsite || 'https://test.com'}&htype=image&url=${agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg'}`;
         
         const templateResponse = await fetch(templateUrl);
-        const templateText = await templateResponse.text().trim();
+        const templateText = (await templateResponse.text()).trim();
         
         const isApproved = templateText.startsWith('S.');
         
@@ -3280,7 +3282,7 @@ Happy Travels!`;
         const smsUrl = `https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=${testPhone}&text=SMS Test from ${agency.name} - If you receive this, SMS works fine&priority=ndnd&stype=normal`;
         
         const smsResponse = await fetch(smsUrl);
-        const smsText = await smsResponse.text().trim();
+        const smsText = (await smsResponse.text()).trim();
         
         verificationResults.push({
           test: 'SMS Fallback',
@@ -3398,7 +3400,7 @@ Happy Travels!`;
           console.log(`Testing with ${testPhone}: ${testUrl}`);
 
           const response = await fetch(testUrl);
-          const responseText = await response.text().trim();
+          const responseText = (await response.text()).trim();
 
           testResults.push({
             phone: testPhone,
@@ -3430,8 +3432,8 @@ Happy Travels!`;
           successRate: travelers.length > 0 ? Math.round((sentTravelers.length / travelers.length) * 100) : 0
         },
         templateTests: testResults,
-        recommendations: [],
-        potentialIssues: []
+        recommendations: [] as string[],
+        potentialIssues: [] as string[]
       };
 
       // Add recommendations based on analysis
