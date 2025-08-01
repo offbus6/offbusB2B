@@ -124,10 +124,13 @@ export default function BusManagement() {
 
   const deleteBusMutation = useMutation({
     mutationFn: async (busId: number) => {
-      await apiRequest("DELETE", `/api/buses/${busId}`);
+      await apiRequest(`/api/buses/${busId}`, {
+        method: "DELETE",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/buses"] });
+      queryClient.refetchQueries({ queryKey: ["/api/buses"] });
       toast({
         title: "Success",
         description: "Bus deleted successfully",
