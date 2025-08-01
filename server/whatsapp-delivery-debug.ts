@@ -1,4 +1,4 @@
-import fetch from 'node-fetch';
+// Using native fetch API (Node.js 18+)
 
 // WhatsApp delivery debugging tool to investigate bulk vs individual delivery issues
 export async function debugWhatsAppDelivery() {
@@ -94,7 +94,7 @@ export async function testIndividualWhatsApp(phone: string, name: string) {
     console.log(`🔗 API URL: ${testUrl}`);
     
     const response = await fetch(testUrl);
-    const responseText = await response.text().trim();
+    const responseText = (await response.text()).trim();
     
     console.log(`📊 Response: "${responseText}"`);
     
@@ -107,6 +107,6 @@ export async function testIndividualWhatsApp(phone: string, name: string) {
     }
   } catch (error) {
     console.error(`🚨 Individual test error:`, error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }

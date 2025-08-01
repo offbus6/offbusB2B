@@ -65,3 +65,11 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - **Added API Endpoint**: Created `/api/whatsapp/process-messages` endpoint for manual WhatsApp message processing
 - **Updated UI**: Added "Process Messages" button in admin WhatsApp configuration page for manual message processing
 - **Compliance**: System now fully complies with Replit Autoscale deployment requirements
+
+### Node-fetch Deployment Resolution (January 2025)
+- **Resolved Runtime Dependency Error**: Fixed missing 'node-fetch' package causing deployment failures
+- **Updated to Native Fetch**: Converted `whatsapp-delivery-debug.ts` and `whatsapp-delivery-test.ts` to use Node.js native fetch API (available in Node.js 18+)
+- **Added Backup Dependency**: Installed node-fetch as production dependency to ensure runtime availability
+- **Fixed TypeScript Errors**: Resolved async/await and error handling issues in debugging tools
+- **Build Process**: Verified build command works correctly with esbuild external packages configuration
+- **Production Ready**: Application now builds and deploys successfully on Replit infrastructure

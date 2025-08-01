@@ -1,5 +1,5 @@
 // WhatsApp Delivery Investigation Tool
-import fetch from 'node-fetch';
+// Using native fetch API (Node.js 18+)
 
 interface DeliveryTestResult {
   success: boolean;
