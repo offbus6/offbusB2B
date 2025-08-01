@@ -425,7 +425,8 @@ export function registerRoutes(app: Express) {
       
       if (mappedData.logoUrl) {
         const logoUrl = mappedData.logoUrl.trim();
-        if (validator.isURL(logoUrl, { protocols: ['http', 'https'] })) {
+        // Accept both HTTP/HTTPS URLs and base64 data URLs
+        if (validator.isURL(logoUrl, { protocols: ['http', 'https'] }) || logoUrl.startsWith('data:image/')) {
           validatedLogoUrl = logoUrl;
         } else {
           return res.status(400).json({ message: "Invalid logo URL format" });
