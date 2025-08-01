@@ -2867,7 +2867,7 @@ Hurry Up!`;
         
         if (legacyTravelers.length > 0) {
           // Group by bus and day
-          const travelerGroups = new Map();
+          const travelerGroups = new Map<string, any[]>();
           
           for (const traveler of legacyTravelers) {
             const date = new Date(traveler.createdAt || new Date()).toDateString();
@@ -2876,7 +2876,7 @@ Hurry Up!`;
             if (!travelerGroups.has(key)) {
               travelerGroups.set(key, []);
             }
-            travelerGroups.get(key).push(traveler);
+            travelerGroups.get(key)!.push(traveler);
           }
           
           // Create batches for each group
@@ -2885,7 +2885,7 @@ Hurry Up!`;
             const bus = await storage.getBus(firstTraveler.busId);
             
             // Calculate WhatsApp status
-            const sentCount = travelers.filter(t => t.whatsappStatus === 'sent').length;
+            const sentCount = travelers.filter((t: any) => t.whatsappStatus === 'sent').length;
             const totalCount = travelers.length;
             
             let whatsappStatus: 'pending' | 'sent' | 'partial' = 'pending';
@@ -2896,8 +2896,8 @@ Hurry Up!`;
             }
             
             // Get unique routes and coupons
-            const routeSet = new Set(travelers.map(t => bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Unknown Route'));
-            const couponSet = new Set(travelers.map(t => t.couponCode).filter(Boolean));
+            const routeSet = new Set(travelers.map((t: any) => bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Unknown Route'));
+            const couponSet = new Set(travelers.map((t: any) => t.couponCode).filter(Boolean));
             const routes = Array.from(routeSet);
             const coupons = Array.from(couponSet);
             
