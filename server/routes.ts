@@ -3028,15 +3028,30 @@ Happy Travels!`;
             console.log(`Starts with S.: ${responseText.startsWith('S.')}`);
             console.log(`Full API URL: ${finalUrl}`);
 
-            // More strict success checking
-            if (response.ok && responseText.startsWith('S.') && responseText.length > 2) {
+            // Enhanced success checking with delivery validation
+            console.log(`=== BULK DELIVERY DEBUG ===`);
+            console.log(`Response Status: ${response.status}`);
+            console.log(`Response OK: ${response.ok}`);
+            console.log(`Raw Response: "${responseText}"`);
+            console.log(`Response Length: ${responseText.length}`);
+            console.log(`Starts with S.: ${responseText.startsWith('S.')}`);
+
+            // Check for specific success patterns
+            const isValidSuccess = response.ok && 
+                                 responseText.startsWith('S.') && 
+                                 responseText.length > 2 &&
+                                 !responseText.includes('ERROR') &&
+                                 !responseText.includes('FAIL');
+
+            if (isValidSuccess) {
               const messageId = responseText;
-              console.log(`✅ SUCCESS: WhatsApp sent to ${traveler.travelerName} (+91${finalPhone}) - Message ID: ${messageId}`);
-              console.log(`⚠️  IMPORTANT: User should receive WhatsApp message at +91${finalPhone} in 1-2 minutes`);
+              console.log(`✅ BULK SUCCESS: WhatsApp sent to ${traveler.travelerName} (+91${finalPhone}) - Message ID: ${messageId}`);
+              console.log(`⚠️  IMPORTANT: User should receive WhatsApp message at +91${finalPhone} in 1-5 minutes`);
               await storage.updateTravelerData(traveler.id, { whatsappStatus: 'sent' });
               sentCount++;
             } else {
-              console.log(`❌ WhatsApp failed for ${traveler.travelerName} (+91${finalPhone}): ${responseText}`);
+              console.log(`❌ BULK FAILED for ${traveler.travelerName} (+91${finalPhone}): ${responseText}`);
+              console.log(`❌ This may indicate template approval issues or account restrictions`);
               await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
             }
 
@@ -3045,8 +3060,8 @@ Happy Travels!`;
             await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
           }
 
-          // Increased delay for better WhatsApp delivery (1 second for bulk stability)
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Increased delay for better WhatsApp delivery (3 seconds for bulk stability)
+          await new Promise(resolve => setTimeout(resolve, 3000));
 
         } catch (error) {
           console.error(`Failed to send WhatsApp to ${traveler.phone}:`, error);
@@ -3082,6 +3097,119 @@ Happy Travels!`;
     } catch (error) {
       console.error('WhatsApp debug error:', error);
       res.status(500).json({ error: 'Failed to run WhatsApp debugging' });
+    }
+  });
+
+  // Bulk delivery analysis for agencies
+  app.post("/api/agency/whatsapp/analyze-bulk-delivery", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "agency") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      console.log('\n🔍 BULK WHATSAPP DELIVERY ANALYSIS 🔍');
+      
+      // Get agency data
+      const agency = await storage.getAgency(user.id);
+      if (!agency) {
+        return res.status(404).json({ message: "Agency not found" });
+      }
+
+      // Get all travelers for analysis
+      const travelers = await storage.getTravelerDataByAgency(user.id);
+      const sentTravelers = travelers.filter(t => t.whatsappStatus === 'sent');
+      const failedTravelers = travelers.filter(t => t.whatsappStatus === 'failed');
+      const pendingTravelers = travelers.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending');
+
+      console.log(`Agency: ${agency.name}`);
+      console.log(`Total Travelers: ${travelers.length}`);
+      console.log(`Sent Successfully: ${sentTravelers.length}`);
+      console.log(`Failed: ${failedTravelers.length}`);
+      console.log(`Pending: ${pendingTravelers.length}`);
+
+      // Test with 3 sample numbers to check template approval
+      const testNumbers = ['9900408817', '9035580937', '9876543210'];
+      const testResults = [];
+
+      for (const testPhone of testNumbers) {
+        try {
+          const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
+          const testParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${testPhone}&text=eddygoo_2807&priority=wa&stype=normal&Params=TestUser,${agency.name},TEST20,${agency.bookingWebsite || 'https://test.com'}&htype=image&url=${agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg'}`;
+          const testUrl = `${apiUrl}?${testParams}`;
+
+          console.log(`Testing with ${testPhone}: ${testUrl}`);
+
+          const response = await fetch(testUrl);
+          const responseText = await response.text().trim();
+
+          testResults.push({
+            phone: testPhone,
+            success: responseText.startsWith('S.'),
+            response: responseText,
+            url: testUrl
+          });
+
+          console.log(`Test ${testPhone}: ${responseText}`);
+          
+          // 5 second delay between test calls
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        } catch (error) {
+          testResults.push({
+            phone: testPhone,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
+      const analysis = {
+        agencyName: agency.name,
+        statistics: {
+          total: travelers.length,
+          sent: sentTravelers.length,
+          failed: failedTravelers.length,
+          pending: pendingTravelers.length,
+          successRate: travelers.length > 0 ? Math.round((sentTravelers.length / travelers.length) * 100) : 0
+        },
+        templateTests: testResults,
+        recommendations: [],
+        potentialIssues: []
+      };
+
+      // Add recommendations based on analysis
+      if (sentTravelers.length === 0 && travelers.length > 0) {
+        analysis.potentialIssues.push('No messages delivered despite API success - Template approval issue likely');
+        analysis.recommendations.push('Contact BhashSMS to verify template eddygoo_2807 approval status');
+      }
+
+      if (failedTravelers.length > sentTravelers.length) {
+        analysis.potentialIssues.push('High failure rate indicates API or account restrictions');
+        analysis.recommendations.push('Check BhashSMS account balance and daily limits');
+      }
+
+      const testSuccessRate = testResults.filter(t => t.success).length / testResults.length * 100;
+      if (testSuccessRate < 100) {
+        analysis.potentialIssues.push(`Template test success rate: ${testSuccessRate}%`);
+        analysis.recommendations.push('Template may need approval for WhatsApp delivery');
+      }
+
+      console.log('\n📋 ANALYSIS COMPLETE 📋');
+      console.log(`Success Rate: ${analysis.statistics.successRate}%`);
+      console.log(`Template Test Success: ${testSuccessRate}%`);
+
+      res.json({
+        success: true,
+        analysis,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('Bulk delivery analysis error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to analyze bulk delivery' 
+      });
     }
   });
 
