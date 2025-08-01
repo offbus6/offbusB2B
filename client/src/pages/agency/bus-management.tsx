@@ -54,7 +54,7 @@ export default function BusManagement() {
     },
   });
 
-  const { data: buses, isLoading: busesLoading } = useQuery({
+  const { data: buses, isLoading: busesLoading } = useQuery<any[]>({
     queryKey: ["/api/buses"],
     retry: false,
   });
@@ -98,7 +98,7 @@ export default function BusManagement() {
         amenities: data.amenities ? data.amenities.split(',').map(a => a.trim()) : [],
       };
       await apiRequest(`/api/buses/${editingBus.id}`, {
-        method: "PUT",
+        method: "PATCH",
         body: payload,
       });
     },
@@ -205,7 +205,7 @@ export default function BusManagement() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {buses?.map((bus: any) => (
+          {(buses && Array.isArray(buses) ? buses : []).map((bus: any) => (
             <Card key={bus.id} className="border-l-4 border-l-red-500 hover:shadow-lg transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
@@ -263,7 +263,7 @@ export default function BusManagement() {
               </CardContent>
             </Card>
           ))}
-          {(!buses || buses.length === 0) && (
+          {(!buses || !Array.isArray(buses) || buses.length === 0) && (
             <div className="col-span-full text-center py-12">
               <Bus className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No buses found</h3>

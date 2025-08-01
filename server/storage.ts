@@ -517,6 +517,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteBus(id: number): Promise<void> {
+    // First, delete all related traveler data and upload history
+    await db.delete(travelerData).where(eq(travelerData.busId, id));
+    await db.delete(uploadHistory).where(eq(uploadHistory.busId, id));
+    
+    // Then delete the bus
     await db.delete(buses).where(eq(buses.id, id));
   }
 

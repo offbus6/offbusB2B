@@ -927,12 +927,20 @@ export function registerRoutes(app: Express) {
   app.patch("/api/buses/:id", async (req: Request, res: Response) => {
     try {
       const user = (req.session as any)?.user;
-      if (!user || user.role !== "agency") {
+      if (!user || (user.role !== "agency" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Access denied" });
       }
 
       const { id } = req.params;
       const updates = req.body;
+
+      // Validate that the bus belongs to the agency (unless super admin)
+      if (user.role === "agency") {
+        const existingBus = await storage.getBus(parseInt(id));
+        if (!existingBus || existingBus.agencyId !== user.id) {
+          return res.status(403).json({ message: "Bus not found or access denied" });
+        }
+      }
 
       const bus = await storage.updateBus(parseInt(id), updates);
       res.json(bus);
