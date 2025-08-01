@@ -2430,8 +2430,22 @@ Happy Travels!`;
 
           // Send via BhashSMS API using your exact template format
           const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
-          const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${cleanPhone}&text=eddygoo_2807&priority=wa&stype=normal&Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}&htype=image&url=${whatsappImageUrl}`;
-          const finalUrl = `${apiUrl}?${baseParams}`;
+          
+          // Build URL manually without encoding to avoid %2C, %3A, %2F issues
+          const cleanParams = [
+            `user=eddygoo1`,
+            `pass=123456`,
+            `sender=BUZWAP`,
+            `phone=${cleanPhone}`,
+            `text=eddygoo_2807`,
+            `priority=wa`,
+            `stype=normal`,
+            `Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}`,
+            `htype=image`,
+            `url=${whatsappImageUrl}`
+          ].join('&');
+          
+          const finalUrl = `${apiUrl}?${cleanParams}`;
 
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -2557,8 +2571,22 @@ Happy Travels!`;
 
       // Send via BhashSMS API using your exact template format
       const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
-      const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${finalPhone}&text=eddygoo_2807&priority=wa&stype=normal&Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}&htype=image&url=${whatsappImageUrl}`;
-      const finalUrl = `${apiUrl}?${baseParams}`;
+      
+      // Build URL manually without encoding to avoid %2C, %3A, %2F issues
+      const cleanParams = [
+        `user=eddygoo1`,
+        `pass=123456`,
+        `sender=BUZWAP`,
+        `phone=${finalPhone}`,
+        `text=eddygoo_2807`,
+        `priority=wa`,
+        `stype=normal`,
+        `Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}`,
+        `htype=image`,
+        `url=${whatsappImageUrl}`
+      ].join('&');
+      
+      const finalUrl = `${apiUrl}?${cleanParams}`;
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -3010,8 +3038,22 @@ Happy Travels!`;
 
           // Create INDIVIDUAL API call with PERSONALIZED data for THIS traveler
           const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
-          const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${finalPhone}&text=eddygoo_2807&priority=wa&stype=normal&Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}&htype=image&url=${whatsappImageUrl}`;
-          const fullApiUrl = `${apiUrl}?${baseParams}`;
+          
+          // Build URL manually without encoding to avoid %2C, %3A, %2F issues
+          const cleanParams = [
+            `user=eddygoo1`,
+            `pass=123456`,
+            `sender=BUZWAP`,
+            `phone=${finalPhone}`,
+            `text=eddygoo_2807`,
+            `priority=wa`,
+            `stype=normal`,
+            `Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}`,
+            `htype=image`,
+            `url=${whatsappImageUrl}`
+          ].join('&');
+          
+          const fullApiUrl = `${apiUrl}?${cleanParams}`;
 
           // Make INDIVIDUAL API call for THIS traveler
           console.log(`Making individual API call ${i + 1}/${pendingTravelers.length}`);
