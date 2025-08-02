@@ -25,11 +25,12 @@ export default function WhatsAppScheduler() {
   const { user } = useAuth();
 
   // Fetch upload batches with WhatsApp status
-  const { data: uploadBatches = [], isLoading, refetch } = useQuery<UploadBatch[]>({
+  const { data: uploadBatches = [], isLoading, error, refetch } = useQuery<UploadBatch[]>({
     queryKey: ["/api/agency/upload-batches"],
-    retry: false,
+    retry: 3,
     refetchInterval: 10000, // Refresh every 10 seconds
     refetchOnWindowFocus: true, // Refresh when window gains focus
+    staleTime: 5000, // Consider data stale after 5 seconds
   });
 
   // Send WhatsApp to all travelers in a batch
@@ -126,6 +127,31 @@ export default function WhatsAppScheduler() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-gray-900">WhatsApp Scheduler</h1>
+          <Button onClick={() => refetch()} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+        <Card>
+          <CardContent className="text-center py-8">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="text-red-500">⚠️</div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Error Loading Batches</h3>
+                <p className="text-gray-500 mt-1">Failed to load upload batches. Please try again.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -155,7 +181,7 @@ export default function WhatsAppScheduler() {
         </div>
       </div>
 
-      {uploadBatches.length === 0 ? (
+      {!uploadBatches || uploadBatches.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
             <div className="flex flex-col items-center space-y-4">
@@ -169,7 +195,7 @@ export default function WhatsAppScheduler() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {uploadBatches.map((batch) => (
+          {(uploadBatches || []).filter(batch => batch && batch.uploadId).map((batch) => (
             <Card key={batch.uploadId} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">

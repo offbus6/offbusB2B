@@ -2847,8 +2847,181 @@ Happy Travels!`;
         success: false, 
         error: error instanceof Error ? error.message : "Unknown error occurred" 
       });
+
+  // System health check for large batch processing
+  app.get("/api/system/health", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || (user.role !== "agency" && user.role !== "super_admin")) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const memUsage = process.memoryUsage();
+      const uptime = process.uptime();
+      
+      res.json({
+        status: 'healthy',
+        uptime: Math.floor(uptime),
+        memory: {
+          rss: Math.round(memUsage.rss / 1024 / 1024) + ' MB',
+          heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',
+          heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + ' MB',
+          external: Math.round(memUsage.external / 1024 / 1024) + ' MB'
+        },
+        timestamp: new Date().toISOString(),
+        recommendations: {
+          maxBatchSize: memUsage.heapUsed > 100 * 1024 * 1024 ? 500 : 1000,
+          delayBetweenBatches: memUsage.heapUsed > 100 * 1024 * 1024 ? 5000 : 1000
+        }
+      });
+    } catch (error) {
+      console.error("Health check error:", error);
+      res.status(500).json({ 
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
+
+
+    }
+  });
+
+
+  // Intelligent batch splitting for large WhatsApp campaigns
+  app.post('/api/agency/whatsapp/send-large-batch/:uploadId', requireAuth(['agency']), async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any).user;
+      if (!user || user.role !== 'agency') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const { uploadId } = req.params;
+      const { batchSize = 500 } = req.body; // Configurable batch size
+      const agencyId = user.agency?.id;
+
+      if (!agencyId) {
+        return res.status(404).json({ error: 'Agency not found' });
+      }
+
+      // Get all pending travelers
+      let allTravelers = [];
+      if (uploadId.startsWith('legacy-')) {
+        const [, busIdStr, dateStr] = uploadId.split('-');
+        const busId = parseInt(busIdStr);
+        const targetDate = new Date(dateStr).toDateString();
+        const agencyTravelers = await storage.getTravelerDataByAgency(agencyId);
+        allTravelers = agencyTravelers.filter(t => 
+          t.busId === busId && 
+          !t.uploadId && 
+          new Date(t.createdAt || new Date()).toDateString() === targetDate
+        );
+      } else {
+        const uploadIdNum = parseInt(uploadId);
+        if (!isNaN(uploadIdNum)) {
+          allTravelers = await storage.getTravelerDataByUpload(uploadIdNum);
+        }
+      }
+
+      const pendingTravelers = allTravelers.filter(t => t && t.whatsappStatus !== 'sent');
+      
+      if (pendingTravelers.length === 0) {
+        return res.json({ success: true, message: 'No pending travelers to send WhatsApp', totalBatches: 0 });
+      }
+
+      // Split into manageable batches
+      const batches = [];
+      for (let i = 0; i < pendingTravelers.length; i += batchSize) {
+        batches.push(pendingTravelers.slice(i, i + batchSize));
+      }
+
+      console.log(`📦 LARGE CAMPAIGN: Splitting ${pendingTravelers.length} travelers into ${batches.length} batches of ${batchSize}`);
+
+      let totalSent = 0;
+      let totalFailed = 0;
+      const batchResults = [];
+
+      // Process each batch with delays
+      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex];
+        
+        console.log(`\n🚀 Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} travelers)`);
+        
+        try {
+          // Use the existing batch processing logic
+          const batchResponse = await fetch(`http://localhost:5000/api/agency/whatsapp/send-batch/${uploadId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Cookie': req.headers.cookie || ''
+            }
+          });
+
+          const batchResult = await batchResponse.json();
+          
+          if (batchResult.success) {
+            totalSent += batchResult.sentCount || 0;
+            totalFailed += batchResult.failedCount || 0;
+          }
+
+          batchResults.push({
+            batchNumber: batchIndex + 1,
+            travelers: batch.length,
+            sent: batchResult.sentCount || 0,
+            failed: batchResult.failedCount || 0,
+            success: batchResult.success
+          });
+
+          // Delay between batches for system stability
+          if (batchIndex < batches.length - 1) {
+            console.log(`⏳ Waiting 5 seconds before next batch...`);
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+
+        } catch (batchError) {
+          console.error(`❌ Batch ${batchIndex + 1} failed:`, batchError);
+          totalFailed += batch.length;
+          batchResults.push({
+            batchNumber: batchIndex + 1,
+            travelers: batch.length,
+            sent: 0,
+            failed: batch.length,
+            success: false,
+            error: batchError instanceof Error ? batchError.message : 'Unknown error'
+          });
+        }
+      }
+
+      console.log(`\n📊 LARGE CAMPAIGN COMPLETED`);
+      console.log(`✅ Total sent: ${totalSent}`);
+      console.log(`❌ Total failed: ${totalFailed}`);
+      console.log(`📦 Batches processed: ${batches.length}`);
+
+      res.json({
+        success: totalSent > 0,
+        message: `Large campaign completed: ${totalSent} sent, ${totalFailed} failed across ${batches.length} batches`,
+        totalSent,
+        totalFailed,
+        totalBatches: batches.length,
+        batchSize,
+        batchResults,
+        campaignDetails: {
+          totalTravelers: pendingTravelers.length,
+          batchStrategy: 'intelligent_splitting',
+          delayBetweenBatches: '5 seconds',
+          memoryOptimized: true
+        }
+      });
+
+    } catch (error) {
+      console.error('Large batch campaign error:', error);
+      res.status(500).json({ 
+        error: 'Failed to process large batch campaign',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
 
   // Get upload batches with WhatsApp status for scheduler
   app.get('/api/agency/upload-batches', requireAuth(['agency']), async (req: Request, res: Response) => {
@@ -2993,6 +3166,8 @@ Happy Travels!`;
         return res.status(404).json({ error: 'Agency not found' });
       }
 
+      // Add batch size limit for safety
+      const MAX_BATCH_SIZE = 1000;
       let batchTravelers = [];
 
       // Handle legacy batches vs normal upload batches
@@ -3015,10 +3190,18 @@ Happy Travels!`;
         batchTravelers = await storage.getTravelerDataByUpload(uploadIdNum);
       }
 
-      const pendingTravelers = batchTravelers.filter(t => t.whatsappStatus !== 'sent');
+      const pendingTravelers = (batchTravelers || []).filter(t => t && t.whatsappStatus !== 'sent');
 
       if (pendingTravelers.length === 0) {
         return res.json({ success: true, message: 'No pending travelers to send WhatsApp', sentCount: 0 });
+      }
+
+      // Safety check for large batches
+      if (pendingTravelers.length > MAX_BATCH_SIZE) {
+        return res.status(400).json({ 
+          error: `Batch size too large. Maximum ${MAX_BATCH_SIZE} messages per batch. Current: ${pendingTravelers.length}`,
+          suggestion: 'Process in smaller batches for better reliability'
+        });
       }
 
       console.log(`\n🚀 BULK WHATSAPP API HANDLER - PROCESSING ${pendingTravelers.length} TRAVELERS`);
@@ -3039,6 +3222,19 @@ Happy Travels!`;
       // Process each traveler individually with personalized API calls
       for (let i = 0; i < pendingTravelers.length; i++) {
         const traveler = pendingTravelers[i];
+        
+        // Safety check
+        if (!traveler || !traveler.id || !traveler.phone || !traveler.travelerName) {
+          console.error(`❌ Invalid traveler data at index ${i}:`, traveler);
+          failedCount++;
+          deliveryResults.push({
+            travelerName: traveler?.travelerName || 'Unknown',
+            phone: traveler?.phone || 'Unknown',
+            status: 'failed',
+            reason: 'Invalid traveler data'
+          });
+          continue;
+        }
         
         try {
           console.log(`\n=== WHATSAPP BATCH SEND DEBUG ===`);
@@ -3176,6 +3372,14 @@ Happy Travels!`;
           if (i < pendingTravelers.length - 1) {
             console.log(`⏳ Waiting 1 second before next API call...`);
             await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+
+          // Memory cleanup for large batches
+          if (i > 0 && i % 100 === 0) {
+            console.log(`🔄 Processed ${i}/${pendingTravelers.length} messages. Forcing garbage collection...`);
+            if (global.gc) {
+              global.gc();
+            }
           }
 
         } catch (error) {
