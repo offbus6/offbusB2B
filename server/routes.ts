@@ -3514,6 +3514,109 @@ Happy Travels!`;
     }
   });
 
+  // Check WhatsApp daily limit and usage
+  app.get("/api/agency/whatsapp/daily-limit", requireAuth(['agency']), async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any).user;
+      if (!user || user.role !== 'agency') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      console.log('\n📊 CHECKING WHATSAPP DAILY LIMIT 📊');
+      
+      // Check account balance and status via BhashSMS API
+      const balanceUrl = 'https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=9900408817&text=balance';
+      
+      try {
+        const response = await fetch(balanceUrl);
+        const responseText = (await response.text()).trim();
+        
+        console.log(`Balance API Response: "${responseText}"`);
+        
+        // Get today's sent count from database for this agency
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const travelers = await storage.getTravelerDataByAgency(user.id);
+        const todaysSent = travelers.filter(t => {
+          const updatedAt = new Date(t.updatedAt || t.createdAt || new Date());
+          return t.whatsappStatus === 'sent' && 
+                 updatedAt >= today && 
+                 updatedAt < tomorrow;
+        }).length;
+        
+        // Parse balance response for limit information
+        let dailyLimit = 'Unknown';
+        let currentUsage = todaysSent;
+        let accountBalance = 'Unknown';
+        let limitReached = false;
+        
+        if (responseText.includes('Daily Message Limit Reached')) {
+          limitReached = true;
+        } else if (responseText.startsWith('S.')) {
+          accountBalance = 'Active';
+        }
+        
+        // Estimate daily limit based on common BhashSMS plans
+        let estimatedLimit = 1000; // Default assumption
+        if (responseText.includes('500')) estimatedLimit = 500;
+        if (responseText.includes('1000')) estimatedLimit = 1000;
+        if (responseText.includes('2000')) estimatedLimit = 2000;
+        if (responseText.includes('5000')) estimatedLimit = 5000;
+        
+        const remainingMessages = limitReached ? 0 : estimatedLimit - currentUsage;
+        const usagePercentage = Math.round((currentUsage / estimatedLimit) * 100);
+        
+        res.json({
+          success: true,
+          dailyLimit: {
+            estimated: estimatedLimit,
+            actual: dailyLimit,
+            limitReached
+          },
+          usage: {
+            todaysSent: currentUsage,
+            remaining: Math.max(0, remainingMessages),
+            percentage: usagePercentage
+          },
+          account: {
+            status: accountBalance,
+            provider: 'BhashSMS',
+            credentials: 'eddygoo1'
+          },
+          resetTime: 'Daily limit resets at midnight IST',
+          apiResponse: responseText,
+          recommendations: limitReached ? [
+            'Daily limit reached - wait until midnight for reset',
+            'Contact BhashSMS to upgrade your plan for higher limits',
+            'Consider spreading campaigns across multiple days'
+          ] : [
+            `You can send approximately ${remainingMessages} more messages today`,
+            'Monitor usage to avoid hitting limits during important campaigns',
+            'Consider upgrading if you frequently approach limits'
+          ]
+        });
+        
+      } catch (error) {
+        console.error('Error checking balance:', error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to check daily limit',
+          message: 'Could not connect to BhashSMS API'
+        });
+      }
+      
+    } catch (error) {
+      console.error('Daily limit check error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to check daily limit' 
+      });
+    }
+  });
+
   // WhatsApp Template Verification Endpoint
   app.post("/api/agency/whatsapp/verify-template", requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
