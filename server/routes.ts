@@ -3051,8 +3051,10 @@ Happy Travels!`;
 
         if (travelers.length === 0) continue; // Skip empty uploads
 
-        // Calculate WhatsApp status
-        const sentCount = travelers.filter(t => t.whatsappStatus === 'sent').length;
+        // Calculate WhatsApp status with better accuracy
+        const sentCount = travelers.filter(t => t.whatsappStatus === 'sent' || t.whatsappStatus === 'delivered').length;
+        const failedCount = travelers.filter(t => t.whatsappStatus === 'failed').length;
+        const pendingCount = travelers.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending').length;
         const totalCount = travelers.length;
 
         let whatsappStatus: 'pending' | 'sent' | 'partial' = 'pending';
@@ -3076,8 +3078,11 @@ Happy Travels!`;
           coupons: coupons || [],
           whatsappStatus,
           sentCount: sentCount || 0,
+          failedCount: failedCount || 0,
+          pendingCount: pendingCount || 0,
           fileName: upload.fileName || 'Unknown File', // Add filename for better identification
-          busName: bus?.name || 'Unknown Bus'
+          busName: bus?.name || 'Unknown Bus',
+          progressPercentage: totalCount > 0 ? Math.round((sentCount / totalCount) * 100) : 0
         });
       }
 
@@ -3190,11 +3195,29 @@ Happy Travels!`;
         batchTravelers = await storage.getTravelerDataByUpload(uploadIdNum);
       }
 
-      const pendingTravelers = (batchTravelers || []).filter(t => t && t.whatsappStatus !== 'sent');
+      // Smart batching: Only process travelers who haven't received WhatsApp messages yet
+      const pendingTravelers = (batchTravelers || []).filter(t => 
+        t && 
+        t.whatsappStatus !== 'sent' && 
+        t.whatsappStatus !== 'delivered'
+      );
 
       if (pendingTravelers.length === 0) {
-        return res.json({ success: true, message: 'No pending travelers to send WhatsApp', sentCount: 0 });
+        const alreadySentCount = (batchTravelers || []).filter(t => t && t.whatsappStatus === 'sent').length;
+        return res.json({ 
+          success: true, 
+          message: `All travelers have already received WhatsApp messages (${alreadySentCount} previously sent)`, 
+          sentCount: 0,
+          alreadySentCount,
+          totalCount: (batchTravelers || []).length
+        });
       }
+
+      console.log(`\n🎯 SMART BATCH PROCESSING`);
+      console.log(`📊 Total travelers in batch: ${(batchTravelers || []).length}`);
+      console.log(`✅ Already sent: ${(batchTravelers || []).length - pendingTravelers.length}`);
+      console.log(`⏳ Pending to send: ${pendingTravelers.length}`);
+      console.log(`🚀 Starting from where we left off...`);
 
       // Safety check for large batches
       if (pendingTravelers.length > MAX_BATCH_SIZE) {
@@ -3402,18 +3425,28 @@ Happy Travels!`;
       console.log(`📱 Total processed: ${pendingTravelers.length}`);
       console.log(`🎯 Each traveler got individual API call with personalized data`);
 
+      const alreadySentCount = (batchTravelers || []).length - pendingTravelers.length;
+
       res.json({
         success: sentCount > 0,
-        message: `Bulk send complete: ${sentCount} sent, ${failedCount} failed`,
+        message: `Smart batch complete: ${sentCount} newly sent, ${failedCount} failed${alreadySentCount > 0 ? `, ${alreadySentCount} already sent` : ''}`,
         sentCount,
         failedCount,
-        totalCount: pendingTravelers.length,
+        alreadySentCount,
+        totalInBatch: (batchTravelers || []).length,
+        totalProcessed: pendingTravelers.length,
         deliveryResults,
+        smartBatching: {
+          enabled: true,
+          skippedAlreadySent: alreadySentCount,
+          resumedFromPosition: alreadySentCount + 1,
+          preventsDuplicates: true
+        },
         processingDetails: {
           individualApiCalls: true,
           personalizedData: true,
           delayBetweenCalls: '1 second',
-          templateUsed: 'eddygoo_2807'
+          templateUsed: agency.whatsappTemplate || 'eddygoo_2807'
         }
       });
 

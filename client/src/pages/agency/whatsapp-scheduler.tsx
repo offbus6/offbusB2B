@@ -113,15 +113,9 @@ export default function WhatsAppScheduler() {
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-900">WhatsApp Scheduler</h1>
         </div>
-        <div className="grid gap-4">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-2 text-gray-600">Loading upload batches...</span>
         </div>
       </div>
     );
@@ -132,19 +126,20 @@ export default function WhatsAppScheduler() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-900">WhatsApp Scheduler</h1>
-          <Button onClick={() => refetch()} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Retry
-          </Button>
         </div>
         <Card>
           <CardContent className="text-center py-8">
             <div className="flex flex-col items-center space-y-4">
-              <div className="text-red-500">⚠️</div>
+              <div className="text-red-500">
+                <Send className="h-12 w-12" />
+              </div>
               <div>
                 <h3 className="text-lg font-medium text-gray-900">Error Loading Batches</h3>
                 <p className="text-gray-500 mt-1">Failed to load upload batches. Please try again.</p>
               </div>
+              <Button onClick={() => refetch()} variant="outline">
+                Retry
+              </Button>
             </div>
           </CardContent>
         </Card>
