@@ -579,7 +579,7 @@ export default function UploadedData() {
               <p className="text-sm text-[var(--airbnb-gray)]">
                 Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredData.length)} of {filteredData.length} results
               </p>
-              <div className="flex space-x-2">
+              <div className="flex items-center space-x-3">
                 <Button
                   variant="outline"
                   size="sm"
@@ -589,20 +589,24 @@ export default function UploadedData() {
                 >
                   Previous
                 </Button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                    className={currentPage === page ? 
-                      "bg-[var(--airbnb-primary)] text-white" : 
-                      "text-[var(--airbnb-gray)] hover:text-[var(--airbnb-dark)]"
-                    }
-                  >
-                    {page}
-                  </Button>
-                ))}
+                
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-[var(--airbnb-gray)]">Page</span>
+                  <Select value={currentPage.toString()} onValueChange={(value) => setCurrentPage(parseInt(value))}>
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <SelectItem key={page} value={page.toString()}>
+                          {page}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-[var(--airbnb-gray)]">of {totalPages}</span>
+                </div>
+                
                 <Button
                   variant="outline"
                   size="sm"
