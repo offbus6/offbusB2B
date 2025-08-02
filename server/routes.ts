@@ -2892,18 +2892,18 @@ Happy Travels!`;
         // Get unique routes and coupons for this specific upload
         const routeSet = new Set(travelers.map(t => bus ? `${bus.fromLocation} to ${bus.toLocation}` : 'Unknown Route'));
         const couponSet = new Set(travelers.map(t => t.couponCode).filter(Boolean));
-        const routes = Array.from(routeSet);
-        const coupons = Array.from(couponSet);
+        const routes = Array.from(routeSet) || [];
+        const coupons = Array.from(couponSet) || [];
 
         batches.push({
           uploadId: upload.id.toString(), // Ensure it's a string for consistency
           uploadDate: upload.createdAt || new Date(),
-          travelerCount: totalCount,
-          routes,
-          coupons,
+          travelerCount: totalCount || 0,
+          routes: routes || [],
+          coupons: coupons || [],
           whatsappStatus,
-          sentCount,
-          fileName: upload.fileName, // Add filename for better identification
+          sentCount: sentCount || 0,
+          fileName: upload.fileName || 'Unknown File', // Add filename for better identification
           busName: bus?.name || 'Unknown Bus'
         });
       }

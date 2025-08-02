@@ -195,26 +195,22 @@ export default function WhatsAppScheduler() {
 
                   {/* Routes */}
                   <div className="flex items-center space-x-3">
-                    <div className="flex items-center justify-center w-10 h-10 bg-green-100 rounded-lg">
-                      <MapPin className="h-5 w-5 text-green-600" />
-                    </div>
+                    <MapPin className="h-5 w-5 text-green-600" />
                     <div>
                       <p className="text-sm font-medium text-gray-900">Routes</p>
                       <p className="text-sm text-gray-600">
-                        {batch.routes.length > 0 ? batch.routes.join(', ') : 'No routes'}
+                        {(batch.routes && batch.routes.length > 0) ? batch.routes.join(', ') : 'No routes'}
                       </p>
                     </div>
                   </div>
 
                   {/* Coupons */}
                   <div className="flex items-center space-x-3">
-                    <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-lg">
-                      <Gift className="h-5 w-5 text-purple-600" />
-                    </div>
+                    <Gift className="h-5 w-5 text-purple-600" />
                     <div>
                       <p className="text-sm font-medium text-gray-900">Coupons</p>
                       <p className="text-sm text-gray-600">
-                        {batch.coupons.length > 0 ? batch.coupons.join(', ') : 'No coupons'}
+                        {(batch.coupons && batch.coupons.length > 0) ? batch.coupons.join(', ') : 'No coupons'}
                       </p>
                     </div>
                   </div>
