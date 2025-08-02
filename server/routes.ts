@@ -3343,6 +3343,46 @@ Happy Travels!`;
           console.log(`Starts with S.: ${responseText.startsWith('S.')}`);
           console.log(`Full API URL: ${fullApiUrl}`);
 
+          // Check for daily limit reached - stop batch processing
+          if (responseText.includes('Daily Message Limit Reached')) {
+            console.log(`🚫 DAILY LIMIT REACHED - Stopping batch processing`);
+            console.log(`📊 Processed ${i + 1}/${pendingTravelers.length} travelers before hitting limit`);
+            console.log(`✅ Sent: ${sentCount}, ❌ Failed: ${failedCount + 1}`);
+            
+            // Mark current traveler as failed due to limit
+            await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
+            failedCount++;
+            
+            deliveryResults.push({
+              travelerName: traveler.travelerName,
+              phone: `+91${finalPhone}`,
+              status: 'failed',
+              apiResponse: responseText,
+              reason: 'Daily message limit reached'
+            });
+
+            // Return early with limit reached information
+            const alreadySentCount = (batchTravelers || []).length - pendingTravelers.length;
+            return res.json({
+              success: sentCount > 0,
+              limitReached: true,
+              message: `Daily message limit reached after sending ${sentCount} messages. Resume tomorrow to continue.`,
+              sentCount,
+              failedCount,
+              alreadySentCount,
+              totalInBatch: (batchTravelers || []).length,
+              totalProcessed: i + 1,
+              remainingToProcess: pendingTravelers.length - (i + 1),
+              deliveryResults,
+              limitInfo: {
+                limitReachedAt: new Date().toISOString(),
+                processedBeforeLimit: i + 1,
+                remainingTravelers: pendingTravelers.length - (i + 1),
+                canResumeAt: 'Tomorrow after daily limit resets'
+              }
+            });
+          }
+
           // Check success
           const isSuccess = response.ok && 
                            responseText.startsWith('S.') && 

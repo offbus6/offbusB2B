@@ -5,7 +5,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, MapPin, Gift, Send, CheckCircle, Clock, RefreshCw, MessageSquare } from "lucide-react";
+import { Calendar, Users, MapPin, Gift, Send, CheckCircle, Clock, RefreshCw, MessageSquare, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 
 interface UploadBatch {
@@ -41,16 +41,24 @@ export default function WhatsAppScheduler() {
       });
     },
     onSuccess: (data: any, uploadId: string) => {
-      toast({
-        title: "WhatsApp Messages Sent",
-        description: `Successfully sent messages to ${data.sentCount} travelers`,
-        variant: "default",
-      });
+      if (data.limitReached) {
+        toast({
+          title: "Daily Message Limit Reached",
+          description: `Sent ${data.sentCount} messages before hitting limit. ${data.remainingToProcess} messages remain. Please resume tomorrow.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "WhatsApp Messages Sent",
+          description: `Successfully sent messages to ${data.sentCount} travelers`,
+          variant: "default",
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/agency/upload-batches"] });
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
+        title: "Error", 
         description: error.message || "Failed to send WhatsApp messages",
         variant: "destructive",
       });
@@ -203,7 +211,7 @@ export default function WhatsAppScheduler() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Traveler Count */}
+                  {/* Traveler Count with Progress */}
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
                       <Users className="h-5 w-5 text-blue-600" />
@@ -211,6 +219,19 @@ export default function WhatsAppScheduler() {
                     <div>
                       <p className="text-sm font-medium text-gray-900">Travelers</p>
                       <p className="text-lg font-bold text-blue-600">{batch.travelerCount}</p>
+                      {batch.whatsappStatus === 'partial' && (
+                        <div className="mt-1">
+                          <div className="text-xs text-gray-600">
+                            {batch.sentCount}/{batch.travelerCount} sent ({batch.progressPercentage || Math.round((batch.sentCount / batch.travelerCount) * 100)}%)
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                            <div 
+                              className="bg-blue-600 h-1.5 rounded-full" 
+                              style={{ width: `${batch.progressPercentage || Math.round((batch.sentCount / batch.travelerCount) * 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -237,6 +258,24 @@ export default function WhatsAppScheduler() {
                   </div>
                 </div>
 
+                {/* Daily Limit Warning for Partial Batches */}
+                {batch.whatsappStatus === 'partial' && batch.failedCount > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="text-amber-600">
+                        <AlertTriangle className="h-5 w-5 mt-0.5" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-amber-800">Batch Partially Complete</h4>
+                        <p className="text-sm text-amber-700 mt-1">
+                          {batch.pendingCount || (batch.travelerCount - batch.sentCount)} messages remain to be sent. 
+                          If you hit the daily limit, please try again tomorrow when the limit resets.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Action Button */}
                 <div className="flex justify-end pt-4 border-t">
                   <Button
@@ -247,7 +286,7 @@ export default function WhatsAppScheduler() {
                     <Send className="h-4 w-4" />
                     {sendWhatsAppBatchMutation.isPending ? 'Sending...' : 
                      batch.whatsappStatus === 'sent' ? 'All Sent' :
-                     batch.whatsappStatus === 'partial' ? 'Send Remaining' :
+                     batch.whatsappStatus === 'partial' ? `Resume Batch (${batch.pendingCount || (batch.travelerCount - batch.sentCount)} remaining)` :
                      'Send WhatsApp to All'}
                   </Button>
                 </div>
