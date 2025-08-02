@@ -643,6 +643,22 @@ export class DatabaseStorage implements IStorage {
     return traveler;
   }
 
+  async getTodaysWhatsappCount(): Promise<number> {
+    const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+    
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(travelerData)
+      .where(
+        and(
+          eq(travelerData.whatsappStatus, 'sent'),
+          sql`DATE(${travelerData.whatsappSentAt}) = ${today}`
+        )
+      );
+    
+    return result[0]?.count || 0;
+  }
+
   async createUploadHistory(history: InsertUploadHistory): Promise<UploadHistory> {
     const [newHistory] = await db
       .insert(uploadHistory)

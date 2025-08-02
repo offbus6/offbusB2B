@@ -3048,7 +3048,7 @@ Happy Travels!`;
       }).length;
 
       // Estimated daily limit (this could be configured per agency)
-      const estimatedDailyLimit = 100; // Most WhatsApp APIs have around 100-1000 per day
+      const estimatedDailyLimit = 1000; // Updated to 1000 based on user's BhashSMS plan confirmation
       
       const usage = {
         today: todayMessages,
@@ -3386,9 +3386,25 @@ Happy Travels!`;
           console.log(`Starts with S.: ${responseText.startsWith('S.')}`);
           console.log(`Full API URL: ${fullApiUrl}`);
 
-          // Check for daily limit reached - stop batch processing
-          if (responseText.includes('Daily Message Limit Reached')) {
-            console.log(`🚫 DAILY LIMIT REACHED - Stopping batch processing`);
+          // Check for various error responses but BE MORE CAREFUL about daily limit detection
+          // Only stop batch processing for CONFIRMED daily limit responses, not other errors
+          const isDailyLimitError = responseText.includes('Daily Message Limit Reached') || 
+                                   responseText.includes('daily limit exceeded') ||
+                                   responseText.includes('DAILY_LIMIT_EXCEEDED');
+          
+          // Check current daily usage before stopping batch
+          const todaysMessages = await storage.getTodaysWhatsappCount();
+          const estimatedDailyLimit = 1000; // Updated to 1000 based on user confirmation
+          
+          console.log(`🔍 LIMIT CHECK: Response "${responseText}", Today's count: ${todaysMessages}/${estimatedDailyLimit}`);
+          
+          // Only stop if BOTH conditions are true:
+          // 1. API response indicates limit reached AND
+          // 2. We're actually near/at the expected limit (95% or higher)
+          const isNearLimit = todaysMessages >= (estimatedDailyLimit * 0.95);
+          
+          if (isDailyLimitError && isNearLimit) {
+            console.log(`🚫 CONFIRMED DAILY LIMIT REACHED - API response + usage check both confirm limit`);
             console.log(`📊 Processed ${i + 1}/${pendingTravelers.length} travelers before hitting limit`);
             console.log(`✅ Sent: ${sentCount}, ❌ Failed: ${failedCount + 1}`);
             
@@ -3424,6 +3440,11 @@ Happy Travels!`;
                 canResumeAt: 'Tomorrow after daily limit resets'
               }
             });
+          } else if (isDailyLimitError && !isNearLimit) {
+            // API says limit reached but our usage count shows we should have capacity
+            // This might be a temporary API issue or false positive - log it but continue
+            console.log(`⚠️  API claimed limit reached but usage shows ${todaysMessages}/${estimatedDailyLimit} - continuing batch`);
+            console.log(`🔄 Treating as temporary error, will retry this traveler`);
           }
 
           // Check success
@@ -3606,7 +3627,7 @@ Happy Travels!`;
         }
         
         // Estimate daily limit based on common BhashSMS plans
-        let estimatedLimit = 1000; // Default assumption
+        let estimatedLimit = 1000; // Default assumption - confirmed by user
         if (responseText.includes('500')) estimatedLimit = 500;
         if (responseText.includes('1000')) estimatedLimit = 1000;
         if (responseText.includes('2000')) estimatedLimit = 2000;
