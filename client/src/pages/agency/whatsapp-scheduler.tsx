@@ -5,7 +5,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, MapPin, Gift, Send, CheckCircle, Clock, RefreshCw, MessageSquare, AlertTriangle } from "lucide-react";
+import { Calendar, Users, MapPin, Gift, Send, CheckCircle, Clock, RefreshCw, MessageSquare, AlertTriangle, BarChart3, Info } from "lucide-react";
 import { format } from "date-fns";
 
 interface UploadBatch {
@@ -23,6 +23,15 @@ interface UploadBatch {
   busName?: string;
 }
 
+interface DailyUsage {
+  today: number;
+  estimatedLimit: number;
+  remaining: number;
+  percentage: number;
+  resetTime: string;
+  lastUpdated: string;
+}
+
 export default function WhatsAppScheduler() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -34,6 +43,13 @@ export default function WhatsAppScheduler() {
     refetchInterval: 10000, // Refresh every 10 seconds
     refetchOnWindowFocus: true, // Refresh when window gains focus
     staleTime: 5000, // Consider data stale after 5 seconds
+  });
+
+  // Fetch daily WhatsApp usage
+  const { data: dailyUsage, isLoading: usageLoading } = useQuery<DailyUsage>({
+    queryKey: ["/api/agency/whatsapp/daily-usage"],
+    retry: 3,
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   // Send WhatsApp to all travelers in a batch
@@ -58,6 +74,7 @@ export default function WhatsAppScheduler() {
         });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/agency/upload-batches"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/agency/whatsapp/daily-usage"] });
     },
     onError: (error: any) => {
       toast({
@@ -187,6 +204,63 @@ export default function WhatsAppScheduler() {
           </Button>
         </div>
       </div>
+
+      {/* Daily Usage Stats */}
+      {dailyUsage && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-medium flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-blue-600" />
+              Daily WhatsApp Usage
+              <Badge variant="outline" className="ml-auto">
+                {dailyUsage.today}/{dailyUsage.estimatedLimit} messages
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4 text-blue-600" />
+                <span className="text-sm text-gray-700">Messages sent today</span>
+              </div>
+              <span className="font-semibold text-blue-600">{dailyUsage.today}</span>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Usage</span>
+                <span>{dailyUsage.percentage}% of daily limit</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full transition-all ${
+                    dailyUsage.percentage >= 90 ? 'bg-red-500' : 
+                    dailyUsage.percentage >= 70 ? 'bg-yellow-500' : 'bg-blue-500'
+                  }`}
+                  style={{ width: `${Math.min(100, dailyUsage.percentage)}%` }}
+                ></div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <span>Remaining: {dailyUsage.remaining} messages</span>
+              <span>Resets: {dailyUsage.resetTime}</span>
+            </div>
+
+            {dailyUsage.percentage >= 90 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-red-800">Near Daily Limit</p>
+                    <p className="text-red-700">You're close to your daily message limit. Consider waiting until tomorrow to send more messages.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {!uploadBatches || uploadBatches.length === 0 ? (
         <Card>

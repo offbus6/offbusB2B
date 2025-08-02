@@ -3023,6 +3023,49 @@ Happy Travels!`;
   });
 
 
+  // Get daily WhatsApp usage and limits
+  app.get('/api/agency/whatsapp/daily-usage', requireAuth(['agency']), async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any).user;
+      if (!user || user.role !== 'agency') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const agencyId = user.agency?.id;
+      if (!agencyId) {
+        return res.status(404).json({ error: 'Agency not found' });
+      }
+
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Count messages sent today
+      const travelers = await storage.getTravelerDataByAgency(agencyId);
+      const todayMessages = travelers.filter(t => {
+        if (!t.whatsappSentAt) return false;
+        const sentDate = new Date(t.whatsappSentAt).toISOString().split('T')[0];
+        return sentDate === today && t.whatsappStatus === 'sent';
+      }).length;
+
+      // Estimated daily limit (this could be configured per agency)
+      const estimatedDailyLimit = 100; // Most WhatsApp APIs have around 100-1000 per day
+      
+      const usage = {
+        today: todayMessages,
+        estimatedLimit: estimatedDailyLimit,
+        remaining: Math.max(0, estimatedDailyLimit - todayMessages),
+        percentage: Math.min(100, Math.round((todayMessages / estimatedDailyLimit) * 100)),
+        resetTime: 'Tomorrow at 12:00 AM',
+        lastUpdated: new Date().toISOString()
+      };
+
+      res.json(usage);
+    } catch (error) {
+      console.error('Error fetching daily usage:', error);
+      res.status(500).json({ error: 'Failed to fetch daily usage' });
+    }
+  });
+
   // Get upload batches with WhatsApp status for scheduler
   app.get('/api/agency/upload-batches', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
@@ -3401,7 +3444,10 @@ Happy Travels!`;
             console.log(`✅ BULK SUCCESS: WhatsApp sent to ${traveler.travelerName} (+91${finalPhone}) - Message ID: ${responseText}`);
             console.log(`⚠️  IMPORTANT: User should receive WhatsApp message at +91${finalPhone} in 1-5 minutes`);
             
-            await storage.updateTravelerData(traveler.id, { whatsappStatus: 'sent' });
+            await storage.updateTravelerData(traveler.id, { 
+              whatsappStatus: 'sent',
+              whatsappSentAt: new Date().toISOString()
+            });
             sentCount++;
             
             deliveryResults.push({
