@@ -5,9 +5,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, MapPin, Gift, Send, CheckCircle, Clock, RefreshCw, MessageSquare, AlertTriangle, BarChart3 } from "lucide-react";
+import { Calendar, Users, MapPin, Gift, Send, CheckCircle, Clock, RefreshCw, MessageSquare, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 
 interface UploadBatch {
   uploadId: string;
@@ -17,6 +16,9 @@ interface UploadBatch {
   coupons: string[];
   whatsappStatus: 'pending' | 'sent' | 'partial';
   sentCount: number;
+  failedCount?: number;
+  pendingCount?: number;
+  progressPercentage?: number;
   fileName?: string;
   busName?: string;
 }
@@ -24,14 +26,9 @@ interface UploadBatch {
 export default function WhatsAppScheduler() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [uploadBatches, setUploadBatches] = useState<UploadBatch[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [dailyLimit, setDailyLimit] = useState<any>(null);
-  const [checkingLimit, setCheckingLimit] = useState(false);
 
   // Fetch upload batches with WhatsApp status
-  const { data: uploadBatchesData = [], isLoading: isUploadBatchesLoading, error: uploadBatchesError, refetch } = useQuery<UploadBatch[]>({
+  const { data: uploadBatches = [], isLoading, error, refetch } = useQuery<UploadBatch[]>({
     queryKey: ["/api/agency/upload-batches"],
     retry: 3,
     refetchInterval: 10000, // Refresh every 10 seconds
@@ -71,7 +68,7 @@ export default function WhatsAppScheduler() {
     },
   });
 
-  // Template verification mutation
+  // Verify WhatsApp template
   const verifyTemplateMutation = useMutation({
     mutationFn: async () => {
       return await apiRequest('/api/agency/whatsapp/verify-template', {
@@ -79,24 +76,16 @@ export default function WhatsAppScheduler() {
       });
     },
     onSuccess: (data: any) => {
-      if (data.templateApproved) {
-        toast({
-          title: "Template Verification Success",
-          description: "WhatsApp template appears to be approved",
-        });
-      } else {
-        toast({
-          title: "Template NOT Approved",
-          description: "Contact BhashSMS to approve template for WhatsApp delivery",
-          variant: "destructive",
-        });
-      }
-      console.log('Template Verification Results:', data);
+      toast({
+        title: "Template Verified",
+        description: data.message || "WhatsApp template is working correctly",
+        variant: "default",
+      });
     },
     onError: (error: any) => {
       toast({
-        title: "Verification Failed",
-        description: error.message || "Could not verify template",
+        title: "Template Error",
+        description: error.message || "Failed to verify WhatsApp template",
         variant: "destructive",
       });
     },
@@ -113,44 +102,30 @@ export default function WhatsAppScheduler() {
   const getStatusBadge = (status: string, sentCount: number, totalCount: number) => {
     switch (status) {
       case 'sent':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle className="w-3 h-3 mr-1" />Sent</Badge>;
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          All Sent ({sentCount}/{totalCount})
+        </Badge>;
       case 'partial':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100"><Clock className="w-3 h-3 mr-1" />Partial ({sentCount}/{totalCount})</Badge>;
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+          <Clock className="h-3 w-3 mr-1" />
+          Partial ({sentCount}/{totalCount})
+        </Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+        return <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+          <Clock className="h-3 w-3 mr-1" />
+          Pending (0/{totalCount})
+        </Badge>;
     }
   };
 
-  const checkDailyLimit = async () => {
-    try {
-      setCheckingLimit(true);
-      const response = await apiRequest('/api/agency/whatsapp/daily-limit', { method: 'GET' });
-
-      if (!response.ok) {
-        throw new Error('Failed to check daily limit');
-      }
-
-      const data = await response.json();
-      setDailyLimit(data);
-    } catch (err) {
-      console.error('Error checking daily limit:', err);
-      toast({
-        title: "Error",
-        description: "Failed to check daily limit",
-        variant: "destructive",
-      });
-    } finally {
-      setCheckingLimit(false);
-    }
-  };
-
-  if (isUploadBatchesLoading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-900">WhatsApp Scheduler</h1>
         </div>
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="ml-2 text-gray-600">Loading upload batches...</span>
         </div>
@@ -158,7 +133,7 @@ export default function WhatsAppScheduler() {
     );
   }
 
-  if (uploadBatchesError) {
+  if (error) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -192,10 +167,6 @@ export default function WhatsAppScheduler() {
           <p className="text-gray-600 mt-1">Send WhatsApp messages to uploaded traveler data</p>
         </div>
         <div className="flex gap-2">
-            <Button onClick={checkDailyLimit} disabled={checkingLimit} variant="outline" className="flex items-center gap-2">
-              <BarChart3 className={cn("mr-2 h-4 w-4", checkingLimit && "animate-spin")} />
-              {checkingLimit ? 'Checking Limit...' : 'Check Daily Limit'}
-            </Button>
           <Button
             onClick={() => verifyTemplate()}
             variant="outline"
@@ -209,86 +180,15 @@ export default function WhatsAppScheduler() {
             onClick={() => refetch()}
             variant="outline"
             className="flex items-center gap-2"
-            disabled={isUploadBatchesLoading}
+            disabled={isLoading}
           >
-            <RefreshCw className={`h-4 w-4 ${isUploadBatchesLoading ? 'animate-spin' : ''}`} />
-            {isUploadBatchesLoading ? 'Refreshing...' : 'Refresh'}
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? 'Refreshing...' : 'Refresh'}
           </Button>
         </div>
       </div>
 
-      {dailyLimit && (
-        <Card className={cn(
-          "border-2",
-          dailyLimit.dailyLimit?.limitReached ? "border-red-500 bg-red-50" :
-            dailyLimit.usage?.percentage > 80 ? "border-orange-500 bg-orange-50" :
-              "border-green-500 bg-green-50"
-        )}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Daily WhatsApp Message Limit
-              {dailyLimit.dailyLimit?.limitReached && <Badge variant="destructive">LIMIT REACHED</Badge>}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {dailyLimit.usage?.todaysSent || 0}
-                </div>
-                <div className="text-sm text-gray-600">Messages Sent Today</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {dailyLimit.usage?.remaining || 0}
-                </div>
-                <div className="text-sm text-gray-600">Remaining Today</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">
-                  {dailyLimit.dailyLimit?.estimated || 'Unknown'}
-                </div>
-                <div className="text-sm text-gray-600">Estimated Daily Limit</div>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <div className="flex justify-between text-sm text-gray-600 mb-1">
-                <span>Usage: {dailyLimit.usage?.percentage || 0}%</span>
-                <span>{dailyLimit.resetTime}</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className={cn(
-                    "h-2 rounded-full transition-all",
-                    dailyLimit.usage?.percentage > 90 ? "bg-red-500" :
-                      dailyLimit.usage?.percentage > 80 ? "bg-orange-500" :
-                        "bg-green-500"
-                  )}
-                  style={{ width: `${Math.min(dailyLimit.usage?.percentage || 0, 100)}%` }}
-                ></div>
-              </div>
-            </div>
-
-            {dailyLimit.recommendations && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <h4 className="font-semibold text-sm mb-2">Recommendations:</h4>
-                <ul className="text-sm space-y-1">
-                  {dailyLimit.recommendations.map((rec: string, i: number) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-blue-500">•</span>
-                      {rec}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {!uploadBatchesData || uploadBatchesData.length === 0 ? (
+      {!uploadBatches || uploadBatches.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
             <div className="flex flex-col items-center space-y-4">
@@ -302,7 +202,7 @@ export default function WhatsAppScheduler() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {(uploadBatchesData || []).filter(batch => batch && batch.uploadId).map((batch) => (
+          {(uploadBatches || []).filter(batch => batch && batch.uploadId).map((batch) => (
             <Card key={batch.uploadId} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -329,8 +229,8 @@ export default function WhatsAppScheduler() {
                             {batch.sentCount}/{batch.travelerCount} sent ({batch.progressPercentage || Math.round((batch.sentCount / batch.travelerCount) * 100)}%)
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                            <div
-                              className="bg-blue-600 h-1.5 rounded-full"
+                            <div 
+                              className="bg-blue-600 h-1.5 rounded-full" 
                               style={{ width: `${batch.progressPercentage || Math.round((batch.sentCount / batch.travelerCount) * 100)}%` }}
                             ></div>
                           </div>
@@ -363,7 +263,7 @@ export default function WhatsAppScheduler() {
                 </div>
 
                 {/* Daily Limit Warning for Partial Batches */}
-                {batch.whatsappStatus === 'partial' && batch.failedCount > 0 && (
+                {batch.whatsappStatus === 'partial' && batch.failedCount && batch.failedCount > 0 && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                     <div className="flex items-start gap-3">
                       <div className="text-amber-600">
@@ -372,7 +272,7 @@ export default function WhatsAppScheduler() {
                       <div>
                         <h4 className="font-medium text-amber-800">Batch Partially Complete</h4>
                         <p className="text-sm text-amber-700 mt-1">
-                          {batch.pendingCount || (batch.travelerCount - batch.sentCount)} messages remain to be sent.
+                          {batch.pendingCount || (batch.travelerCount - batch.sentCount)} messages remain to be sent. 
                           If you hit the daily limit, please try again tomorrow when the limit resets.
                         </p>
                       </div>
@@ -388,10 +288,10 @@ export default function WhatsAppScheduler() {
                     className="flex items-center gap-2"
                   >
                     <Send className="h-4 w-4" />
-                    {sendWhatsAppBatchMutation.isPending ? 'Sending...' :
-                      batch.whatsappStatus === 'sent' ? 'All Sent' :
-                        batch.whatsappStatus === 'partial' ? `Resume Batch (${batch.pendingCount || (batch.travelerCount - batch.sentCount)} remaining)` :
-                          'Send WhatsApp to All'}
+                    {sendWhatsAppBatchMutation.isPending ? 'Sending...' : 
+                     batch.whatsappStatus === 'sent' ? 'All Sent' :
+                     batch.whatsappStatus === 'partial' ? `Resume Batch (${batch.pendingCount || (batch.travelerCount - batch.sentCount)} remaining)` :
+                     'Send WhatsApp to All'}
                   </Button>
                 </div>
               </CardContent>
