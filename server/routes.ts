@@ -1144,7 +1144,7 @@ export function registerRoutes(app: Express) {
 
       // Remove duplicates within the upload (keep first occurrence)
       const seenPhones = new Set();
-      const uniqueTravelerData = travelerDataArray.filter((traveler) => {
+      const finalTravelerData = travelerDataArray.filter((traveler) => {
         if (!traveler.phone || seenPhones.has(traveler.phone)) {
           return false; // Skip duplicates or empty phone numbers
         }
@@ -1152,17 +1152,8 @@ export function registerRoutes(app: Express) {
         return true;
       });
 
-      // Check for existing phone numbers in database for this agency
-      const existingTravelers = await storage.getTravelerDataByAgency(user.id);
-      const existingPhones = new Set(existingTravelers.map(t => t.phone));
-
-      // Filter out phone numbers that already exist in database
-      const finalTravelerData = uniqueTravelerData.filter((traveler) => {
-        return !existingPhones.has(traveler.phone);
-      });
-
-      const duplicatesInFile = travelerDataArray.length - uniqueTravelerData.length;
-      const duplicatesInDB = uniqueTravelerData.length - finalTravelerData.length;
+      const duplicatesInFile = travelerDataArray.length - finalTravelerData.length;
+      const duplicatesInDB = 0; // No longer filtering against database
 
       // Create upload history record first
       const uploadRecord = await storage.createUploadHistory({
@@ -1205,8 +1196,8 @@ export function registerRoutes(app: Express) {
       });
 
       let message = "Data uploaded successfully";
-      if (duplicatesInFile > 0 || duplicatesInDB > 0) {
-        message += `. Removed ${duplicatesInFile} duplicates from file and ${duplicatesInDB} existing phone numbers.`;
+      if (duplicatesInFile > 0) {
+        message += `. Removed ${duplicatesInFile} duplicate phone numbers from the Excel file.`;
       }
 
       res.status(201).json({

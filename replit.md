@@ -57,7 +57,16 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - **UI Components**: Radix UI primitives
 - **WhatsApp API**: BhashSMS API (http://bhashsms.com/api/sendmsg.php, http://bhashsms.com/api/sendmsgutil.php)
 
-## Recent Changes (January 2025)
+## Recent Changes (August 2025)
+
+### Upload Duplicate Handling Update (August 2025)
+- **Modified Duplicate Logic**: Changed Excel upload behavior to allow existing phone numbers in database
+- **File-Level Deduplication**: Continues to remove duplicates within the uploaded Excel file (keeps first occurrence)
+- **Database Integration**: No longer filters out travelers with phone numbers that exist in database - allows multiple entries for same phone number
+- **User Experience**: Simplified upload process - only shows count of duplicates removed from Excel file, not database conflicts
+- **Business Logic**: Supports scenarios where same traveler may book multiple trips or appear in different batches
+
+## Previous Changes (January 2025)
 
 ### Deployment Fixes for Replit Autoscale
 - **Removed Background Interval**: Eliminated setInterval for WhatsApp message processing that violated Autoscale requirements
