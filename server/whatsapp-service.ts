@@ -238,19 +238,12 @@ export class WhatsappService {
         cleanPhone = cleanPhone.substring(2);
       }
 
-      // Get credentials from environment variables or fallback to old ones for debugging
-      const bhashUser = process.env.BHASHSMS_USER || 'eddygoo1';
-      const bhashPassword = process.env.BHASHSMS_PASSWORD || '123456';
-      const bhashSender = process.env.BHASHSMS_SENDER || 'BUZWAP';
-      
-      console.log(`🔑 Using BhashSMS credentials - User: ${bhashUser}, Sender: ${bhashSender}`);
-      
       // Use exact working BhashSMS API format with dynamic Params
       const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
       const params = new URLSearchParams({
-        user: bhashUser,
-        pass: bhashPassword,
-        sender: bhashSender,
+        user: 'eddygoo1',
+        pass: '123456',
+        sender: 'BUZWAP',
         phone: cleanPhone,
         text: message,
         priority: 'wa',
@@ -412,18 +405,11 @@ export async function sendBhashWhatsAppMessage(
       cleanPhone = cleanPhone.substring(2);
     }
     
-    // Get credentials from environment variables or fallback to old ones for debugging
-    const bhashUser = process.env.BHASHSMS_USER || 'eddygoo1';
-    const bhashPassword = process.env.BHASHSMS_PASSWORD || '123456';
-    const bhashSender = process.env.BHASHSMS_SENDER || 'BUZWAP';
-    
-    console.log(`🔑 Using BhashSMS credentials - User: ${bhashUser}, Sender: ${bhashSender}`);
-    
     // Use exact working API format with dynamic Params
     const params = new URLSearchParams({
-      user: bhashUser,
-      pass: bhashPassword,
-      sender: bhashSender,
+      user: 'eddygoo1',
+      pass: '123456',
+      sender: 'BUZWAP',
       phone: cleanPhone,
       text: finalMessage,
       priority: 'wa',

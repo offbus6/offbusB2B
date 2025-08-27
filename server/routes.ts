@@ -1144,7 +1144,7 @@ export function registerRoutes(app: Express) {
 
       // Remove duplicates within the upload (keep first occurrence)
       const seenPhones = new Set();
-      const finalTravelerData = travelerDataArray.filter((traveler) => {
+      const uniqueTravelerData = travelerDataArray.filter((traveler) => {
         if (!traveler.phone || seenPhones.has(traveler.phone)) {
           return false; // Skip duplicates or empty phone numbers
         }
@@ -1152,8 +1152,17 @@ export function registerRoutes(app: Express) {
         return true;
       });
 
-      const duplicatesInFile = travelerDataArray.length - finalTravelerData.length;
-      const duplicatesInDB = 0; // No longer filtering against database
+      // Check for existing phone numbers in database for this agency
+      const existingTravelers = await storage.getTravelerDataByAgency(user.id);
+      const existingPhones = new Set(existingTravelers.map(t => t.phone));
+
+      // Filter out phone numbers that already exist in database
+      const finalTravelerData = uniqueTravelerData.filter((traveler) => {
+        return !existingPhones.has(traveler.phone);
+      });
+
+      const duplicatesInFile = travelerDataArray.length - uniqueTravelerData.length;
+      const duplicatesInDB = uniqueTravelerData.length - finalTravelerData.length;
 
       // Create upload history record first
       const uploadRecord = await storage.createUploadHistory({
@@ -1196,8 +1205,8 @@ export function registerRoutes(app: Express) {
       });
 
       let message = "Data uploaded successfully";
-      if (duplicatesInFile > 0) {
-        message += `. Removed ${duplicatesInFile} duplicate phone numbers from the Excel file.`;
+      if (duplicatesInFile > 0 || duplicatesInDB > 0) {
+        message += `. Removed ${duplicatesInFile} duplicates from file and ${duplicatesInDB} existing phone numbers.`;
       }
 
       res.status(201).json({
@@ -3014,49 +3023,6 @@ Happy Travels!`;
   });
 
 
-  // Get daily WhatsApp usage and limits
-  app.get('/api/agency/whatsapp/daily-usage', requireAuth(['agency']), async (req: Request, res: Response) => {
-    try {
-      const user = (req.session as any).user;
-      if (!user || user.role !== 'agency') {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-
-      const agencyId = user.agency?.id;
-      if (!agencyId) {
-        return res.status(404).json({ error: 'Agency not found' });
-      }
-
-      // Get today's date in YYYY-MM-DD format
-      const today = new Date().toISOString().split('T')[0];
-      
-      // Count messages sent today
-      const travelers = await storage.getTravelerDataByAgency(agencyId);
-      const todayMessages = travelers.filter(t => {
-        if (!t.whatsappSentAt) return false;
-        const sentDate = new Date(t.whatsappSentAt).toISOString().split('T')[0];
-        return sentDate === today && t.whatsappStatus === 'sent';
-      }).length;
-
-      // Estimated daily limit (this could be configured per agency)
-      const estimatedDailyLimit = 1000; // Updated to 1000 based on user's BhashSMS plan confirmation
-      
-      const usage = {
-        today: todayMessages,
-        estimatedLimit: estimatedDailyLimit,
-        remaining: Math.max(0, estimatedDailyLimit - todayMessages),
-        percentage: Math.min(100, Math.round((todayMessages / estimatedDailyLimit) * 100)),
-        resetTime: 'Tomorrow at 12:00 AM',
-        lastUpdated: new Date().toISOString()
-      };
-
-      res.json(usage);
-    } catch (error) {
-      console.error('Error fetching daily usage:', error);
-      res.status(500).json({ error: 'Failed to fetch daily usage' });
-    }
-  });
-
   // Get upload batches with WhatsApp status for scheduler
   app.get('/api/agency/upload-batches', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
@@ -3377,25 +3343,9 @@ Happy Travels!`;
           console.log(`Starts with S.: ${responseText.startsWith('S.')}`);
           console.log(`Full API URL: ${fullApiUrl}`);
 
-          // Check for various error responses but BE MORE CAREFUL about daily limit detection
-          // Only stop batch processing for CONFIRMED daily limit responses, not other errors
-          const isDailyLimitError = responseText.includes('Daily Message Limit Reached') || 
-                                   responseText.includes('daily limit exceeded') ||
-                                   responseText.includes('DAILY_LIMIT_EXCEEDED');
-          
-          // Check current daily usage before stopping batch
-          const todaysMessages = await storage.getTodaysWhatsappCount();
-          const estimatedDailyLimit = 1000; // Updated to 1000 based on user confirmation
-          
-          console.log(`🔍 LIMIT CHECK: Response "${responseText}", Today's count: ${todaysMessages}/${estimatedDailyLimit}`);
-          
-          // Only stop if BOTH conditions are true:
-          // 1. API response indicates limit reached AND
-          // 2. We're actually near/at the expected limit (95% or higher)
-          const isNearLimit = todaysMessages >= (estimatedDailyLimit * 0.95);
-          
-          if (isDailyLimitError && isNearLimit) {
-            console.log(`🚫 CONFIRMED DAILY LIMIT REACHED - API response + usage check both confirm limit`);
+          // Check for daily limit reached - stop batch processing
+          if (responseText.includes('Daily Message Limit Reached')) {
+            console.log(`🚫 DAILY LIMIT REACHED - Stopping batch processing`);
             console.log(`📊 Processed ${i + 1}/${pendingTravelers.length} travelers before hitting limit`);
             console.log(`✅ Sent: ${sentCount}, ❌ Failed: ${failedCount + 1}`);
             
@@ -3431,11 +3381,6 @@ Happy Travels!`;
                 canResumeAt: 'Tomorrow after daily limit resets'
               }
             });
-          } else if (isDailyLimitError && !isNearLimit) {
-            // API says limit reached but our usage count shows we should have capacity
-            // This might be a temporary API issue or false positive - log it but continue
-            console.log(`⚠️  API claimed limit reached but usage shows ${todaysMessages}/${estimatedDailyLimit} - continuing batch`);
-            console.log(`🔄 Treating as temporary error, will retry this traveler`);
           }
 
           // Check success
@@ -3456,10 +3401,7 @@ Happy Travels!`;
             console.log(`✅ BULK SUCCESS: WhatsApp sent to ${traveler.travelerName} (+91${finalPhone}) - Message ID: ${responseText}`);
             console.log(`⚠️  IMPORTANT: User should receive WhatsApp message at +91${finalPhone} in 1-5 minutes`);
             
-            await storage.updateTravelerData(traveler.id, { 
-              whatsappStatus: 'sent',
-              whatsappSentAt: new Date().toISOString()
-            });
+            await storage.updateTravelerData(traveler.id, { whatsappStatus: 'sent' });
             sentCount++;
             
             deliveryResults.push({
@@ -3618,7 +3560,7 @@ Happy Travels!`;
         }
         
         // Estimate daily limit based on common BhashSMS plans
-        let estimatedLimit = 1000; // Default assumption - confirmed by user
+        let estimatedLimit = 1000; // Default assumption
         if (responseText.includes('500')) estimatedLimit = 500;
         if (responseText.includes('1000')) estimatedLimit = 1000;
         if (responseText.includes('2000')) estimatedLimit = 2000;
