@@ -1142,27 +1142,18 @@ export function registerRoutes(app: Express) {
         };
       });
 
-      // Remove duplicates within the upload (keep first occurrence)
+      // Remove duplicates within the upload only (keep first occurrence)
       const seenPhones = new Set();
-      const uniqueTravelerData = travelerDataArray.filter((traveler) => {
+      const finalTravelerData = travelerDataArray.filter((traveler) => {
         if (!traveler.phone || seenPhones.has(traveler.phone)) {
-          return false; // Skip duplicates or empty phone numbers
+          return false; // Skip duplicates or empty phone numbers within this upload
         }
         seenPhones.add(traveler.phone);
         return true;
       });
 
-      // Check for existing phone numbers in database for this agency
-      const existingTravelers = await storage.getTravelerDataByAgency(user.id);
-      const existingPhones = new Set(existingTravelers.map(t => t.phone));
-
-      // Filter out phone numbers that already exist in database
-      const finalTravelerData = uniqueTravelerData.filter((traveler) => {
-        return !existingPhones.has(traveler.phone);
-      });
-
-      const duplicatesInFile = travelerDataArray.length - uniqueTravelerData.length;
-      const duplicatesInDB = uniqueTravelerData.length - finalTravelerData.length;
+      const duplicatesInFile = travelerDataArray.length - finalTravelerData.length;
+      // No longer filtering against database - allow existing passengers to be uploaded
 
       // Create upload history record first
       const uploadRecord = await storage.createUploadHistory({
@@ -1205,8 +1196,8 @@ export function registerRoutes(app: Express) {
       });
 
       let message = "Data uploaded successfully";
-      if (duplicatesInFile > 0 || duplicatesInDB > 0) {
-        message += `. Removed ${duplicatesInFile} duplicates from file and ${duplicatesInDB} existing phone numbers.`;
+      if (duplicatesInFile > 0) {
+        message += `. Removed ${duplicatesInFile} duplicates within the uploaded file.`;
       }
 
       res.status(201).json({
@@ -1214,7 +1205,6 @@ export function registerRoutes(app: Express) {
         count: createdData.length,
         originalCount: travelerDataArray.length,
         duplicatesInFile: duplicatesInFile,
-        duplicatesInDB: duplicatesInDB,
         data: createdData
       });
     } catch (error) {
@@ -2905,7 +2895,7 @@ Happy Travels!`;
       }
 
       // Get all pending travelers
-      let allTravelers = [];
+      let allTravelers: any[] = [];
       if (uploadId.startsWith('legacy-')) {
         const [, busIdStr, dateStr] = uploadId.split('-');
         const busId = parseInt(busIdStr);
@@ -3052,7 +3042,7 @@ Happy Travels!`;
         if (travelers.length === 0) continue; // Skip empty uploads
 
         // Calculate WhatsApp status with better accuracy
-        const sentCount = travelers.filter(t => t.whatsappStatus === 'sent' || t.whatsappStatus === 'delivered').length;
+        const sentCount = travelers.filter(t => t.whatsappStatus === 'sent').length;
         const failedCount = travelers.filter(t => t.whatsappStatus === 'failed').length;
         const pendingCount = travelers.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending').length;
         const totalCount = travelers.length;
@@ -3198,8 +3188,7 @@ Happy Travels!`;
       // Smart batching: Only process travelers who haven't received WhatsApp messages yet
       const pendingTravelers = (batchTravelers || []).filter(t => 
         t && 
-        t.whatsappStatus !== 'sent' && 
-        t.whatsappStatus !== 'delivered'
+        t.whatsappStatus !== 'sent'
       );
 
       if (pendingTravelers.length === 0) {
