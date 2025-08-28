@@ -1142,13 +1142,21 @@ export function registerRoutes(app: Express) {
         };
       });
 
-      // Only filter out passengers with completely missing phone numbers
-      // Allow duplicates since passengers can travel multiple times
+      // Remove duplicates within the same upload and filter missing phone numbers
+      // Passengers can travel multiple times, but not receive multiple messages in one day
+      const seenPhones = new Set();
       const finalTravelerData = travelerDataArray.filter((traveler) => {
-        return traveler.phone && traveler.phone.trim() !== ''; // Only skip if phone is completely missing
+        if (!traveler.phone || traveler.phone.trim() === '') {
+          return false; // Skip records with missing phone numbers
+        }
+        if (seenPhones.has(traveler.phone)) {
+          return false; // Skip duplicate phone numbers within this upload
+        }
+        seenPhones.add(traveler.phone);
+        return true;
       });
 
-      const skippedCount = travelerDataArray.length - finalTravelerData.length;
+      const duplicatesInFile = travelerDataArray.length - finalTravelerData.length;
       // No longer filtering against database - allow existing passengers to be uploaded
 
       // Create upload history record first
@@ -1191,16 +1199,16 @@ export function registerRoutes(app: Express) {
         travelerCount: upsertedData.length
       });
 
-      let message = "Data uploaded successfully. Passengers can now travel multiple times.";
-      if (skippedCount > 0) {
-        message += ` Skipped ${skippedCount} records with missing phone numbers.`;
+      let message = "Data uploaded successfully.";
+      if (duplicatesInFile > 0) {
+        message += ` Removed ${duplicatesInFile} duplicate phone numbers and missing records from the upload.`;
       }
 
       res.status(201).json({
         message: message,
         count: upsertedData.length,
         originalCount: travelerDataArray.length,
-        skippedCount: skippedCount,
+        duplicatesInFile: duplicatesInFile,
         data: upsertedData
       });
     } catch (error) {

@@ -76,7 +76,7 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 
 ### Excel Upload Enhancement (January 2025)
 - **Multiple Trip Support**: Passengers can now travel multiple times - each upload creates new records instead of updating existing ones
-- **No Duplicate Filtering**: Removed phone number duplicate checking to allow passengers to book multiple trips
-- **Data Handling**: Only filters out records with completely missing phone numbers, preserves all valid passenger data
-- **Improved Messaging**: Clear feedback showing total uploaded vs skipped records
-- **Business Logic**: Supports real-world travel patterns where passengers book multiple journeys over time
+- **Duplicate Prevention Within Upload**: Removes duplicate phone numbers within the same Excel file to prevent multiple WhatsApp messages to same passenger on same day
+- **Data Handling**: Filters out duplicate phone numbers and missing phone records within each upload
+- **Improved Messaging**: Clear feedback showing total uploaded vs removed duplicates/missing records
+- **Business Logic**: Supports real-world travel patterns while respecting WhatsApp messaging limits per day
