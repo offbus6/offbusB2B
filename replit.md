@@ -80,3 +80,10 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - **Data Handling**: Filters out duplicate phone numbers and missing phone records within each upload
 - **Improved Messaging**: Clear feedback showing total uploaded vs removed duplicates/missing records
 - **Business Logic**: Supports real-world travel patterns while respecting WhatsApp messaging limits per day
+
+### WhatsApp Duplicate Prevention Fix (January 2025)
+- **Critical Fix**: Added duplicate phone number filtering in WhatsApp batch processing to prevent multiple messages to same passenger
+- **Batch Processing**: Both regular and large batch processing now filter duplicate phone numbers before sending messages
+- **Console Logging**: Added detailed logging to track duplicate prevention in WhatsApp processing
+- **Multiple Message Prevention**: System now ensures each phone number receives only one WhatsApp message per batch, regardless of duplicate database entries
+- **Safety Measures**: Prevents accidental multiple messaging that could annoy customers and waste API credits

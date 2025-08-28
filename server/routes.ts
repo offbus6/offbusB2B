@@ -2917,7 +2917,23 @@ Happy Travels!`;
         }
       }
 
-      const pendingTravelers = allTravelers.filter(t => t && t.whatsappStatus !== 'sent');
+      const initialPendingTravelers = allTravelers.filter(t => t && t.whatsappStatus !== 'sent');
+      
+      // CRITICAL: Remove duplicate phone numbers to prevent multiple messages to same passenger
+      const seenPhones = new Set();
+      const pendingTravelers = initialPendingTravelers.filter(traveler => {
+        if (seenPhones.has(traveler.phone)) {
+          console.log(`🚫 DUPLICATE PHONE DETECTED: Skipping ${traveler.travelerName} (${traveler.phone}) - already processed in this batch`);
+          return false;
+        }
+        seenPhones.add(traveler.phone);
+        return true;
+      });
+
+      const duplicatesSkipped = initialPendingTravelers.length - pendingTravelers.length;
+      if (duplicatesSkipped > 0) {
+        console.log(`⚠️  DUPLICATE PREVENTION: Skipped ${duplicatesSkipped} duplicate phone numbers to prevent multiple messages`);
+      }
       
       if (pendingTravelers.length === 0) {
         return res.json({ success: true, message: 'No pending travelers to send WhatsApp', totalBatches: 0 });
@@ -3190,10 +3206,26 @@ Happy Travels!`;
       }
 
       // Smart batching: Only process travelers who haven't received WhatsApp messages yet
-      const pendingTravelers = (batchTravelers || []).filter(t => 
+      const initialPendingTravelers = (batchTravelers || []).filter(t => 
         t && 
         t.whatsappStatus !== 'sent'
       );
+
+      // CRITICAL: Remove duplicate phone numbers to prevent multiple messages to same passenger
+      const seenPhones = new Set();
+      const pendingTravelers = initialPendingTravelers.filter(traveler => {
+        if (seenPhones.has(traveler.phone)) {
+          console.log(`🚫 DUPLICATE PHONE DETECTED: Skipping ${traveler.travelerName} (${traveler.phone}) - already processed in this batch`);
+          return false;
+        }
+        seenPhones.add(traveler.phone);
+        return true;
+      });
+
+      const duplicatesSkipped = initialPendingTravelers.length - pendingTravelers.length;
+      if (duplicatesSkipped > 0) {
+        console.log(`⚠️  DUPLICATE PREVENTION: Skipped ${duplicatesSkipped} duplicate phone numbers to prevent multiple messages`);
+      }
 
       if (pendingTravelers.length === 0) {
         const alreadySentCount = (batchTravelers || []).filter(t => t && t.whatsappStatus === 'sent').length;
