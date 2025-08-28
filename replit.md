@@ -75,8 +75,8 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - **Production Ready**: Application now builds and deploys successfully on Replit infrastructure
 
 ### Excel Upload Enhancement (January 2025)
-- **Fixed Passenger Data Handling**: Implemented upsert functionality for Excel uploads - existing passengers are now updated instead of skipped
-- **Smart Duplicate Management**: System removes duplicates only within the uploaded file while preserving existing database records
-- **Update Logic**: When re-uploading passengers, system updates traveler name, bus assignment, travel date, and coupon code while preserving WhatsApp status
-- **Improved User Feedback**: Upload messages now clearly indicate when existing passengers are updated vs new passengers added
-- **Data Integrity**: All existing passenger records preserved during uploads, allowing for data corrections and updates
+- **Multiple Trip Support**: Passengers can now travel multiple times - each upload creates new records instead of updating existing ones
+- **No Duplicate Filtering**: Removed phone number duplicate checking to allow passengers to book multiple trips
+- **Data Handling**: Only filters out records with completely missing phone numbers, preserves all valid passenger data
+- **Improved Messaging**: Clear feedback showing total uploaded vs skipped records
+- **Business Logic**: Supports real-world travel patterns where passengers book multiple journeys over time

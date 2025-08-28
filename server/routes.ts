@@ -1142,17 +1142,13 @@ export function registerRoutes(app: Express) {
         };
       });
 
-      // Remove duplicates within the upload only (keep first occurrence)
-      const seenPhones = new Set();
+      // Only filter out passengers with completely missing phone numbers
+      // Allow duplicates since passengers can travel multiple times
       const finalTravelerData = travelerDataArray.filter((traveler) => {
-        if (!traveler.phone || seenPhones.has(traveler.phone)) {
-          return false; // Skip duplicates or empty phone numbers within this upload
-        }
-        seenPhones.add(traveler.phone);
-        return true;
+        return traveler.phone && traveler.phone.trim() !== ''; // Only skip if phone is completely missing
       });
 
-      const duplicatesInFile = travelerDataArray.length - finalTravelerData.length;
+      const skippedCount = travelerDataArray.length - finalTravelerData.length;
       // No longer filtering against database - allow existing passengers to be uploaded
 
       // Create upload history record first
@@ -1195,16 +1191,16 @@ export function registerRoutes(app: Express) {
         travelerCount: upsertedData.length
       });
 
-      let message = "Data uploaded successfully. Existing passengers updated, new passengers added.";
-      if (duplicatesInFile > 0) {
-        message += ` Removed ${duplicatesInFile} duplicates within the uploaded file.`;
+      let message = "Data uploaded successfully. Passengers can now travel multiple times.";
+      if (skippedCount > 0) {
+        message += ` Skipped ${skippedCount} records with missing phone numbers.`;
       }
 
       res.status(201).json({
         message: message,
         count: upsertedData.length,
         originalCount: travelerDataArray.length,
-        duplicatesInFile: duplicatesInFile,
+        skippedCount: skippedCount,
         data: upsertedData
       });
     } catch (error) {
