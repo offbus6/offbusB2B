@@ -73,3 +73,10 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - **Fixed TypeScript Errors**: Resolved async/await and error handling issues in debugging tools
 - **Build Process**: Verified build command works correctly with esbuild external packages configuration
 - **Production Ready**: Application now builds and deploys successfully on Replit infrastructure
+
+### Excel Upload Enhancement (January 2025)
+- **Fixed Passenger Data Handling**: Implemented upsert functionality for Excel uploads - existing passengers are now updated instead of skipped
+- **Smart Duplicate Management**: System removes duplicates only within the uploaded file while preserving existing database records
+- **Update Logic**: When re-uploading passengers, system updates traveler name, bus assignment, travel date, and coupon code while preserving WhatsApp status
+- **Improved User Feedback**: Upload messages now clearly indicate when existing passengers are updated vs new passengers added
+- **Data Integrity**: All existing passenger records preserved during uploads, allowing for data corrections and updates

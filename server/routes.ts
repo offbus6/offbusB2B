@@ -1175,15 +1175,15 @@ export function registerRoutes(app: Express) {
         insertTravelerDataSchema.parse(data)
       );
 
-      // Save to database
-      const createdData = await storage.createTravelerData(validatedData);
+      // Save to database using upsert (update existing or create new)
+      const upsertedData = await storage.upsertTravelerData(validatedData);
 
       // Schedule WhatsApp messages for each uploaded traveler
       try {
-        for (const traveler of createdData) {
+        for (const traveler of upsertedData) {
           await whatsappService.scheduleMessagesForTraveler(traveler.id);
         }
-        console.log(`Scheduled WhatsApp messages for ${createdData.length} travelers`);
+        console.log(`Scheduled WhatsApp messages for ${upsertedData.length} travelers`);
       } catch (error) {
         console.error('Error scheduling WhatsApp messages:', error);
         // Continue with upload even if scheduling fails
@@ -1192,20 +1192,20 @@ export function registerRoutes(app: Express) {
       // Update upload history record status to completed
       await storage.updateUploadHistory(uploadRecord.id, {
         status: "completed",
-        travelerCount: createdData.length
+        travelerCount: upsertedData.length
       });
 
-      let message = "Data uploaded successfully";
+      let message = "Data uploaded successfully. Existing passengers updated, new passengers added.";
       if (duplicatesInFile > 0) {
-        message += `. Removed ${duplicatesInFile} duplicates within the uploaded file.`;
+        message += ` Removed ${duplicatesInFile} duplicates within the uploaded file.`;
       }
 
       res.status(201).json({
         message: message,
-        count: createdData.length,
+        count: upsertedData.length,
         originalCount: travelerDataArray.length,
         duplicatesInFile: duplicatesInFile,
-        data: createdData
+        data: upsertedData
       });
     } catch (error) {
       console.error("Upload traveler data error:", error);

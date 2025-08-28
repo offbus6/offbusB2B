@@ -532,6 +532,49 @@ export class DatabaseStorage implements IStorage {
       .returning();
   }
 
+  async upsertTravelerData(data: InsertTravelerData[]): Promise<TravelerData[]> {
+    const results: TravelerData[] = [];
+    
+    for (const traveler of data) {
+      // Check if traveler exists by phone number and agency
+      const existing = await db
+        .select()
+        .from(travelerData)
+        .where(and(
+          eq(travelerData.phone, traveler.phone),
+          eq(travelerData.agencyId, traveler.agencyId)
+        ))
+        .limit(1);
+      
+      if (existing.length > 0) {
+        // Update existing traveler
+        const [updated] = await db
+          .update(travelerData)
+          .set({
+            travelerName: traveler.travelerName,
+            busId: traveler.busId,
+            travelDate: traveler.travelDate,
+            couponCode: traveler.couponCode,
+            uploadId: traveler.uploadId,
+            whatsappStatus: traveler.whatsappStatus || existing[0].whatsappStatus,
+            updatedAt: new Date()
+          })
+          .where(eq(travelerData.id, existing[0].id))
+          .returning();
+        results.push(updated);
+      } else {
+        // Create new traveler
+        const [created] = await db
+          .insert(travelerData)
+          .values(traveler)
+          .returning();
+        results.push(created);
+      }
+    }
+    
+    return results;
+  }
+
   async getTravelerData(id: number): Promise<TravelerData | undefined> {
     const [traveler] = await db.select().from(travelerData).where(eq(travelerData.id, id));
     return traveler;
