@@ -62,25 +62,39 @@ export default function ApiDashboard() {
     gcTime: 0, // Don't cache
   });
 
-  // Get batch-wise API statistics 
+  // Get batch-wise API statistics for selected date only
   const { data: batchStats, isLoading: batchLoading, error: batchError, refetch: refetchBatch } = useQuery<BatchApiStats[]>({
-    queryKey: ["/api/agency/upload-batches"],
+    queryKey: ["/api/agency/upload-batches", selectedDate],
+    queryFn: async () => {
+      console.log(`🔍 Frontend: Fetching batches for date: ${selectedDate}`);
+      const response = await fetch(`/api/agency/upload-batches?date=${selectedDate}`);
+      if (!response.ok) throw new Error('Failed to fetch batch stats');
+      const data = await response.json();
+      console.log(`📦 Frontend: Received batch data:`, data);
+      return data;
+    },
     retry: 1,
-    refetchInterval: 30000,
     refetchOnWindowFocus: true,
+    staleTime: 0,
     select: (data: any[]) => {
-      return data.map(batch => ({
-        batchId: batch.uploadId,
-        uploadDate: batch.uploadDate,
-        fileName: batch.fileName || 'Unknown File',
-        busName: batch.busName || 'Unknown Bus',
-        travelers: batch.travelerCount,
-        apiCallsMade: (batch.sentCount || 0) + (batch.failedCount || 0),
-        sent: batch.sentCount || 0,
-        failed: batch.failedCount || 0,
-        status: batch.whatsappStatus || 'pending',
-        lastProcessed: batch.uploadDate
-      }));
+      // Filter and map batch data for selected date
+      return data
+        .filter(batch => {
+          const batchDate = new Date(batch.uploadDate).toISOString().split('T')[0];
+          return batchDate === selectedDate;
+        })
+        .map(batch => ({
+          batchId: batch.uploadId,
+          uploadDate: batch.uploadDate,
+          fileName: batch.fileName || 'Unknown File',
+          busName: batch.busName || 'Unknown Bus',
+          travelers: batch.travelerCount,
+          apiCallsMade: (batch.sentCount || 0) + (batch.failedCount || 0),
+          sent: batch.sentCount || 0,
+          failed: batch.failedCount || 0,
+          status: batch.whatsappStatus || 'pending',
+          lastProcessed: batch.uploadDate
+        }));
     }
   });
 
@@ -282,7 +296,7 @@ export default function ApiDashboard() {
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
-                No batch data available for today
+                No batch data available for {format(new Date(selectedDate), 'MMM dd, yyyy')}
               </div>
             )}
           </div>
