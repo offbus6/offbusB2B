@@ -3140,6 +3140,10 @@ Happy Travels!`;
         return res.status(404).json({ error: 'Agency not found' });
       }
 
+      // Get date parameter for filtering batches that had API calls on specific date
+      const targetDate = req.query.date as string;
+      console.log(`\n🎯 BATCH API FILTER for agency ${agencyId}, target date: ${targetDate}`);
+
       // Get upload history for this agency
       const uploadHistory = await storage.getUploadHistory(agencyId);
 
@@ -3155,7 +3159,25 @@ Happy Travels!`;
 
         if (travelers.length === 0) continue; // Skip empty uploads
 
-        // Calculate WhatsApp status with better accuracy
+        // CRITICAL: If filtering by date, only include batches that had API calls on that date
+        if (targetDate) {
+          // Filter travelers who had API calls made on the target date
+          const apiCallTravelers = travelers.filter(t => {
+            if (t.whatsappStatus !== 'sent' && t.whatsappStatus !== 'failed') return false;
+            const apiCallDate = t.updatedAt ? new Date(t.updatedAt).toISOString().split('T')[0] : null;
+            return apiCallDate === targetDate;
+          });
+          
+          // Skip this batch if no API calls were made on the target date
+          if (apiCallTravelers.length === 0) {
+            console.log(`📦 Skipping batch ${upload.id} - no API calls on ${targetDate}`);
+            continue;
+          }
+          
+          console.log(`📦 Including batch ${upload.id} - ${apiCallTravelers.length} API calls on ${targetDate}`);
+        }
+
+        // Calculate WhatsApp status with better accuracy  
         const sentCount = travelers.filter(t => t.whatsappStatus === 'sent').length;
         const failedCount = travelers.filter(t => t.whatsappStatus === 'failed').length;
         const pendingCount = travelers.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending').length;
@@ -3189,6 +3211,12 @@ Happy Travels!`;
           progressPercentage: totalCount > 0 ? Math.round((sentCount / totalCount) * 100) : 0
         });
       }
+
+      console.log(`\n📊 FINAL BATCH RESULTS for ${targetDate || 'all dates'}:`);
+      console.log(`   Found ${batches.length} batches that had API calls${targetDate ? ` on ${targetDate}` : ' ever'}`);
+      batches.forEach(batch => {
+        console.log(`   - Batch ${batch.uploadId}: ${batch.sentCount + batch.failedCount} API calls (${batch.fileName})`);
+      });
 
       // If no upload history but there's traveler data, create legacy batches
       if (batches.length === 0) {

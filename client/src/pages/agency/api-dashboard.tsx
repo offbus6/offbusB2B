@@ -43,7 +43,7 @@ interface BatchApiStats {
 
 export default function ApiDashboard() {
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState('2025-08-26'); // Show Aug 26 which had 941 API calls
+  const [selectedDate, setSelectedDate] = useState('2025-08-29'); // Reset to current date to test filtering
 
   // Get API call statistics for selected date
   const { data: apiStats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery<ApiCallStats>({
