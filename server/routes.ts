@@ -3033,6 +3033,53 @@ Happy Travels!`;
   });
 
 
+  // Get today's API call statistics
+  app.get('/api/agency/whatsapp/api-stats', requireAuth(['agency']), async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any).user;
+      if (!user || user.role !== 'agency') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const agencyId = user.agency?.id;
+      if (!agencyId) {
+        return res.status(404).json({ error: 'Agency not found' });
+      }
+
+      // Get today's travelers with sent status
+      const today = new Date().toISOString().split('T')[0];
+      const allTravelers = await storage.getTravelerDataByAgency(agencyId);
+      
+      const todaysTravelers = allTravelers.filter(t => {
+        const createdDate = new Date(t.createdAt || new Date()).toISOString().split('T')[0];
+        return createdDate === today;
+      });
+
+      const sentToday = todaysTravelers.filter(t => t.whatsappStatus === 'sent').length;
+      const failedToday = todaysTravelers.filter(t => t.whatsappStatus === 'failed').length;
+      const pendingToday = todaysTravelers.filter(t => t.whatsappStatus === 'pending').length;
+      
+      // API calls = sent + failed (both require an API call)
+      const totalApiCallsToday = sentToday + failedToday;
+
+      res.json({
+        date: today,
+        totalApiCallsToday,
+        breakdown: {
+          sent: sentToday,
+          failed: failedToday,
+          pending: pendingToday,
+          total: todaysTravelers.length
+        },
+        note: 'API calls = Sent messages + Failed attempts (both count as API calls)'
+      });
+
+    } catch (error) {
+      console.error('Error getting API stats:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // Get upload batches with WhatsApp status for scheduler
   app.get('/api/agency/upload-batches', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
@@ -3258,6 +3305,8 @@ Happy Travels!`;
 
       let sentCount = 0;
       let failedCount = 0;
+      let totalApiCallsToday = 0; // Track API calls for this batch
+      
       // Get fresh agency data from database to ensure we have latest whatsappTemplate
       const agency = await storage.getAgencyById(user.agency.id);
       if (!agency) {
@@ -3357,6 +3406,9 @@ Happy Travels!`;
               'User-Agent': 'TravelFlow-WhatsApp/1.0'
             }
           });
+          
+          // Count this API call
+          totalApiCallsToday++;
 
           clearTimeout(timeoutId);
           const responseText = await response.text().then(text => text.trim());
@@ -3488,6 +3540,7 @@ Happy Travels!`;
       console.log(`✅ Successfully sent: ${sentCount}`);
       console.log(`❌ Failed: ${failedCount}`);
       console.log(`📱 Total processed: ${pendingTravelers.length}`);
+      console.log(`📞 Total API calls made: ${totalApiCallsToday}`);
       console.log(`🎯 Each traveler got individual API call with personalized data`);
 
       const alreadySentCount = (batchTravelers || []).length - pendingTravelers.length;
@@ -3500,6 +3553,7 @@ Happy Travels!`;
         alreadySentCount,
         totalInBatch: (batchTravelers || []).length,
         totalProcessed: pendingTravelers.length,
+        totalApiCallsMade: totalApiCallsToday,
         deliveryResults,
         smartBatching: {
           enabled: true,
@@ -3511,7 +3565,8 @@ Happy Travels!`;
           individualApiCalls: true,
           personalizedData: true,
           delayBetweenCalls: '1 second',
-          templateUsed: agency.whatsappTemplate || 'eddygoo_2807'
+          templateUsed: agency.whatsappTemplate || 'eddygoo_2807',
+          apiCallCount: totalApiCallsToday
         }
       });
 
