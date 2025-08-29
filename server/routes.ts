@@ -2882,7 +2882,8 @@ Happy Travels!`;
   });
 
 
-  // Intelligent batch splitting for large WhatsApp campaigns
+  /*
+  // DISABLED: Intelligent batch splitting for large WhatsApp campaigns (causing unwanted multiple batch sends)
   app.post('/api/agency/whatsapp/send-large-batch/:uploadId', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
       const user = (req.session as any).user;
@@ -3031,6 +3032,7 @@ Happy Travels!`;
       });
     }
   });
+  */
 
 
   // Get today's API call statistics
