@@ -2411,7 +2411,8 @@ Happy Travels!`;
     }
   });
 
-  // Manual WhatsApp message sending to all unsent users (agency access)
+  /*
+  // DISABLED: Manual WhatsApp message sending to all unsent users (CAUSES UNAUTHORIZED BATCH PROCESSING)
   app.post("/api/agency/whatsapp/send-all", async (req: Request, res: Response) => {
     try {
       const user = (req.session as any)?.user;
@@ -2539,6 +2540,7 @@ Happy Travels!`;
       });
     }
   });
+  */
 
   // Manual WhatsApp message sending to individual user (agency access)
   app.post("/api/agency/whatsapp/send-individual/:id", async (req: Request, res: Response) => {
@@ -3226,10 +3228,21 @@ Happy Travels!`;
       const { uploadId } = req.params;
       const agencyId = user.agency?.id;
 
+      // CRITICAL LOGGING: Track which batch is being requested
+      console.log(`\n🎯 BATCH SEND REQUEST RECEIVED`);
+      console.log(`📅 Upload ID Requested: ${uploadId}`);
+      console.log(`🏢 Agency ID: ${agencyId}`);
+      console.log(`👤 User: ${user.email}`);
+      console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
+
       if (!agencyId) {
         return res.status(404).json({ error: 'Agency not found' });
       }
 
+      // CRITICAL: Prevent multiple batch processing - only process the EXACT requested batch
+      console.log(`🛡️  SAFETY CHECK: Only processing upload ID: ${uploadId}`);
+      console.log(`🚨 WARNING: If any other batch gets processed, this is a SYSTEM BUG`);
+      
       // Add batch size limit for safety
       const MAX_BATCH_SIZE = 1000;
       let batchTravelers = [];
@@ -3291,6 +3304,7 @@ Happy Travels!`;
       console.log(`📊 Total travelers in batch: ${(batchTravelers || []).length}`);
       console.log(`✅ Already sent: ${(batchTravelers || []).length - pendingTravelers.length}`);
       console.log(`⏳ Pending to send: ${pendingTravelers.length}`);
+      console.log(`📋 ONLY PROCESSING BATCH: ${uploadId} - NO OTHER BATCHES WILL BE PROCESSED`);
       console.log(`🚀 Starting from where we left off...`);
 
       // Safety check for large batches

@@ -32,6 +32,7 @@ import AgencyPayments from "@/pages/agency/payments";
 import AgencyRegister from "@/pages/agency/register";
 import AgencyPending from "@/pages/agency/pending";
 import AgencyProfile from "@/pages/agency/profile";
+import ApiDashboard from "@/pages/agency/api-dashboard";
 import RoleSelection from "@/pages/role-selection";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
@@ -99,6 +100,7 @@ function AppContent() {
                   <Route path="/agency/upload-data" component={UploadData} />
                   <Route path="/agency/uploaded-data" component={UploadedData} />
                   <Route path="/agency/whatsapp-scheduler" component={WhatsAppScheduler} />
+                  <Route path="/agency/api-dashboard" component={ApiDashboard} />
                   <Route path="/agency/payments" component={AgencyPayments} />
                   <Route path="/agency/profile" component={AgencyProfile} />
                   <Route path="/agency/pending" component={AgencyPending} />

@@ -11,7 +11,8 @@ import {
   User,
   MessageSquare,
   CreditCard,
-  Users
+  Users,
+  Activity
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -93,6 +94,11 @@ export default function Sidebar() {
       href: "/agency/whatsapp-scheduler", 
       icon: MessageSquare, 
       label: "WhatsApp Scheduler" 
+    },
+    { 
+      href: "/agency/api-dashboard", 
+      icon: Activity, 
+      label: "API Dashboard" 
     },
     { 
       href: "/agency/payments",
