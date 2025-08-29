@@ -2542,7 +2542,9 @@ Happy Travels!`;
   });
   */
 
-  // Manual WhatsApp message sending to individual user (agency access)
+  /*
+  // DISABLED: Manual WhatsApp message sending to individual user (SECURITY RISK - CAUSES UNAUTHORIZED API CALLS)
+  // This endpoint was making unauthorized API calls when users accessed individual travelers
   app.post("/api/agency/whatsapp/send-individual/:id", async (req: Request, res: Response) => {
     try {
       const user = (req.session as any)?.user;
@@ -2669,8 +2671,10 @@ Happy Travels!`;
       });
     }
   });
+  */
 
-  // Simple WhatsApp Test Endpoint
+  /*
+  // DISABLED: Simple WhatsApp Test Endpoint (SECURITY RISK - MAKES REAL API CALLS)
   app.post("/api/whatsapp/test-message", async (req: Request, res: Response) => {
     try {
       console.log("=== WhatsApp Test Request ===");
@@ -2696,8 +2700,10 @@ Happy Travels!`;
       });
     }
   });
+  */
 
-  // Test WhatsApp with Traveler Template
+  /*
+  // DISABLED: Test WhatsApp with Traveler Template (SECURITY RISK - MAKES REAL API CALLS)
   app.post("/api/whatsapp/test-traveler", async (req: Request, res: Response) => {
     try {
       const { travelerName, agencyName, couponCode, bookingWebsite, phone } = req.body;
@@ -2720,8 +2726,10 @@ Happy Travels!`;
       });
     }
   });
+  */
 
-  // Test WhatsApp with Image (using your provided example)
+  /*
+  // DISABLED: Test WhatsApp with Image (SECURITY RISK - MAKES REAL API CALLS)
   app.post("/api/whatsapp/test-image", async (req: Request, res: Response) => {
     try {
       const { phone } = req.body;
@@ -2744,8 +2752,10 @@ Happy Travels!`;
       });
     }
   });
+  */
 
-  // Debug WhatsApp test endpoint with detailed logging
+  /*
+  // DISABLED: Debug WhatsApp test endpoint (SECURITY RISK - MAKES REAL API CALLS)
   app.post("/api/whatsapp/debug-test", async (req: Request, res: Response) => {
     try {
       const { phone, message } = req.body;
@@ -2843,6 +2853,9 @@ Happy Travels!`;
         success: false, 
         error: error instanceof Error ? error.message : "Unknown error occurred" 
       });
+    }
+  });
+  */
 
   // System health check for large batch processing
   app.get("/api/system/health", async (req: Request, res: Response) => {
@@ -2878,11 +2891,6 @@ Happy Travels!`;
       });
     }
   });
-
-
-    }
-  });
-
 
   /*
   // DISABLED: Intelligent batch splitting for large WhatsApp campaigns (causing unwanted multiple batch sends)
