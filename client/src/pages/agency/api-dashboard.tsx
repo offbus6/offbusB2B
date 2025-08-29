@@ -43,19 +43,23 @@ interface BatchApiStats {
 
 export default function ApiDashboard() {
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState('2025-08-26'); // Show Aug 26 which had 941 API calls
 
   // Get API call statistics for selected date
   const { data: apiStats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery<ApiCallStats>({
     queryKey: ["/api/agency/whatsapp/api-stats", selectedDate],
     queryFn: async () => {
-      const response = await fetch(`/api/agency/whatsapp/api-stats?date=${selectedDate}`);
+      console.log(`🔍 Frontend: Fetching API stats for date: ${selectedDate}`);
+      const response = await fetch(`/api/agency/whatsapp/api-stats?date=${selectedDate}&cache=${Date.now()}`);
       if (!response.ok) throw new Error('Failed to fetch API stats');
-      return response.json();
+      const data = await response.json();
+      console.log(`📊 Frontend: Received API stats:`, data);
+      return data;
     },
     retry: 1,
-    refetchInterval: 30000, // Refresh every 30 seconds
     refetchOnWindowFocus: true,
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 0, // Don't cache
   });
 
   // Get batch-wise API statistics 
@@ -135,10 +139,15 @@ export default function ApiDashboard() {
             />
           </div>
           <Button
-            onClick={() => { refetchStats(); refetchBatch(); }}
+            onClick={() => { 
+              console.log(`🔄 Frontend: Force refreshing API stats for date: ${selectedDate}`);
+              refetchStats(); 
+              refetchBatch(); 
+            }}
             variant="outline"
             className="flex items-center gap-2"
             disabled={isLoading}
+            data-testid="button-refresh-api-stats"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             {isLoading ? 'Refreshing...' : 'Refresh'}
