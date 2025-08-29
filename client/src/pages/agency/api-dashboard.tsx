@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,12 +33,13 @@ interface BatchApiStats {
 }
 
 export default function ApiDashboard() {
+  const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Get today's API call statistics
   const { data: apiStats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery<ApiCallStats>({
     queryKey: ["/api/agency/whatsapp/api-stats"],
-    retry: 3,
+    retry: 1,
     refetchInterval: 30000, // Refresh every 30 seconds
     refetchOnWindowFocus: true,
   });
@@ -45,7 +47,7 @@ export default function ApiDashboard() {
   // Get batch-wise API statistics 
   const { data: batchStats, isLoading: batchLoading, error: batchError, refetch: refetchBatch } = useQuery<BatchApiStats[]>({
     queryKey: ["/api/agency/upload-batches"],
-    retry: 3,
+    retry: 1,
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
     select: (data: any[]) => {
@@ -55,10 +57,10 @@ export default function ApiDashboard() {
         fileName: batch.fileName || 'Unknown File',
         busName: batch.busName || 'Unknown Bus',
         travelers: batch.travelerCount,
-        apiCallsMade: batch.sentCount + batch.failedCount,
-        sent: batch.sentCount,
-        failed: batch.failedCount,
-        status: batch.whatsappStatus,
+        apiCallsMade: (batch.sentCount || 0) + (batch.failedCount || 0),
+        sent: batch.sentCount || 0,
+        failed: batch.failedCount || 0,
+        status: batch.whatsappStatus || 'pending',
         lastProcessed: batch.uploadDate
       }));
     }
@@ -87,8 +89,8 @@ export default function ApiDashboard() {
             <div className="flex flex-col items-center space-y-4">
               <AlertTriangle className="h-12 w-12 text-red-500" />
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Error Loading Dashboard</h3>
-                <p className="text-gray-500 mt-1">Failed to load API statistics. Please try again.</p>
+                <h3 className="text-lg font-medium text-gray-900">Unable to Load Dashboard</h3>
+                <p className="text-gray-500 mt-1">Please refresh the page and try again. If the problem continues, you may need to log in again.</p>
               </div>
               <Button onClick={() => { refetchStats(); refetchBatch(); }} variant="outline">
                 Retry
