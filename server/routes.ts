@@ -3050,32 +3050,56 @@ Happy Travels!`;
         return res.status(404).json({ error: 'Agency not found' });
       }
 
-      // Get today's travelers with sent status
-      const today = new Date().toISOString().split('T')[0];
+      // Get date parameter or default to today
+      const targetDate = (req.query.date as string) || new Date().toISOString().split('T')[0];
       const allTravelers = await storage.getTravelerDataByAgency(agencyId);
       
-      const todaysTravelers = allTravelers.filter(t => {
-        const createdDate = new Date(t.createdAt || new Date()).toISOString().split('T')[0];
-        return createdDate === today;
+      // IMPORTANT: Count API calls based on when WhatsApp was SENT, not when traveler was uploaded
+      // This gives accurate API usage per day
+      const travelersWithApiCalls = allTravelers.filter(t => {
+        // Only count travelers who had API calls made (sent or failed)
+        if (t.whatsappStatus !== 'sent' && t.whatsappStatus !== 'failed') {
+          return false;
+        }
+        
+        // Check if the API call was made on the target date
+        // Note: We need to track when WhatsApp was sent, not when traveler was uploaded
+        // For now, we'll use the traveler's updatedAt or createdAt as proxy
+        const apiCallDate = new Date(t.updatedAt || t.createdAt || new Date()).toISOString().split('T')[0];
+        return apiCallDate === targetDate;
       });
 
-      const sentToday = todaysTravelers.filter(t => t.whatsappStatus === 'sent').length;
-      const failedToday = todaysTravelers.filter(t => t.whatsappStatus === 'failed').length;
-      const pendingToday = todaysTravelers.filter(t => t.whatsappStatus === 'pending').length;
+      const sentCount = travelersWithApiCalls.filter(t => t.whatsappStatus === 'sent').length;
+      const failedCount = travelersWithApiCalls.filter(t => t.whatsappStatus === 'failed').length;
       
-      // API calls = sent + failed (both require an API call)
-      const totalApiCallsToday = sentToday + failedToday;
+      // Also include ALL sent and failed travelers regardless of date to show total usage
+      const allSentEver = allTravelers.filter(t => t.whatsappStatus === 'sent').length;
+      const allFailedEver = allTravelers.filter(t => t.whatsappStatus === 'failed').length;
+      const totalApiCallsEver = allSentEver + allFailedEver;
+      
+      // For selected date
+      const totalApiCallsForDate = sentCount + failedCount;
+      
+      // Get all pending (never had API calls)
+      const pendingCount = allTravelers.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending').length;
 
       res.json({
-        date: today,
-        totalApiCallsToday,
+        date: targetDate,
+        totalApiCallsToday: totalApiCallsForDate,
+        totalApiCallsEver: totalApiCallsEver, // Show total usage ever
         breakdown: {
-          sent: sentToday,
-          failed: failedToday,
-          pending: pendingToday,
-          total: todaysTravelers.length
+          sent: sentCount,
+          failed: failedCount,
+          pending: pendingCount,
+          total: allTravelers.length
         },
-        note: 'API calls = Sent messages + Failed attempts (both count as API calls)'
+        everBreakdown: {
+          sent: allSentEver,
+          failed: allFailedEver,
+          pending: pendingCount,
+          total: allTravelers.length
+        },
+        note: `API calls for ${targetDate}: ${totalApiCallsForDate}. Total ever: ${totalApiCallsEver}`
       });
 
     } catch (error) {

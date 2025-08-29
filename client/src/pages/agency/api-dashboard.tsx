@@ -4,13 +4,22 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Activity, Phone, Calendar, AlertTriangle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RefreshCw, Activity, Phone, Calendar, AlertTriangle, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 
 interface ApiCallStats {
   date: string;
   totalApiCallsToday: number;
+  totalApiCallsEver: number;
   breakdown: {
+    sent: number;
+    failed: number;
+    pending: number;
+    total: number;
+  };
+  everBreakdown: {
     sent: number;
     failed: number;
     pending: number;
@@ -36,9 +45,14 @@ export default function ApiDashboard() {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Get today's API call statistics
+  // Get API call statistics for selected date
   const { data: apiStats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery<ApiCallStats>({
-    queryKey: ["/api/agency/whatsapp/api-stats"],
+    queryKey: ["/api/agency/whatsapp/api-stats", selectedDate],
+    queryFn: async () => {
+      const response = await fetch(`/api/agency/whatsapp/api-stats?date=${selectedDate}`);
+      if (!response.ok) throw new Error('Failed to fetch API stats');
+      return response.json();
+    },
     retry: 1,
     refetchInterval: 30000, // Refresh every 30 seconds
     refetchOnWindowFocus: true,
@@ -109,22 +123,34 @@ export default function ApiDashboard() {
           <h1 className="text-3xl font-bold text-gray-900">API Call Dashboard</h1>
           <p className="text-gray-600 mt-1">Track WhatsApp API usage and prevent unauthorized calls</p>
         </div>
-        <Button
-          onClick={() => { refetchStats(); refetchBatch(); }}
-          variant="outline"
-          className="flex items-center gap-2"
-          disabled={isLoading}
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          {isLoading ? 'Refreshing...' : 'Refresh'}
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="date-picker" className="text-sm font-medium">Select Date:</Label>
+            <Input
+              id="date-picker"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-40"
+            />
+          </div>
+          <Button
+            onClick={() => { refetchStats(); refetchBatch(); }}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        </div>
       </div>
 
-      {/* Today's Summary */}
+      {/* Date-based Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total API Calls Today</CardTitle>
+            <CardTitle className="text-sm font-medium">API Calls on {format(new Date(selectedDate), 'MMM dd')}</CardTitle>
             <Phone className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -132,8 +158,11 @@ export default function ApiDashboard() {
               {apiStats?.totalApiCallsToday || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Each call costs money
+              Selected date usage
             </p>
+            <div className="text-lg font-bold text-orange-600 mt-2">
+              Total Ever: {apiStats?.totalApiCallsEver || 0}
+            </div>
           </CardContent>
         </Card>
 
@@ -147,8 +176,11 @@ export default function ApiDashboard() {
               {apiStats?.breakdown.sent || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Successfully delivered
+              On selected date
             </p>
+            <div className="text-lg font-bold text-green-500 mt-1">
+              Total: {apiStats?.everBreakdown?.sent || 0}
+            </div>
           </CardContent>
         </Card>
 
@@ -162,8 +194,11 @@ export default function ApiDashboard() {
               {apiStats?.breakdown.failed || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Still counted as API calls
+              On selected date  
             </p>
+            <div className="text-lg font-bold text-red-500 mt-1">
+              Total: {apiStats?.everBreakdown?.failed || 0}
+            </div>
           </CardContent>
         </Card>
 
@@ -177,7 +212,7 @@ export default function ApiDashboard() {
               {apiStats?.breakdown.pending || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Not yet sent
+              Never sent
             </p>
           </CardContent>
         </Card>
@@ -188,7 +223,7 @@ export default function ApiDashboard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            API Calls by Batch - Today ({format(new Date(), 'PPP')})
+            API Calls by Batch - {format(new Date(selectedDate), 'PPP')}
           </CardTitle>
         </CardHeader>
         <CardContent>
