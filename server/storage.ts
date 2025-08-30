@@ -609,28 +609,50 @@ export class DatabaseStorage implements IStorage {
   }
 
   async resetProcessingStatus(uploadId: string): Promise<void> {
-    // Reset any stuck 'processing' status back to 'pending' to prevent duplicate API calls
-    // Only reset records that have been 'processing' for more than 5 minutes (likely stuck)
+    // CRITICAL: DON'T reset 'processing' to 'pending' - this causes duplicate API calls!
+    // If a record is 'processing', the API call was already made to WhatsApp
+    // Instead, assume interrupted 'processing' records are actually 'sent' after 10 minutes
     const uploadIdNum = uploadId.startsWith('legacy-') ? null : parseInt(uploadId);
     
     if (uploadIdNum && !isNaN(uploadIdNum)) {
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
       
-      const resetCount = await db
-        .update(travelerData)
-        .set({ 
-          whatsappStatus: 'pending',
-          updatedAt: new Date()
-        })
+      // Get stuck processing records
+      const stuckRecords = await db
+        .select()
+        .from(travelerData)
         .where(
           and(
             eq(travelerData.uploadId, uploadIdNum),
             eq(travelerData.whatsappStatus, 'processing'),
-            sql`updated_at < ${fiveMinutesAgo}`
+            sql`updated_at < ${tenMinutesAgo}`
           )
         );
       
-      console.log(`🔧 CLEANUP: Reset ${resetCount} stuck 'processing' records older than 5 minutes for uploadId ${uploadId}`);
+      if (stuckRecords.length > 0) {
+        // Mark as 'sent' because API call was already made, just interrupted before database update
+        const resetCount = await db
+          .update(travelerData)
+          .set({ 
+            whatsappStatus: 'sent', // ASSUME successful since API was called
+            updatedAt: new Date()
+          })
+          .where(
+            and(
+              eq(travelerData.uploadId, uploadIdNum),
+              eq(travelerData.whatsappStatus, 'processing'),
+              sql`updated_at < ${tenMinutesAgo}`
+            )
+          );
+        
+        console.log(`🔧 CLEANUP: Marked ${resetCount} interrupted 'processing' records as 'sent' to prevent duplicate API calls`);
+        console.log(`📱 These numbers already received WhatsApp messages, just database wasn't updated due to interruption`);
+        
+        // Log the phone numbers that were marked as sent
+        stuckRecords.forEach(record => {
+          console.log(`📞 ASSUMED SENT: ${record.travelerName} (${record.phone}) - API was called but interrupted`);
+        });
+      }
     }
   }
 

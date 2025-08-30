@@ -3499,8 +3499,9 @@ Happy Travels!`;
           await storage.updateTravelerData(traveler.id, { whatsappStatus: 'processing' });
 
           // Make INDIVIDUAL API call for THIS traveler
-          console.log(`Making individual API call ${i + 1}/${pendingTravelers.length} for ${traveler.travelerName} (${traveler.phone})`);
-          console.log(`🔍 DUPLICATE CHECK: Phone ${traveler.phone} - This should be the ONLY call for this number`);
+          console.log(`\n🚀 API CALL ${i + 1}/${pendingTravelers.length}: ${traveler.travelerName} (${traveler.phone})`);
+          console.log(`🔍 CRITICAL: This phone ${traveler.phone} is now RECEIVING WhatsApp message`);
+          console.log(`⚠️  IMPORTANT: If interrupted after this point, phone ${traveler.phone} already got message!`);
           
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 15000);
