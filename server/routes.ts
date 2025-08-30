@@ -3518,6 +3518,18 @@ Happy Travels!`;
 
           clearTimeout(timeoutId);
           const responseText = await response.text().then(text => text.trim());
+          
+          // CRITICAL: Immediately update to prevent duplicate processing on interruption
+          console.log(`🔒 IMMEDIATE POST-API UPDATE: Updating status to prevent duplicates on interruption`);
+          const isSuccess = response.ok && 
+                           responseText.startsWith('S.') && 
+                           responseText.length > 2 &&
+                           !responseText.includes('ERROR') &&
+                           !responseText.includes('FAIL');
+          
+          // Update status immediately after API response to prevent race condition
+          const finalStatus = isSuccess ? 'sent' : 'failed';
+          await storage.updateTravelerData(traveler.id, { whatsappStatus: finalStatus });
 
           console.log(`API Response Status: ${response.status}`);
           console.log(`API Response OK: ${response.ok}`);
@@ -3566,13 +3578,6 @@ Happy Travels!`;
             });
           }
 
-          // Check success
-          const isSuccess = response.ok && 
-                           responseText.startsWith('S.') && 
-                           responseText.length > 2 &&
-                           !responseText.includes('ERROR') &&
-                           !responseText.includes('FAIL');
-
           console.log(`=== BULK DELIVERY DEBUG ===`);
           console.log(`Response Status: ${response.status}`);
           console.log(`Response OK: ${response.ok}`);
@@ -3584,7 +3589,6 @@ Happy Travels!`;
             console.log(`✅ BULK SUCCESS: WhatsApp sent to ${traveler.travelerName} (+91${finalPhone}) - Message ID: ${responseText}`);
             console.log(`⚠️  IMPORTANT: User should receive WhatsApp message at +91${finalPhone} in 1-5 minutes`);
             
-            await storage.updateTravelerData(traveler.id, { whatsappStatus: 'sent' });
             sentCount++;
             
             deliveryResults.push({
@@ -3602,7 +3606,6 @@ Happy Travels!`;
           } else {
             console.log(`❌ BULK FAILED: ${traveler.travelerName} (+91${finalPhone}): ${responseText}`);
             
-            await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
             failedCount++;
             
             deliveryResults.push({

@@ -610,10 +610,13 @@ export class DatabaseStorage implements IStorage {
 
   async resetProcessingStatus(uploadId: string): Promise<void> {
     // Reset any stuck 'processing' status back to 'pending' to prevent duplicate API calls
+    // Only reset records that have been 'processing' for more than 5 minutes (likely stuck)
     const uploadIdNum = uploadId.startsWith('legacy-') ? null : parseInt(uploadId);
     
     if (uploadIdNum && !isNaN(uploadIdNum)) {
-      await db
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      
+      const resetCount = await db
         .update(travelerData)
         .set({ 
           whatsappStatus: 'pending',
@@ -622,9 +625,12 @@ export class DatabaseStorage implements IStorage {
         .where(
           and(
             eq(travelerData.uploadId, uploadIdNum),
-            eq(travelerData.whatsappStatus, 'processing')
+            eq(travelerData.whatsappStatus, 'processing'),
+            sql`updated_at < ${fiveMinutesAgo}`
           )
         );
+      
+      console.log(`🔧 CLEANUP: Reset ${resetCount} stuck 'processing' records older than 5 minutes for uploadId ${uploadId}`);
     }
   }
 

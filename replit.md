@@ -96,3 +96,11 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - **API Dashboard Fixed**: Accurate date-based filtering showing selected date vs total usage with proper batch filtering
 - **Cost Management**: Precise API call tracking with only legitimate sends counted, no test calls or unwanted operations
 - **Production Security**: System now fully secured against unauthorized WhatsApp API usage with comprehensive audit trail
+
+### WhatsApp Duplicate API Call Prevention Fix (January 2025)
+- **CRITICAL BUG FIX**: Eliminated duplicate API calls caused by interrupted batch processing and retries
+- **Race Condition Fixed**: Immediate status update after API response prevents duplicate processing during interruptions
+- **Status Flow Protection**: Enhanced 'processing' status prevents retries from calling same numbers multiple times
+- **Smart Cleanup**: Only resets stuck 'processing' records older than 5 minutes to prevent interference with active batches
+- **Bulletproof Retry Safety**: System now handles server restarts, network timeouts, and manual stops without duplicate API charges
+- **Cost Protection**: Prevents scenarios like phone number 8680081833 being called 3 times due to retry attempts
