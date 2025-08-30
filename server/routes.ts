@@ -3322,6 +3322,10 @@ Happy Travels!`;
       console.log(`🛡️  SAFETY CHECK: Only processing upload ID: ${uploadId}`);
       console.log(`🚨 WARNING: If any other batch gets processed, this is a SYSTEM BUG`);
       
+      // CLEANUP: Reset any stuck 'processing' status from previous interrupted sends
+      console.log(`🔧 CLEANUP: Resetting any stuck 'processing' status from previous interrupted sends`);
+      await storage.resetProcessingStatus(uploadId);
+      
       // Add batch size limit for safety
       const MAX_BATCH_SIZE = 1000;
       let batchTravelers = [];
@@ -3347,9 +3351,11 @@ Happy Travels!`;
       }
 
       // Smart batching: Only process travelers who haven't received WhatsApp messages yet
+      // CRITICAL: Also exclude 'processing' status to prevent duplicate API calls during retries
       const initialPendingTravelers = (batchTravelers || []).filter(t => 
         t && 
-        t.whatsappStatus !== 'sent'
+        t.whatsappStatus !== 'sent' && 
+        t.whatsappStatus !== 'processing'
       );
 
       // CRITICAL: Remove duplicate phone numbers to prevent multiple messages to same passenger
@@ -3488,8 +3494,13 @@ Happy Travels!`;
           
           const fullApiUrl = `${apiUrl}?${cleanParams}`;
 
+          // CRITICAL SAFETY: Mark as processing BEFORE API call to prevent duplicates
+          console.log(`🔒 PRE-API SAFETY: Marking traveler ${traveler.id} as 'processing' to prevent duplicate calls`);
+          await storage.updateTravelerData(traveler.id, { whatsappStatus: 'processing' });
+
           // Make INDIVIDUAL API call for THIS traveler
-          console.log(`Making individual API call ${i + 1}/${pendingTravelers.length}`);
+          console.log(`Making individual API call ${i + 1}/${pendingTravelers.length} for ${traveler.travelerName} (${traveler.phone})`);
+          console.log(`🔍 DUPLICATE CHECK: Phone ${traveler.phone} - This should be the ONLY call for this number`);
           
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 15000);

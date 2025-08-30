@@ -608,6 +608,26 @@ export class DatabaseStorage implements IStorage {
     return data;
   }
 
+  async resetProcessingStatus(uploadId: string): Promise<void> {
+    // Reset any stuck 'processing' status back to 'pending' to prevent duplicate API calls
+    const uploadIdNum = uploadId.startsWith('legacy-') ? null : parseInt(uploadId);
+    
+    if (uploadIdNum && !isNaN(uploadIdNum)) {
+      await db
+        .update(travelerData)
+        .set({ 
+          whatsappStatus: 'pending',
+          updatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(travelerData.uploadId, uploadIdNum),
+            eq(travelerData.whatsappStatus, 'processing')
+          )
+        );
+    }
+  }
+
   async deleteTravelerData(id: number): Promise<void> {
     // First, delete any related WhatsApp queue entries to avoid foreign key constraint violation
     await db
