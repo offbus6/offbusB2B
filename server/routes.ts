@@ -1292,7 +1292,7 @@ export function registerRoutes(app: Express) {
 
       console.log("Processing pending WhatsApp messages via API endpoint");
       await whatsappService.processPendingMessages();
-      
+
       res.json({ 
         message: "WhatsApp message processing completed successfully",
         timestamp: new Date().toISOString()
@@ -2411,452 +2411,6 @@ Happy Travels!`;
     }
   });
 
-  /*
-  // DISABLED: Manual WhatsApp message sending to all unsent users (CAUSES UNAUTHORIZED BATCH PROCESSING)
-  app.post("/api/agency/whatsapp/send-all", async (req: Request, res: Response) => {
-    try {
-      const user = (req.session as any)?.user;
-      if (!user || user.role !== "agency") {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      // Get agency data
-      const agency = await storage.getAgency(user.id);
-      if (!agency) {
-        return res.status(404).json({ message: "Agency not found" });
-      }
-
-      // Get all travelers for this agency who haven't received WhatsApp messages
-      const travelers = await storage.getTravelerDataByAgency(user.id);
-      const unsentTravelers = travelers.filter(t => !t.whatsappStatus || t.whatsappStatus === 'failed');
-
-      if (unsentTravelers.length === 0) {
-        return res.json({
-          success: true,
-          message: "All travelers have already received WhatsApp messages",
-          results: [],
-          summary: { total: 0, sent: 0, failed: 0 }
-        });
-      }
-
-      const results = [];
-      const approvedTemplate = "Hi {{1}}, thanks for Traveling with us at {{2}}! Get 20% off on your next trip – use Coupon Code {{3}} 🚀 Valid for Next 90 days at: {{4}} ✨ Hurry Up.";
-
-      for (const traveler of unsentTravelers) {
-        try {
-          // Get bus information for route details
-          const bus = await storage.getBus(traveler.busId);
-
-          // Clean phone number
-          let cleanPhone = traveler.phone.replace(/\D/g, '');
-          if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
-            cleanPhone = cleanPhone.substring(2);
-          }
-
-          // Use agency's booking website URL and WhatsApp image URL from profile
-          const bookingUrl = agency.bookingWebsite || agency.website || 'https://testtravelagency.com';
-          const whatsappImageUrl = agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
-
-          // Send via BhashSMS API using your exact template format
-          const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
-          const whatsappTemplate = agency.whatsappTemplate || 'eddygoo_2807';
-          
-          // Build URL manually without encoding to avoid %2C, %3A, %2F issues
-          const cleanParams = [
-            `user=eddygoo1`,
-            `pass=123456`,
-            `sender=BUZWAP`,
-            `phone=${cleanPhone}`,
-            `text=${whatsappTemplate}`,
-            `priority=wa`,
-            `stype=normal`,
-            `Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}`,
-            `htype=image`,
-            `url=${whatsappImageUrl}`
-          ].join('&');
-          
-          const finalUrl = `${apiUrl}?${cleanParams}`;
-
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-          const response = await fetch(finalUrl, {
-            method: 'GET',
-            headers: { 'User-Agent': 'TravelFlow-WhatsApp-Service/1.0' },
-            signal: controller.signal
-          });
-
-          clearTimeout(timeoutId);
-          const result = await response.text();
-          const success = result.startsWith('S.');
-
-          // Update traveler WhatsApp status
-          await storage.updateTravelerData(traveler.id, { 
-            whatsappStatus: success ? 'sent' : 'failed'
-          });
-
-          const sentMessage = `Hi ${traveler.travelerName}, thanks for Traveling with us at ${agency.name}! Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 Valid for Next 90 days at: ${bookingUrl} ✨ Hurry Up.`;
-
-          results.push({
-            travelerId: traveler.id,
-            travelerName: traveler.travelerName,
-            phone: `+91${cleanPhone}`,
-            success,
-            message: success ? "Message sent successfully" : `Failed: ${result}`,
-            apiResponse: result,
-            sentMessage: sentMessage
-          });
-
-        } catch (error) {
-          results.push({
-            travelerId: traveler.id,
-            travelerName: traveler.travelerName,
-            phone: traveler.phone,
-            success: false,
-            message: error instanceof Error ? error.message : "Unknown error"
-          });
-        }
-      }
-
-      const successCount = results.filter(r => r.success).length;
-      const failureCount = results.length - successCount;
-
-      res.json({
-        success: successCount > 0,
-        message: `Sent ${successCount} messages successfully, ${failureCount} failed`,
-        results,
-        summary: {
-          total: results.length,
-          sent: successCount,
-          failed: failureCount
-        }
-      });
-
-    } catch (error) {
-      console.error("Send all WhatsApp messages error:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Internal server error" 
-      });
-    }
-  });
-  */
-
-  /*
-  // DISABLED: Manual WhatsApp message sending to individual user (SECURITY RISK - CAUSES UNAUTHORIZED API CALLS)
-  // This endpoint was making unauthorized API calls when users accessed individual travelers
-  app.post("/api/agency/whatsapp/send-individual/:id", async (req: Request, res: Response) => {
-    try {
-      const user = (req.session as any)?.user;
-      if (!user || user.role !== "agency") {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      const { id } = req.params;
-
-      // Get traveler data
-      const traveler = await storage.getTravelerData(parseInt(id));
-      if (!traveler || traveler.agencyId !== user.id) {
-        return res.status(404).json({ message: "Traveler not found or access denied" });
-      }
-
-      // Get agency data
-      const agency = await storage.getAgency(user.id);
-      if (!agency) {
-        return res.status(404).json({ message: "Agency not found" });
-      }
-
-      // Clean and validate phone number
-      let cleanPhone = traveler.phone.replace(/\D/g, '');
-
-      // Ensure it's a valid Indian mobile number
-      let finalPhone = cleanPhone;
-      if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
-        finalPhone = cleanPhone.substring(2);
-      } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
-        finalPhone = cleanPhone.substring(1);
-      }
-
-      // Validate final phone number (should be 10 digits starting with 6-9)
-      if (!/^[6-9]\d{9}$/.test(finalPhone)) {
-        return res.status(400).json({
-          success: false,
-          message: `Invalid phone number format: ${traveler.phone}`,
-          travelerData: {
-            id: traveler.id,
-            name: traveler.travelerName,
-            phone: traveler.phone,
-            status: 'failed'
-          }
-        });
-      }
-
-      // Get bus information for route details
-      const bus = await storage.getBus(traveler.busId);
-
-      // Use agency's booking website URL and WhatsApp image URL from profile
-      const bookingUrl = agency.bookingWebsite || agency.website || 'https://testtravelagency.com';
-      const whatsappImageUrl = agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
-
-      console.log(`Sending individual WhatsApp to ${traveler.travelerName} at +91${finalPhone}`);
-      console.log(`Using booking URL: ${bookingUrl}`);
-      console.log(`Using WhatsApp image: ${whatsappImageUrl}`);
-      console.log(`🎯 Individual WhatsApp Template: ${agency.whatsappTemplate || 'eddygoo_2807'}`);
-
-      // Send via BhashSMS API using your exact template format
-      const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
-      const whatsappTemplate = agency.whatsappTemplate || 'eddygoo_2807';
-      
-      // Build URL manually without encoding to avoid %2C, %3A, %2F issues
-      const cleanParams = [
-        `user=eddygoo1`,
-        `pass=123456`,
-        `sender=BUZWAP`,
-        `phone=${finalPhone}`,
-        `text=${whatsappTemplate}`,
-        `priority=wa`,
-        `stype=normal`,
-        `Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}`,
-        `htype=image`,
-        `url=${whatsappImageUrl}`
-      ].join('&');
-      
-      const finalUrl = `${apiUrl}?${cleanParams}`;
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-      const response = await fetch(finalUrl, {
-        method: 'GET',
-        headers: { 'User-Agent': 'TravelFlow-WhatsApp-Service/1.0' },
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-      const result = await response.text().then(text => text.trim());
-
-      console.log(`WhatsApp API Response for individual send to ${finalPhone}:`, result);
-
-      // More strict success checking
-      const success = response.ok && result.startsWith('S.') && result.length > 2;
-
-      // Update traveler WhatsApp status
-      await storage.updateTravelerData(traveler.id, { 
-        whatsappStatus: success ? 'sent' : 'failed'
-      });
-
-      res.json({
-        success,
-        message: success ? `WhatsApp message sent successfully to +91${finalPhone}` : `Failed to send message: ${result}`,
-        travelerData: {
-          id: traveler.id,
-          name: traveler.travelerName,
-          phone: `+91${finalPhone}`,
-          status: success ? 'sent' : 'failed'
-        },
-        apiResponse: result,
-        sentMessage: `Hi ${traveler.travelerName}, thanks for Traveling with us at ${agency.name}! Get 20% off on your next trip – use Coupon Code ${traveler.couponCode || 'SAVE20'} 🚀 Valid for Next 90 days at: ${bookingUrl} ✨ Hurry Up.`,
-        phoneValidation: {
-          original: traveler.phone,
-          cleaned: finalPhone,
-          isValid: true
-        }
-      });
-
-    } catch (error) {
-      console.error("Send individual WhatsApp message error:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Internal server error" 
-      });
-    }
-  });
-  */
-
-  /*
-  // DISABLED: Simple WhatsApp Test Endpoint (SECURITY RISK - MAKES REAL API CALLS)
-  app.post("/api/whatsapp/test-message", async (req: Request, res: Response) => {
-    try {
-      console.log("=== WhatsApp Test Request ===");
-      const { phone, message, imageUrl } = req.body;
-
-      if (!phone || !message) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "Phone number and message are required" 
-        });
-      }
-
-      const result = await testWhatsAppMessage(phone, message, imageUrl);
-
-      console.log("Test result:", result);
-      res.json(result);
-
-    } catch (error) {
-      console.error("WhatsApp test endpoint error:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Unknown error occurred" 
-      });
-    }
-  });
-  */
-
-  /*
-  // DISABLED: Test WhatsApp with Traveler Template (SECURITY RISK - MAKES REAL API CALLS)
-  app.post("/api/whatsapp/test-traveler", async (req: Request, res: Response) => {
-    try {
-      const { travelerName, agencyName, couponCode, bookingWebsite, phone } = req.body;
-
-      if (!travelerName || !agencyName || !couponCode || !bookingWebsite || !phone) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "All fields are required: travelerName, agencyName, couponCode, bookingWebsite, phone" 
-        });
-      }
-
-      const result = await sendWhatsAppToTraveler(travelerName, agencyName, couponCode, bookingWebsite, phone);
-      res.json(result);
-
-    } catch (error) {
-      console.error("WhatsApp traveler test error:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Unknown error occurred" 
-      });
-    }
-  });
-  */
-
-  /*
-  // DISABLED: Test WhatsApp with Image (SECURITY RISK - MAKES REAL API CALLS)
-  app.post("/api/whatsapp/test-image", async (req: Request, res: Response) => {
-    try {
-      const { phone } = req.body;
-
-      if (!phone) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "Phone number is required" 
-        });
-      }
-
-      const result = await testWhatsAppWithImage(phone);
-      res.json(result);
-
-    } catch (error) {
-      console.error("WhatsApp image test error:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Unknown error occurred" 
-      });
-    }
-  });
-  */
-
-  /*
-  // DISABLED: Debug WhatsApp test endpoint (SECURITY RISK - MAKES REAL API CALLS)
-  app.post("/api/whatsapp/debug-test", async (req: Request, res: Response) => {
-    try {
-      const { phone, message } = req.body;
-
-      if (!phone) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "Phone number is required" 
-        });
-      }
-
-      // Clean and validate phone number
-      let cleanPhone = phone.replace(/\D/g, '');
-      let finalPhone = cleanPhone;
-
-      if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
-        finalPhone = cleanPhone.substring(2);
-      } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
-        finalPhone = cleanPhone.substring(1);
-      }
-
-      console.log(`=== DEBUG WhatsApp Test ===`);
-      console.log(`Original phone: ${phone}`);
-      console.log(`Cleaned phone: ${cleanPhone}`);
-      console.log(`Final phone: ${finalPhone}`);
-
-      // Validate phone number
-      const isValidPhone = /^[6-9]\d{9}$/.test(finalPhone);
-      console.log(`Phone validation: ${isValidPhone}`);
-
-      if (!isValidPhone) {
-        return res.json({
-          success: false,
-          error: `Invalid phone number format. Must be 10 digits starting with 6-9. Got: ${finalPhone}`,
-          phoneValidation: {
-            original: phone,
-            cleaned: cleanPhone,
-            final: finalPhone,
-            isValid: false
-          }
-        });
-      }
-
-      const testMessage = message || `DEBUG TEST: Hi! This is a test from TravelFlow at ${new Date().toLocaleTimeString()}. Please reply if you receive this.`;
-
-      // Send via BhashSMS API using your exact working format
-      const apiUrl = 'http://bhashsms.com/api/sendmsg.php';
-      const baseParams = `user=eddygoo1&pass=123456&sender=BUZWAP&phone=${finalPhone}&text=${encodeURIComponent(testMessage)}&priority=wa&stype=normal&Params=54,877,966,52&htype=image&url=https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg`;
-      const finalUrl = `${apiUrl}?${baseParams}`;
-
-      console.log(`API URL: ${finalUrl}`);
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-      const response = await fetch(finalUrl, {
-        method: 'GET',
-        headers: { 'User-Agent': 'TravelFlow-Debug/1.0' },
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-      const result = await response.text().then(text => text.trim());
-
-      console.log(`API Response: "${result}"`);
-      console.log(`Response starts with S.: ${result.startsWith('S.')}`);
-      console.log(`Response length: ${result.length}`);
-
-      const success = response.ok && result.startsWith('S.') && result.length > 2;
-
-      console.log(`Final success status: ${success}`);
-      console.log(`=== END DEBUG ===`);
-
-      res.json({
-        success,
-        message: success ? `Test message sent successfully to +91${finalPhone}` : `Failed to send test message`,
-        apiResponse: result,
-        phoneValidation: {
-          original: phone,
-          cleaned: cleanPhone,
-          final: finalPhone,
-          isValid: true
-        },
-        apiDetails: {
-          url: finalUrl,
-          responseStatus: response.status,
-          responseOk: response.ok
-        },
-        testMessage
-      });
-
-    } catch (error) {
-      console.error("Debug WhatsApp test error:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Unknown error occurred" 
-      });
-    }
-  });
-  */
-
   // System health check for large batch processing
   app.get("/api/system/health", async (req: Request, res: Response) => {
     try {
@@ -2867,7 +2421,7 @@ Happy Travels!`;
 
       const memUsage = process.memoryUsage();
       const uptime = process.uptime();
-      
+
       res.json({
         status: 'healthy',
         uptime: Math.floor(uptime),
@@ -2929,7 +2483,7 @@ Happy Travels!`;
       }
 
       const initialPendingTravelers = allTravelers.filter(t => t && t.whatsappStatus !== 'sent');
-      
+
       // CRITICAL: Remove duplicate phone numbers to prevent multiple messages to same passenger
       const seenPhones = new Set();
       const pendingTravelers = initialPendingTravelers.filter(traveler => {
@@ -2945,7 +2499,7 @@ Happy Travels!`;
       if (duplicatesSkipped > 0) {
         console.log(`⚠️  DUPLICATE PREVENTION: Skipped ${duplicatesSkipped} duplicate phone numbers to prevent multiple messages`);
       }
-      
+
       if (pendingTravelers.length === 0) {
         return res.json({ success: true, message: 'No pending travelers to send WhatsApp', totalBatches: 0 });
       }
@@ -2956,7 +2510,7 @@ Happy Travels!`;
         batches.push(pendingTravelers.slice(i, i + batchSize));
       }
 
-      console.log(`📦 LARGE CAMPAIGN: Splitting ${pendingTravelers.length} travelers into ${batches.length} batches of ${batchSize}`);
+      console.log(`\n📦 LARGE CAMPAIGN: Splitting ${pendingTravelers.length} travelers into ${batches.length} batches of ${batchSize}`);
 
       let totalSent = 0;
       let totalFailed = 0;
@@ -2965,9 +2519,9 @@ Happy Travels!`;
       // Process each batch with delays
       for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
         const batch = batches[batchIndex];
-        
+
         console.log(`\n🚀 Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} travelers)`);
-        
+
         try {
           // Use the existing batch processing logic
           const batchResponse = await fetch(`http://localhost:5000/api/agency/whatsapp/send-batch/${uploadId}`, {
@@ -2979,7 +2533,7 @@ Happy Travels!`;
           });
 
           const batchResult = await batchResponse.json();
-          
+
           if (batchResult.success) {
             totalSent += batchResult.sentCount || 0;
             totalFailed += batchResult.failedCount || 0;
@@ -3044,7 +2598,6 @@ Happy Travels!`;
   });
   */
 
-
   // Get today's API call statistics
   app.get('/api/agency/whatsapp/api-stats', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
@@ -3061,22 +2614,22 @@ Happy Travels!`;
       // Get date parameter or default to today
       const targetDate = (req.query.date as string) || new Date().toISOString().split('T')[0];
       const allTravelers = await storage.getTravelerDataByAgency(agencyId);
-      
+
       // DEBUG: Count ALL travelers who had API calls (sent/failed) on ANY date first
       const allApiCallTravelers = allTravelers.filter(t => 
         t.whatsappStatus === 'sent' || t.whatsappStatus === 'failed'
       );
-      
+
       console.log(`\n🔍 API STATS DEBUG for agency ${agencyId}, date ${targetDate}:`);
       console.log(`📊 Total travelers: ${allTravelers.length}`);
       console.log(`📞 Travelers with API calls ever: ${allApiCallTravelers.length}`);
-      
+
       // Show sample of travelers and their timestamps to understand the data
       console.log(`\n📋 SAMPLE OF TRAVELERS WITH API CALLS:`);
       allApiCallTravelers.slice(0, 10).forEach((t, idx) => {
         console.log(`${idx + 1}. ${t.travelerName} - Status: ${t.whatsappStatus} - Created: ${t.createdAt} - Updated: ${t.updatedAt}`);
       });
-      
+
       // For the target date, filter by updatedAt (when WhatsApp status was set)
       const travelersWithApiCalls = allApiCallTravelers.filter(t => {
         // Use updatedAt as the date when WhatsApp was actually sent
@@ -3093,12 +2646,12 @@ Happy Travels!`;
       const sentCount = travelersWithApiCalls.filter(t => t.whatsappStatus === 'sent').length;
       const failedCount = travelersWithApiCalls.filter(t => t.whatsappStatus === 'failed').length;
       const totalApiCallsForDate = sentCount + failedCount;
-      
+
       // Also include ALL sent and failed travelers regardless of date to show total usage
       const allSentEver = allTravelers.filter(t => t.whatsappStatus === 'sent').length;
       const allFailedEver = allTravelers.filter(t => t.whatsappStatus === 'failed').length;
       const totalApiCallsEver = allSentEver + allFailedEver;
-      
+
       // Get all pending (never had API calls)
       const pendingCount = allTravelers.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending').length;
 
@@ -3175,13 +2728,13 @@ Happy Travels!`;
             const apiCallDate = t.updatedAt ? new Date(t.updatedAt).toISOString().split('T')[0] : null;
             return apiCallDate === targetDate;
           });
-          
+
           // Skip this batch if no API calls were made on the target date
           if (apiCallTravelers.length === 0) {
             console.log(`📦 Skipping batch ${upload.id} - no API calls on ${targetDate}`);
             continue;
           }
-          
+
           console.log(`📦 Including batch ${upload.id} - ${apiCallTravelers.length} API calls on ${targetDate}`);
         }
 
@@ -3321,14 +2874,14 @@ Happy Travels!`;
       // CRITICAL: Prevent multiple batch processing - only process the EXACT requested batch
       console.log(`🛡️  SAFETY CHECK: Only processing upload ID: ${uploadId}`);
       console.log(`🚨 WARNING: If any other batch gets processed, this is a SYSTEM BUG`);
-      
+
       // CRITICAL DUPLICATE PREVENTION: Reset any stuck 'processing' status from previous interrupted sends
       console.log(`🔧 CRITICAL CLEANUP: Preventing duplicate API calls by fixing stuck 'processing' records`);
       await storage.resetProcessingStatus(uploadId);
-      
+
       // ADDITIONAL SAFETY: Wait 1 second for cleanup to complete
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Add batch size limit for safety
       const MAX_BATCH_SIZE = 1000;
       let batchTravelers = [];
@@ -3355,10 +2908,10 @@ Happy Travels!`;
 
       // CRITICAL DUPLICATE PREVENTION: Only process travelers who haven't received WhatsApp messages
       console.log(`🔍 DUPLICATE CHECK: Filtering travelers who already received WhatsApp messages`);
-      
+
       const initialPendingTravelers = (batchTravelers || []).filter(t => {
         if (!t) return false;
-        
+
         const hasReceived = t.whatsappStatus === 'sent' || t.whatsappStatus === 'processing';
         if (hasReceived) {
           console.log(`✅ ALREADY PROCESSED: ${t.travelerName} (${t.phone}) - Status: ${t.whatsappStatus}`);
@@ -3376,8 +2929,8 @@ Happy Travels!`;
         seenPhones.add(traveler.phone);
         return true;
       });
-      
-      console.log(`📊 DUPLICATE PREVENTION COMPLETE:`);
+
+      console.log(`\n📊 DUPLICATE PREVENTION COMPLETE:`);
       console.log(`   Total in batch: ${(batchTravelers || []).length}`);
       console.log(`   Already processed: ${(batchTravelers || []).length - initialPendingTravelers.length}`);
       console.log(`   Duplicates within batch: ${initialPendingTravelers.length - pendingTravelers.length}`);
@@ -3418,10 +2971,6 @@ Happy Travels!`;
       console.log(`📋 Each traveler will get individual API call with personalized data`);
       console.log(`⏱️  Using 1-second delay between each API call for optimal delivery`);
 
-      let sentCount = 0;
-      let failedCount = 0;
-      let totalApiCallsToday = 0; // Track API calls for this batch
-      
       // Get fresh agency data from database to ensure we have latest whatsappTemplate
       const agency = await storage.getAgencyById(user.agency.id);
       if (!agency) {
@@ -3429,75 +2978,49 @@ Happy Travels!`;
       }
       console.log(`🔄 FRESH AGENCY DATA - WhatsApp Template: '${agency.whatsappTemplate}' (fallback: 'eddygoo_2807')`);
       console.log(`📊 Agency ID: ${agency.id}, Name: ${agency.name}`);
+      
+      let sentCount = 0;
+      let failedCount = 0;
+      let totalApiCallsToday = 0; // Track API calls for this batch
       const deliveryResults = [];
 
-      // Process each traveler individually with personalized API calls
+      // ATOMIC PROCESSING: Process each traveler with guaranteed single API call
       for (let i = 0; i < pendingTravelers.length; i++) {
         const traveler = pendingTravelers[i];
-        
-        // Safety check
-        if (!traveler || !traveler.id || !traveler.phone || !traveler.travelerName) {
-          console.error(`❌ Invalid traveler data at index ${i}:`, traveler);
-          failedCount++;
-          deliveryResults.push({
-            travelerName: traveler?.travelerName || 'Unknown',
-            phone: traveler?.phone || 'Unknown',
-            status: 'failed',
-            reason: 'Invalid traveler data'
-          });
-          continue;
-        }
-        
+
         try {
-          console.log(`\n=== WHATSAPP BATCH SEND DEBUG ===`);
-          console.log(`Traveler: ${traveler.travelerName}`);
-          console.log(`Original Phone: ${traveler.phone}`);
-
-          // Clean and validate phone number with detailed logging
-          let cleanPhone = traveler.phone.replace(/\D/g, '');
-          console.log(`Cleaned Phone: ${cleanPhone}`);
-
-          let finalPhone = cleanPhone;
-          if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
-            finalPhone = cleanPhone.substring(2);
-          } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
-            finalPhone = cleanPhone.substring(1);
-          }
-          console.log(`Final Phone: +91${finalPhone}`);
-
-          // Validate phone number
-          if (!/^[6-9]\d{9}$/.test(finalPhone)) {
-            console.error(`❌ Invalid phone number format: ${finalPhone}`);
-            await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
-            failedCount++;
-            deliveryResults.push({
-              travelerName: traveler.travelerName,
-              phone: traveler.phone,
-              status: 'failed',
-              reason: 'Invalid phone number format'
-            });
+          // ATOMIC CHECK: Verify CURRENT status before API call
+          const currentRecord = await storage.getTravelerData(traveler.id);
+          if (!currentRecord || currentRecord.whatsappStatus === 'sent') {
+            console.log(`🚫 ATOMIC SKIP: ${traveler.phone} already sent (race condition prevented)`);
             continue;
           }
 
-          // Get agency settings and bus info
+          // Clean phone number
+          let cleanPhone = traveler.phone.replace(/\D/g, '');
+          if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+            cleanPhone = cleanPhone.substring(2);
+          }
+
+          // Validate phone format
+          if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+            await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
+            failedCount++;
+            continue;
+          }
+
           const bus = await storage.getBus(traveler.busId);
-          const bookingUrl = agency.bookingWebsite || agency.website || 'https://testtravelagency.com';
+          const bookingUrl = agency.bookingWebsite || 'https://testtravelagency.com';
           const whatsappImageUrl = agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
 
-          console.log(`Booking URL: ${bookingUrl}`);
-          console.log(`WhatsApp Image URL: ${whatsappImageUrl}`);
-          console.log(`🎯 WhatsApp Template: ${agency.whatsappTemplate || 'eddygoo_2807'}`);
-
-          // Create INDIVIDUAL API call with PERSONALIZED data for THIS traveler
+          // Build API URL
           const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
           const whatsappTemplate = agency.whatsappTemplate || 'eddygoo_2807';
-          
-          // Build URL manually without encoding to avoid %2C, %3A, %2F issues
           const cleanParams = [
             `user=eddygoo1`,
             `pass=123456`,
             `sender=BUZWAP`,
-            `phone=${finalPhone}`,
+            `phone=${cleanPhone}`,
             `text=${whatsappTemplate}`,
             `priority=wa`,
             `stype=normal`,
@@ -3505,117 +3028,35 @@ Happy Travels!`;
             `htype=image`,
             `url=${whatsappImageUrl}`
           ].join('&');
-          
           const fullApiUrl = `${apiUrl}?${cleanParams}`;
 
-          // CRITICAL DUPLICATE CHECK: Verify this phone number hasn't been processed already
-          const currentStatus = await storage.getTravelerData(traveler.id);
-          if (currentStatus?.whatsappStatus === 'sent' || currentStatus?.whatsappStatus === 'processing') {
-            console.log(`🚫 ALREADY PROCESSED: ${traveler.travelerName} (${traveler.phone}) - Status: ${currentStatus.whatsappStatus}`);
-            continue; // Skip this traveler
-          }
-          
-          // CRITICAL SAFETY: Mark as processing BEFORE API call to prevent duplicates
-          console.log(`🔒 PRE-API SAFETY: Marking traveler ${traveler.id} as 'processing' to prevent duplicate calls`);
-          await storage.updateTravelerData(traveler.id, { whatsappStatus: 'processing' });
+          console.log(`🚀 ATOMIC API CALL ${i + 1}/${pendingTravelers.length}: ${traveler.phone}`);
 
-          // Make INDIVIDUAL API call for THIS traveler
-          console.log(`\n🚀 API CALL ${i + 1}/${pendingTravelers.length}: ${traveler.travelerName} (${traveler.phone})`);
-          console.log(`🔍 CRITICAL: This phone ${traveler.phone} is now RECEIVING WhatsApp message`);
-          console.log(`⚠️  IMPORTANT: If interrupted after this point, phone ${traveler.phone} already got message!`);
-          
+          // Make API call
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 15000);
 
           const response = await fetch(fullApiUrl, {
             method: 'GET',
             signal: controller.signal,
-            headers: {
-              'User-Agent': 'TravelFlow-WhatsApp/1.0'
-            }
+            headers: { 'User-Agent': 'TravelFlow-WhatsApp/1.0' }
           });
-          
-          // Count this API call
-          totalApiCallsToday++;
 
           clearTimeout(timeoutId);
-          const responseText = await response.text().then(text => text.trim());
-          
-          // CRITICAL: Immediately update to prevent duplicate processing on interruption
-          console.log(`🔒 IMMEDIATE POST-API UPDATE: Updating status to prevent duplicates on interruption`);
-          const isSuccess = response.ok && 
-                           responseText.startsWith('S.') && 
-                           responseText.length > 2 &&
-                           !responseText.includes('ERROR') &&
-                           !responseText.includes('FAIL');
-          
-          // Update status immediately after API response to prevent race condition
+          const responseText = await response.text().trim();
+
+          // ATOMIC UPDATE: Immediately mark as final status
+          const isSuccess = response.ok && responseText.startsWith('S.') && responseText.length > 2;
           const finalStatus = isSuccess ? 'sent' : 'failed';
           await storage.updateTravelerData(traveler.id, { whatsappStatus: finalStatus });
 
-          console.log(`API Response Status: ${response.status}`);
-          console.log(`API Response OK: ${response.ok}`);
-          console.log(`Raw API Response: "${responseText}"`);
-          console.log(`Response Length: ${responseText.length}`);
-          console.log(`Starts with S.: ${responseText.startsWith('S.')}`);
-          console.log(`Full API URL: ${fullApiUrl}`);
-
-          // Check for daily limit reached - stop batch processing
-          if (responseText.includes('Daily Message Limit Reached')) {
-            console.log(`🚫 DAILY LIMIT REACHED - Stopping batch processing`);
-            console.log(`📊 Processed ${i + 1}/${pendingTravelers.length} travelers before hitting limit`);
-            console.log(`✅ Sent: ${sentCount}, ❌ Failed: ${failedCount + 1}`);
-            
-            // Mark current traveler as failed due to limit
-            await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
-            failedCount++;
-            
-            deliveryResults.push({
-              travelerName: traveler.travelerName,
-              phone: `+91${finalPhone}`,
-              status: 'failed',
-              apiResponse: responseText,
-              reason: 'Daily message limit reached'
-            });
-
-            // Return early with limit reached information
-            const alreadySentCount = (batchTravelers || []).length - pendingTravelers.length;
-            return res.json({
-              success: sentCount > 0,
-              limitReached: true,
-              message: `Daily message limit reached after sending ${sentCount} messages. Resume tomorrow to continue.`,
-              sentCount,
-              failedCount,
-              alreadySentCount,
-              totalInBatch: (batchTravelers || []).length,
-              totalProcessed: i + 1,
-              remainingToProcess: pendingTravelers.length - (i + 1),
-              deliveryResults,
-              limitInfo: {
-                limitReachedAt: new Date().toISOString(),
-                processedBeforeLimit: i + 1,
-                remainingTravelers: pendingTravelers.length - (i + 1),
-                canResumeAt: 'Tomorrow after daily limit resets'
-              }
-            });
-          }
-
-          console.log(`=== BULK DELIVERY DEBUG ===`);
-          console.log(`Response Status: ${response.status}`);
-          console.log(`Response OK: ${response.ok}`);
-          console.log(`Raw Response: "${responseText}"`);
-          console.log(`Response Length: ${responseText.length}`);
-          console.log(`Starts with S.: ${responseText.startsWith('S.')}`);
+          totalApiCallsToday++;
 
           if (isSuccess) {
-            console.log(`✅ BULK SUCCESS: WhatsApp sent to ${traveler.travelerName} (+91${finalPhone}) - Message ID: ${responseText}`);
-            console.log(`⚠️  IMPORTANT: User should receive WhatsApp message at +91${finalPhone} in 1-5 minutes`);
-            
             sentCount++;
-            
             deliveryResults.push({
               travelerName: traveler.travelerName,
-              phone: `+91${finalPhone}`,
+              phone: `+91${cleanPhone}`,
               status: 'sent',
               messageId: responseText,
               personalizedData: {
@@ -3626,13 +3067,10 @@ Happy Travels!`;
               }
             });
           } else {
-            console.log(`❌ BULK FAILED: ${traveler.travelerName} (+91${finalPhone}): ${responseText}`);
-            
             failedCount++;
-            
             deliveryResults.push({
               travelerName: traveler.travelerName,
-              phone: `+91${finalPhone}`,
+              phone: `+91${cleanPhone}`,
               status: 'failed',
               apiResponse: responseText,
               reason: 'API call failed'
@@ -3657,7 +3095,7 @@ Happy Travels!`;
           console.error(`❌ Error processing ${traveler.travelerName}:`, error);
           await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
           failedCount++;
-          
+
           deliveryResults.push({
             travelerName: traveler.travelerName,
             phone: traveler.phone,
@@ -3734,22 +3172,22 @@ Happy Travels!`;
       }
 
       console.log('\n📊 CHECKING WHATSAPP DAILY LIMIT 📊');
-      
+
       // Check account balance and status via BhashSMS API
       const balanceUrl = 'https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=9900408817&text=balance';
-      
+
       try {
         const response = await fetch(balanceUrl);
         const responseText = (await response.text()).trim();
-        
+
         console.log(`Balance API Response: "${responseText}"`);
-        
+
         // Get today's sent count from database for this agency
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        
+
         const travelers = await storage.getTravelerDataByAgency(user.id);
         const todaysSent = travelers.filter(t => {
           const updatedAt = new Date(t.updatedAt || t.createdAt || new Date());
@@ -3757,29 +3195,29 @@ Happy Travels!`;
                  updatedAt >= today && 
                  updatedAt < tomorrow;
         }).length;
-        
+
         // Parse balance response for limit information
         let dailyLimit = 'Unknown';
         let currentUsage = todaysSent;
         let accountBalance = 'Unknown';
         let limitReached = false;
-        
+
         if (responseText.includes('Daily Message Limit Reached')) {
           limitReached = true;
         } else if (responseText.startsWith('S.')) {
           accountBalance = 'Active';
         }
-        
+
         // Estimate daily limit based on common BhashSMS plans
         let estimatedLimit = 1000; // Default assumption
         if (responseText.includes('500')) estimatedLimit = 500;
         if (responseText.includes('1000')) estimatedLimit = 1000;
         if (responseText.includes('2000')) estimatedLimit = 2000;
         if (responseText.includes('5000')) estimatedLimit = 5000;
-        
+
         const remainingMessages = limitReached ? 0 : estimatedLimit - currentUsage;
         const usagePercentage = Math.round((currentUsage / estimatedLimit) * 100);
-        
+
         res.json({
           success: true,
           dailyLimit: {
@@ -3809,7 +3247,7 @@ Happy Travels!`;
             'Consider upgrading if you frequently approach limits'
           ]
         });
-        
+
       } catch (error) {
         console.error('Error checking balance:', error);
         res.status(500).json({
@@ -3818,7 +3256,7 @@ Happy Travels!`;
           message: 'Could not connect to BhashSMS API'
         });
       }
-      
+
     } catch (error) {
       console.error('Daily limit check error:', error);
       res.status(500).json({ 
@@ -3851,13 +3289,13 @@ Happy Travels!`;
         const balanceUrl = `https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=${testPhone}&text=balance`;
         const balanceResponse = await fetch(balanceUrl);
         const balanceText = (await balanceResponse.text()).trim();
-        
+
         verificationResults.push({
           test: 'Account Balance',
           response: balanceText,
           status: balanceText.includes('S.') ? 'success' : 'warning'
         });
-        
+
         console.log(`Account Status: "${balanceText}"`);
       } catch (error) {
         verificationResults.push({
@@ -3871,19 +3309,19 @@ Happy Travels!`;
       console.log('\n2️⃣ Testing WhatsApp template approval...');
       try {
         const templateUrl = `https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=${testPhone}&text=eddygoo_2807&priority=wa&stype=normal&Params=TestUser,${agency.name},TEST20,${agency.bookingWebsite || 'https://test.com'}&htype=image&url=${agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg'}`;
-        
+
         const templateResponse = await fetch(templateUrl);
         const templateText = (await templateResponse.text()).trim();
-        
+
         const isApproved = templateText.startsWith('S.');
-        
+
         verificationResults.push({
           test: 'WhatsApp Template (eddygoo_2807)',
           response: templateText,
           status: isApproved ? 'success' : 'critical_error',
           note: isApproved ? 'Template appears approved' : 'TEMPLATE NOT APPROVED - Messages will not deliver'
         });
-        
+
         console.log(`Template Test: "${templateText}"`);
         if (!isApproved) {
           console.log('🚨 CRITICAL: Template not approved for WhatsApp delivery');
@@ -3900,17 +3338,17 @@ Happy Travels!`;
       console.log('\n3️⃣ Testing SMS delivery as fallback...');
       try {
         const smsUrl = `https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=${testPhone}&text=SMS Test from ${agency.name} - If you receive this, SMS works fine&priority=ndnd&stype=normal`;
-        
+
         const smsResponse = await fetch(smsUrl);
         const smsText = (await smsResponse.text()).trim();
-        
+
         verificationResults.push({
           test: 'SMS Fallback',
           response: smsText,
           status: smsText.startsWith('S.') ? 'success' : 'error',
           note: 'SMS can be used as backup if WhatsApp fails'
         });
-        
+
         console.log(`SMS Test: "${smsText}"`);
       } catch (error) {
         verificationResults.push({
@@ -3988,7 +3426,7 @@ Happy Travels!`;
       }
 
       console.log('\n🔍 BULK WHATSAPP DELIVERY ANALYSIS 🔍');
-      
+
       // Get agency data
       const agency = await storage.getAgency(user.id);
       if (!agency) {
@@ -4030,7 +3468,7 @@ Happy Travels!`;
           });
 
           console.log(`Test ${testPhone}: ${responseText}`);
-          
+
           // 5 second delay between test calls
           await new Promise(resolve => setTimeout(resolve, 5000));
         } catch (error) {

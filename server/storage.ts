@@ -608,59 +608,27 @@ export class DatabaseStorage implements IStorage {
     return data;
   }
 
+  async atomicBatchStatusUpdate(travelerIds: number[], status: string): Promise<void> {
+    console.log(`🔒 ATOMIC UPDATE: Marking ${travelerIds.length} travelers as '${status}'`);
+    
+    // Update all travelers in batch to prevent race conditions
+    for (const id of travelerIds) {
+      await db
+        .update(travelerData)
+        .set({ 
+          whatsappStatus: status as any,
+          updatedAt: new Date()
+        })
+        .where(eq(travelerData.id, id));
+    }
+    
+    console.log(`✅ ATOMIC UPDATE COMPLETE: All ${travelerIds.length} travelers marked as '${status}'`);
+  }
+
   async resetProcessingStatus(uploadId: string): Promise<void> {
-    console.log(`🔧 CLEANUP START: Checking for stuck 'processing' records in batch ${uploadId}`);
-    
-    // CRITICAL: ANY record marked as 'processing' means the API call was already made
-    // We MUST NOT reset to 'pending' as this causes duplicate API calls
-    // Instead, assume ALL 'processing' records are 'sent' to prevent duplicates
-    
-    let batchTravelers = [];
-    
-    if (uploadId.startsWith('legacy-')) {
-      const [, busIdStr, dateStr] = uploadId.split('-');
-      const busId = parseInt(busIdStr);
-      const targetDate = new Date(dateStr).toDateString();
-      const allTravelers = await db.select().from(travelerData);
-      batchTravelers = allTravelers.filter(t => 
-        t.busId === busId && 
-        !t.uploadId && 
-        new Date(t.createdAt || new Date()).toDateString() === targetDate
-      );
-    } else {
-      const uploadIdNum = parseInt(uploadId);
-      if (!isNaN(uploadIdNum)) {
-        batchTravelers = await db
-          .select()
-          .from(travelerData)
-          .where(eq(travelerData.uploadId, uploadIdNum));
-      }
-    }
-    
-    // Find ALL 'processing' records (regardless of time)
-    const processingRecords = batchTravelers.filter(t => t.whatsappStatus === 'processing');
-    
-    if (processingRecords.length > 0) {
-      console.log(`🚨 CRITICAL CLEANUP: Found ${processingRecords.length} records stuck in 'processing' status`);
-      console.log(`📱 These phone numbers already received WhatsApp messages but database wasn't updated`);
-      
-      // Mark ALL as 'sent' to prevent duplicate API calls
-      for (const record of processingRecords) {
-        await db
-          .update(travelerData)
-          .set({ 
-            whatsappStatus: 'sent', // ASSUME successful since API was called
-            updatedAt: new Date()
-          })
-          .where(eq(travelerData.id, record.id));
-        
-        console.log(`📞 MARKED AS SENT: ${record.travelerName} (${record.phone}) - Preventing duplicate API call`);
-      }
-      
-      console.log(`✅ CLEANUP COMPLETE: Protected ${processingRecords.length} numbers from duplicate API calls`);
-    } else {
-      console.log(`✅ CLEANUP: No stuck 'processing' records found in batch ${uploadId}`);
-    }
+    // This method is no longer needed with atomic processing
+    // Keeping for compatibility but making it a no-op
+    console.log(`ℹ️  ATOMIC PROCESSING: resetProcessingStatus disabled - using atomic batch locking instead`);
   }
 
   async deleteTravelerData(id: number): Promise<void> {
