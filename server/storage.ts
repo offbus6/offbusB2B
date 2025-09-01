@@ -609,50 +609,57 @@ export class DatabaseStorage implements IStorage {
   }
 
   async resetProcessingStatus(uploadId: string): Promise<void> {
-    // CRITICAL: DON'T reset 'processing' to 'pending' - this causes duplicate API calls!
-    // If a record is 'processing', the API call was already made to WhatsApp
-    // Instead, assume interrupted 'processing' records are actually 'sent' after 10 minutes
-    const uploadIdNum = uploadId.startsWith('legacy-') ? null : parseInt(uploadId);
+    console.log(`🔧 CLEANUP START: Checking for stuck 'processing' records in batch ${uploadId}`);
     
-    if (uploadIdNum && !isNaN(uploadIdNum)) {
-      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    // CRITICAL: ANY record marked as 'processing' means the API call was already made
+    // We MUST NOT reset to 'pending' as this causes duplicate API calls
+    // Instead, assume ALL 'processing' records are 'sent' to prevent duplicates
+    
+    let batchTravelers = [];
+    
+    if (uploadId.startsWith('legacy-')) {
+      const [, busIdStr, dateStr] = uploadId.split('-');
+      const busId = parseInt(busIdStr);
+      const targetDate = new Date(dateStr).toDateString();
+      const allTravelers = await db.select().from(travelerData);
+      batchTravelers = allTravelers.filter(t => 
+        t.busId === busId && 
+        !t.uploadId && 
+        new Date(t.createdAt || new Date()).toDateString() === targetDate
+      );
+    } else {
+      const uploadIdNum = parseInt(uploadId);
+      if (!isNaN(uploadIdNum)) {
+        batchTravelers = await db
+          .select()
+          .from(travelerData)
+          .where(eq(travelerData.uploadId, uploadIdNum));
+      }
+    }
+    
+    // Find ALL 'processing' records (regardless of time)
+    const processingRecords = batchTravelers.filter(t => t.whatsappStatus === 'processing');
+    
+    if (processingRecords.length > 0) {
+      console.log(`🚨 CRITICAL CLEANUP: Found ${processingRecords.length} records stuck in 'processing' status`);
+      console.log(`📱 These phone numbers already received WhatsApp messages but database wasn't updated`);
       
-      // Get stuck processing records
-      const stuckRecords = await db
-        .select()
-        .from(travelerData)
-        .where(
-          and(
-            eq(travelerData.uploadId, uploadIdNum),
-            eq(travelerData.whatsappStatus, 'processing'),
-            sql`updated_at < ${tenMinutesAgo}`
-          )
-        );
-      
-      if (stuckRecords.length > 0) {
-        // Mark as 'sent' because API call was already made, just interrupted before database update
-        const resetCount = await db
+      // Mark ALL as 'sent' to prevent duplicate API calls
+      for (const record of processingRecords) {
+        await db
           .update(travelerData)
           .set({ 
             whatsappStatus: 'sent', // ASSUME successful since API was called
             updatedAt: new Date()
           })
-          .where(
-            and(
-              eq(travelerData.uploadId, uploadIdNum),
-              eq(travelerData.whatsappStatus, 'processing'),
-              sql`updated_at < ${tenMinutesAgo}`
-            )
-          );
+          .where(eq(travelerData.id, record.id));
         
-        console.log(`🔧 CLEANUP: Marked ${resetCount} interrupted 'processing' records as 'sent' to prevent duplicate API calls`);
-        console.log(`📱 These numbers already received WhatsApp messages, just database wasn't updated due to interruption`);
-        
-        // Log the phone numbers that were marked as sent
-        stuckRecords.forEach(record => {
-          console.log(`📞 ASSUMED SENT: ${record.travelerName} (${record.phone}) - API was called but interrupted`);
-        });
+        console.log(`📞 MARKED AS SENT: ${record.travelerName} (${record.phone}) - Preventing duplicate API call`);
       }
+      
+      console.log(`✅ CLEANUP COMPLETE: Protected ${processingRecords.length} numbers from duplicate API calls`);
+    } else {
+      console.log(`✅ CLEANUP: No stuck 'processing' records found in batch ${uploadId}`);
     }
   }
 

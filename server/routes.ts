@@ -3322,9 +3322,12 @@ Happy Travels!`;
       console.log(`🛡️  SAFETY CHECK: Only processing upload ID: ${uploadId}`);
       console.log(`🚨 WARNING: If any other batch gets processed, this is a SYSTEM BUG`);
       
-      // CLEANUP: Reset any stuck 'processing' status from previous interrupted sends
-      console.log(`🔧 CLEANUP: Resetting any stuck 'processing' status from previous interrupted sends`);
+      // CRITICAL DUPLICATE PREVENTION: Reset any stuck 'processing' status from previous interrupted sends
+      console.log(`🔧 CRITICAL CLEANUP: Preventing duplicate API calls by fixing stuck 'processing' records`);
       await storage.resetProcessingStatus(uploadId);
+      
+      // ADDITIONAL SAFETY: Wait 1 second for cleanup to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Add batch size limit for safety
       const MAX_BATCH_SIZE = 1000;
@@ -3350,24 +3353,35 @@ Happy Travels!`;
         batchTravelers = await storage.getTravelerDataByUpload(uploadIdNum);
       }
 
-      // Smart batching: Only process travelers who haven't received WhatsApp messages yet
-      // CRITICAL: Also exclude 'processing' status to prevent duplicate API calls during retries
-      const initialPendingTravelers = (batchTravelers || []).filter(t => 
-        t && 
-        t.whatsappStatus !== 'sent' && 
-        t.whatsappStatus !== 'processing'
-      );
+      // CRITICAL DUPLICATE PREVENTION: Only process travelers who haven't received WhatsApp messages
+      console.log(`🔍 DUPLICATE CHECK: Filtering travelers who already received WhatsApp messages`);
+      
+      const initialPendingTravelers = (batchTravelers || []).filter(t => {
+        if (!t) return false;
+        
+        const hasReceived = t.whatsappStatus === 'sent' || t.whatsappStatus === 'processing';
+        if (hasReceived) {
+          console.log(`✅ ALREADY PROCESSED: ${t.travelerName} (${t.phone}) - Status: ${t.whatsappStatus}`);
+        }
+        return !hasReceived;
+      });
 
-      // CRITICAL: Remove duplicate phone numbers to prevent multiple messages to same passenger
+      // CRITICAL: Remove duplicate phone numbers within this batch
       const seenPhones = new Set();
       const pendingTravelers = initialPendingTravelers.filter(traveler => {
         if (seenPhones.has(traveler.phone)) {
-          console.log(`🚫 DUPLICATE PHONE DETECTED: Skipping ${traveler.travelerName} (${traveler.phone}) - already processed in this batch`);
+          console.log(`🚫 DUPLICATE PHONE WITHIN BATCH: Skipping ${traveler.travelerName} (${traveler.phone})`);
           return false;
         }
         seenPhones.add(traveler.phone);
         return true;
       });
+      
+      console.log(`📊 DUPLICATE PREVENTION COMPLETE:`);
+      console.log(`   Total in batch: ${(batchTravelers || []).length}`);
+      console.log(`   Already processed: ${(batchTravelers || []).length - initialPendingTravelers.length}`);
+      console.log(`   Duplicates within batch: ${initialPendingTravelers.length - pendingTravelers.length}`);
+      console.log(`   Will process: ${pendingTravelers.length}`);
 
       const duplicatesSkipped = initialPendingTravelers.length - pendingTravelers.length;
       if (duplicatesSkipped > 0) {
@@ -3494,6 +3508,13 @@ Happy Travels!`;
           
           const fullApiUrl = `${apiUrl}?${cleanParams}`;
 
+          // CRITICAL DUPLICATE CHECK: Verify this phone number hasn't been processed already
+          const currentStatus = await storage.getTravelerData(traveler.id);
+          if (currentStatus?.whatsappStatus === 'sent' || currentStatus?.whatsappStatus === 'processing') {
+            console.log(`🚫 ALREADY PROCESSED: ${traveler.travelerName} (${traveler.phone}) - Status: ${currentStatus.whatsappStatus}`);
+            continue; // Skip this traveler
+          }
+          
           // CRITICAL SAFETY: Mark as processing BEFORE API call to prevent duplicates
           console.log(`🔒 PRE-API SAFETY: Marking traveler ${traveler.id} as 'processing' to prevent duplicate calls`);
           await storage.updateTravelerData(traveler.id, { whatsappStatus: 'processing' });
