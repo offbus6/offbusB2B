@@ -520,7 +520,7 @@ export class DatabaseStorage implements IStorage {
     // First, delete all related traveler data and upload history
     await db.delete(travelerData).where(eq(travelerData.busId, id));
     await db.delete(uploadHistory).where(eq(uploadHistory.busId, id));
-    
+
     // Then delete the bus
     await db.delete(buses).where(eq(buses.id, id));
   }
@@ -610,7 +610,7 @@ export class DatabaseStorage implements IStorage {
 
   async atomicBatchStatusUpdate(travelerIds: number[], status: string): Promise<void> {
     console.log(`🔒 ATOMIC UPDATE: Marking ${travelerIds.length} travelers as '${status}'`);
-    
+
     // Update all travelers in batch to prevent race conditions
     for (const id of travelerIds) {
       await db
@@ -621,14 +621,74 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(travelerData.id, id));
     }
-    
+
     console.log(`✅ ATOMIC UPDATE COMPLETE: All ${travelerIds.length} travelers marked as '${status}'`);
   }
 
   async resetProcessingStatus(uploadId: string): Promise<void> {
-    // This method is no longer needed with atomic processing
-    // Keeping for compatibility but making it a no-op
-    console.log(`ℹ️  ATOMIC PROCESSING: resetProcessingStatus disabled - using atomic batch locking instead`);
+    console.log(`🔧 CLEANUP: Checking stuck 'processing' records in batch ${uploadId}`);
+
+    let batchTravelers = [];
+
+    if (uploadId.startsWith('legacy-')) {
+      const [, busIdStr, dateStr] = uploadId.split('-');
+      const busId = parseInt(busIdStr);
+      const targetDate = new Date(dateStr).toDateString();
+      const allTravelers = await db.select().from(travelerData);
+      batchTravelers = allTravelers.filter(t => 
+        t.busId === busId && 
+        !t.uploadId && 
+        new Date(t.createdAt || new Date()).toDateString() === targetDate
+      );
+    } else {
+      const uploadIdNum = parseInt(uploadId);
+      if (!isNaN(uploadIdNum)) {
+        batchTravelers = await db
+          .select()
+          .from(travelerData)
+          .where(eq(travelerData.uploadId, uploadIdNum));
+      }
+    }
+
+    // Find processing records older than 10 minutes (likely stuck)
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const stuckProcessingRecords = batchTravelers.filter(t => 
+      t.whatsappStatus === 'processing' && 
+      t.updatedAt && 
+      new Date(t.updatedAt) < tenMinutesAgo
+    );
+
+    if (stuckProcessingRecords.length > 0) {
+      console.log(`🚨 FOUND ${stuckProcessingRecords.length} stuck 'processing' records (>10 min old)`);
+      console.log(`📱 Assuming these completed successfully to prevent duplicates`);
+
+      for (const record of stuckProcessingRecords) {
+        await db
+          .update(travelerData)
+          .set({ 
+            whatsappStatus: 'sent', // Assume success to prevent duplicates
+            updatedAt: new Date()
+          })
+          .where(eq(travelerData.id, record.id));
+
+        console.log(`✅ RESET TO SENT: ${record.travelerName} (${record.phone})`);
+      }
+
+      console.log(`✅ CLEANUP COMPLETE: Protected ${stuckProcessingRecords.length} from duplicates`);
+    } else {
+      console.log(`✅ No stuck processing records found in batch ${uploadId}`);
+    }
+
+    // Also find any processing records less than 10 minutes old (active processing)
+    const activeProcessingRecords = batchTravelers.filter(t => 
+      t.whatsappStatus === 'processing' && 
+      (!t.updatedAt || new Date(t.updatedAt) >= tenMinutesAgo)
+    );
+
+    if (activeProcessingRecords.length > 0) {
+      console.log(`⏳ Found ${activeProcessingRecords.length} active 'processing' records (<10 min old)`);
+      console.log(`📱 These will be skipped in current batch to avoid duplicates`);
+    }
   }
 
   async deleteTravelerData(id: number): Promise<void> {
