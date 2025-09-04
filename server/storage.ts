@@ -725,7 +725,7 @@ export class DatabaseStorage implements IStorage {
     console.log(`🔓 BATCH LOCK RELEASED: ${lockKey}`);
   }
 
-  async resetProcessingStatus(uploadId: string): Promise<void> {
+  async resetProcessingStatus(uploadId: string): Promise<{ modifiedCount: number }> {
     console.log(`🔧 CLEANUP: Checking stuck 'processing' records in batch ${uploadId}`);
 
     let batchTravelers = [];
@@ -789,6 +789,8 @@ export class DatabaseStorage implements IStorage {
       console.log(`⏳ Found ${activeProcessingRecords.length} active 'processing' records (<10 min old)`);
       console.log(`📱 These will be skipped in current batch to avoid duplicates`);
     }
+
+    return { modifiedCount: stuckProcessingRecords.length };
   }
 
   async deleteTravelerData(id: number): Promise<void> {
