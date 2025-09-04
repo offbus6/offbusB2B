@@ -3577,7 +3577,10 @@ Happy Travels!`;
   app.post('/api/agency/whatsapp/send-batch/:uploadId', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
       const user = (req.session as any).user;
+      console.log(`\n🔍 DEBUG - User session:`, JSON.stringify(user, null, 2));
+      
       if (!user || user.role !== 'agency') {
+        console.log(`❌ ACCESS DENIED - User role: ${user?.role}, Expected: agency`);
         return res.status(403).json({ error: 'Access denied' });
       }
 
@@ -3585,8 +3588,10 @@ Happy Travels!`;
       const agencyId = user.agency?.id;
 
       console.log(`\n🎯 BATCH SEND REQUEST - Upload ID: ${uploadId}, Agency: ${agencyId}`);
+      console.log(`🔍 DEBUG - user.agency:`, JSON.stringify(user.agency, null, 2));
 
       if (!agencyId) {
+        console.log(`❌ NO AGENCY ID - user.agency is:`, user.agency);
         return res.status(404).json({ error: 'Agency not found' });
       }
 
