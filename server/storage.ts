@@ -625,6 +625,23 @@ export class DatabaseStorage implements IStorage {
     console.log(`✅ ATOMIC UPDATE COMPLETE: All ${travelerIds.length} travelers marked as '${status}'`);
   }
 
+  // Batch locking system to prevent concurrent processing
+  private batchLocks = new Map<string, { agencyId: number; lockedAt: Date }>();
+
+  async createBatchLock(lockKey: string, agencyId: number): Promise<void> {
+    this.batchLocks.set(lockKey, { agencyId, lockedAt: new Date() });
+    console.log(`🔒 BATCH LOCK CREATED: ${lockKey} for agency ${agencyId}`);
+  }
+
+  async getBatchLock(lockKey: string): Promise<{ agencyId: number; lockedAt: Date } | undefined> {
+    return this.batchLocks.get(lockKey);
+  }
+
+  async releaseBatchLock(lockKey: string): Promise<void> {
+    this.batchLocks.delete(lockKey);
+    console.log(`🔓 BATCH LOCK RELEASED: ${lockKey}`);
+  }
+
   async resetProcessingStatus(uploadId: string): Promise<void> {
     console.log(`🔧 CLEANUP: Checking stuck 'processing' records in batch ${uploadId}`);
 

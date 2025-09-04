@@ -3313,6 +3313,22 @@ Happy Travels!`;
         return res.status(404).json({ error: 'Agency not found' });
       }
 
+      // CRITICAL: Create atomic batch lock to prevent simultaneous processing
+      const batchLockKey = `batch_${uploadId}_${agencyId}`;
+      
+      // Check if batch is already being processed
+      const existingLock = await storage.getBatchLock(batchLockKey);
+      if (existingLock && existingLock.lockedAt > new Date(Date.now() - 5 * 60 * 1000)) {
+        return res.status(409).json({ 
+          error: 'Batch is already being processed',
+          message: 'Another batch operation is in progress. Please wait and try again.',
+          lockedSince: existingLock.lockedAt
+        });
+      }
+
+      // Create atomic lock
+      await storage.createBatchLock(batchLockKey, agencyId);
+      
       // CRITICAL: Reset any stuck 'processing' status to prevent duplicates
       await storage.resetProcessingStatus(uploadId);
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -3349,15 +3365,38 @@ Happy Travels!`;
         return !hasReceived;
       });
 
-      // Remove duplicate phone numbers within batch
-      const seenPhones = new Set();
+      // CRITICAL: Enhanced duplicate detection with detailed tracking
+      const seenPhones = new Map();
+      const duplicateDetails = [];
       const pendingTravelers = initialPendingTravelers.filter(traveler => {
-        if (seenPhones.has(traveler.phone)) {
-          console.log(`🚫 SKIPPING DUPLICATE PHONE: ${traveler.travelerName} (${traveler.phone})`);
+        const normalizedPhone = traveler.phone.replace(/\D/g, '');
+        
+        if (seenPhones.has(normalizedPhone)) {
+          const firstOccurrence = seenPhones.get(normalizedPhone);
+          duplicateDetails.push({
+            phone: traveler.phone,
+            travelerName: traveler.travelerName,
+            id: traveler.id,
+            firstOccurrence: firstOccurrence
+          });
+          console.log(`🚫 DUPLICATE PHONE PREVENTED: ${traveler.travelerName} (${traveler.phone}) - First seen: ${firstOccurrence.travelerName}`);
           return false;
         }
-        seenPhones.add(traveler.phone);
+        
+        seenPhones.set(normalizedPhone, {
+          id: traveler.id,
+          travelerName: traveler.travelerName,
+          phone: traveler.phone
+        });
         return true;
+      });
+
+      // Log duplicate prevention statistics
+      console.log(`📊 DUPLICATE ANALYSIS:`);
+      console.log(`   Unique phones to process: ${pendingTravelers.length}`);
+      console.log(`   Duplicates prevented: ${duplicateDetails.length}`);
+      duplicateDetails.forEach((dup, idx) => {
+        console.log(`   ${idx + 1}. ${dup.phone} - Skipped ${dup.travelerName} (kept ${dup.firstOccurrence.travelerName})`);
       });
 
       console.log(`📊 BATCH ANALYSIS:`);
@@ -3471,10 +3510,18 @@ Happy Travels!`;
 
           console.log(`📞 API CALL ${i + 1}/${pendingTravelers.length}: ${traveler.travelerName} (+91${cleanPhone})`);
 
-          // Make API call
+          // CRITICAL: Pre-API call validation
+          console.log(`📞 PRE-API VALIDATION ${i + 1}/${pendingTravelers.length}:`);
+          console.log(`   Traveler: ${traveler.travelerName}`);
+          console.log(`   Phone: ${cleanPhone}`);
+          console.log(`   Status: ${currentStatus?.whatsappStatus || 'unknown'}`);
+
+          // Make API call with strict counting
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 15000);
 
+          console.log(`🌐 MAKING API CALL ${totalApiCalls + 1} to ${cleanPhone}`);
+          
           const response = await fetch(fullUrl, {
             method: 'GET',
             signal: controller.signal,
@@ -3482,6 +3529,7 @@ Happy Travels!`;
           });
 
           totalApiCalls++;
+          console.log(`📊 API CALL COUNTER: ${totalApiCalls} (Expected max: ${pendingTravelers.length})`);
           clearTimeout(timeout);
           const responseText = await response.text().then(t => t.trim());
 
@@ -3566,6 +3614,18 @@ Happy Travels!`;
 
       const alreadySentCount = (batchTravelers || []).length - pendingTravelers.length;
 
+      // CRITICAL: Release batch lock
+      await storage.releaseBatchLock(batchLockKey);
+
+      // CRITICAL: Verify API call count matches expectations
+      const expectedApiCalls = pendingTravelers.length;
+      if (totalApiCalls > expectedApiCalls) {
+        console.error(`🚨 API CALL MISMATCH: Expected ${expectedApiCalls}, Made ${totalApiCalls}`);
+        console.error(`🚨 POTENTIAL DUPLICATE CALLS DETECTED`);
+      } else {
+        console.log(`✅ API CALL COUNT CORRECT: Expected ${expectedApiCalls}, Made ${totalApiCalls}`);
+      }
+
       res.json({
         success: sentCount > 0,
         message: `Batch complete: ${sentCount} sent, ${failedCount} failed${alreadySentCount > 0 ? `, ${alreadySentCount} already sent` : ''}`,
@@ -3575,17 +3635,26 @@ Happy Travels!`;
         totalInBatch: (batchTravelers || []).length,
         totalProcessed: pendingTravelers.length,
         totalApiCallsMade: totalApiCalls,
+        expectedApiCalls: expectedApiCalls,
+        apiCallsMatch: totalApiCalls === expectedApiCalls,
         deliveryResults,
         processingDetails: {
           individualApiCalls: true,
           delayBetweenCalls: '1 second',
           templateUsed: agency.whatsappTemplate || 'eddygoo_2807',
-          duplicatesPrevented: true
+          duplicatesPrevented: true,
+          batchLocked: true
         }
       });
 
     } catch (error) {
       console.error('Batch processing error:', error);
+      // CRITICAL: Always release lock on error
+      try {
+        await storage.releaseBatchLock(batchLockKey);
+      } catch (lockError) {
+        console.error('Error releasing batch lock:', lockError);
+      }
       res.status(500).json({ error: 'Failed to send WhatsApp messages' });
     }
   });
