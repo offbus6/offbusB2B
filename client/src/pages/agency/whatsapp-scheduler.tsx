@@ -46,10 +46,12 @@ export default function WhatsAppScheduler() {
       console.log("🔍 Frontend: Starting WhatsApp batch send for uploadId:", uploadId);
       setLoadingBatches(prev => new Set(prev).add(uploadId));
       try {
-        const result = await apiRequest(`/api/agency/whatsapp/send-batch/${uploadId}`, {
+        const response = await apiRequest(`/api/agency/whatsapp/send-batch/${uploadId}`, {
           method: 'POST'
         });
+        const result = await response.json();
         console.log("✅ Frontend: WhatsApp batch send successful:", result);
+        console.log("🔍 Frontend: Full result object:", JSON.stringify(result, null, 2));
         return result;
       } catch (error) {
         console.error("❌ Frontend: WhatsApp batch send error:", error);
