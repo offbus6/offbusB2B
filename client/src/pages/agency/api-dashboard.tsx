@@ -52,7 +52,7 @@ interface BatchApiStats {
 
 export default function ApiDashboard() {
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState('2025-08-29'); // Reset to current date to test filtering
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Default to today's date
 
   // Get API call statistics for selected date
   const { data: apiStats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery<ApiCallStats>({
@@ -187,7 +187,7 @@ export default function ApiDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {apiStats?.totalApiCallsToday || 0}
+              {apiStats?.todaysApiCalls?.total || 0}
             </div>
             <p className="text-xs text-muted-foreground">
               Selected date usage
