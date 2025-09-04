@@ -3547,12 +3547,23 @@ Happy Travels!`;
       console.log(`   Processing in this batch: ${travelersToBatch.length}`);
       console.log(`   Remaining after this batch: ${initialPendingTravelers.length - travelersToBatch.length}`);
 
-      // Process travelers with duplicate phone number prevention
+      // SMART PROCESSING: First process fresh numbers, then retry failed ones
       let processed = 0;
       let failed = 0;
       const processedPhones = new Set<string>();
 
-      for (const traveler of travelersToBatch) {
+      // Separate fresh numbers from previously failed ones
+      const freshNumbers = travelersToBatch.filter(t => t.whatsappStatus !== 'failed');
+      const failedNumbers = travelersToBatch.filter(t => t.whatsappStatus === 'failed');
+
+      console.log(`📋 SMART PROCESSING ORDER:`);
+      console.log(`   Fresh numbers to process first: ${freshNumbers.length}`);
+      console.log(`   Failed numbers to retry last: ${failedNumbers.length}`);
+
+      // Process fresh numbers first (higher success rate)
+      const processInOrder = [...freshNumbers, ...failedNumbers];
+
+      for (const [index, traveler] of processInOrder.entries()) {
         if (!traveler?.id || !traveler?.phone || !traveler?.travelerName) {
           console.error(`❌ Invalid traveler data:`, traveler);
           failed++;
@@ -3574,6 +3585,9 @@ Happy Travels!`;
           continue;
         }
         processedPhones.add(normalizedPhone);
+
+        const isRetryAttempt = traveler.whatsappStatus === 'failed';
+        const currentPhase = index < freshNumbers.length ? 'FRESH' : 'RETRY';
 
         try {
           // Mark as processing BEFORE API call
@@ -3607,7 +3621,7 @@ Happy Travels!`;
           ].join('&');
           const fullUrl = `${apiUrl}?${params}`;
 
-          console.log(`📞 API CALL ${processed + 1}/${travelersToBatch.length}: ${traveler.travelerName} (+91${normalizedPhone})`);
+          console.log(`📞 ${currentPhase} API CALL ${processed + failed + 1}/${travelersToBatch.length}: ${traveler.travelerName} (+91${normalizedPhone})${isRetryAttempt ? ' [RETRY]' : ''}`);
 
           const response = await fetch(fullUrl, {
             method: 'GET',
@@ -3621,9 +3635,12 @@ Happy Travels!`;
 
           if (isSuccess) {
             processed++;
+            if (isRetryAttempt) {
+              console.log(`✅ RETRY SUCCESS: ${traveler.travelerName} (+91${normalizedPhone}) - Now sent!`);
+            }
           } else {
             failed++;
-            console.log(`❌ FAILED: ${traveler.travelerName} (+91${normalizedPhone}): ${responseText}`);
+            console.log(`❌ ${isRetryAttempt ? 'RETRY FAILED' : 'FAILED'}: ${traveler.travelerName} (+91${normalizedPhone}): ${responseText}`);
           }
 
           // 1 second delay between calls
@@ -3662,9 +3679,14 @@ Happy Travels!`;
           remaining: remainingCount,
           batchComplete: isComplete,
           controlledProcessing: true,
+          smartProcessing: 'Fresh numbers processed first, failed numbers retried last',
           maxBatchSize: MAX_BATCH_SIZE,
           delayBetweenCalls: '1 second',
-          templateUsed: agency.whatsappTemplate || 'eddygoo_2807'
+          templateUsed: agency.whatsappTemplate || 'eddygoo_2807',
+          processingOrder: {
+            freshNumbersFirst: travelersToBatch.filter(t => t.whatsappStatus !== 'failed').length,
+            failedNumbersLast: travelersToBatch.filter(t => t.whatsappStatus === 'failed').length
+          }
         }
       });
 
