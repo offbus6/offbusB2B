@@ -3334,10 +3334,22 @@ Happy Travels!`;
           console.log(`📦 Including batch ${upload.id} - ${apiCallTravelers.length} API calls on ${targetDate}`);
         }
 
-        // Calculate WhatsApp status with better accuracy  
-        const sentCount = travelers.filter(t => t.whatsappStatus === 'sent').length;
-        const failedCount = travelers.filter(t => t.whatsappStatus === 'failed').length;
-        const pendingCount = travelers.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending').length;
+        // When filtering by date, calculate counts based only on travelers with API calls on that date
+        const relevantTravelers = targetDate ? apiCallTravelers : travelers;
+        
+        // Calculate WhatsApp status counts based on relevant travelers
+        const sentCount = targetDate 
+          ? apiCallTravelers.filter(t => t.whatsappStatus === 'sent').length
+          : travelers.filter(t => t.whatsappStatus === 'sent').length;
+        
+        const failedCount = targetDate 
+          ? apiCallTravelers.filter(t => t.whatsappStatus === 'failed').length
+          : travelers.filter(t => t.whatsappStatus === 'failed').length;
+        
+        const pendingCount = targetDate 
+          ? 0 // When filtering by date, pending travelers aren't shown
+          : travelers.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending').length;
+        
         const totalCount = travelers.length;
         
         // When filtering by date, show only the count of travelers with API calls on that date
