@@ -86,12 +86,9 @@ export default function ApiDashboard() {
     refetchOnWindowFocus: true,
     staleTime: 0,
     select: (data: any[]) => {
-      // Filter and map batch data for selected date
+      // Backend already filters for batches with API calls on selected date
+      // Don't add additional date filtering here - just map the data
       return data
-        .filter(batch => {
-          const batchDate = new Date(batch.uploadDate).toISOString().split('T')[0];
-          return batchDate === selectedDate;
-        })
         .map(batch => ({
           batchId: batch.uploadId,
           uploadDate: batch.uploadDate,
