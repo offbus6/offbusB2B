@@ -129,7 +129,7 @@ export interface IStorage {
   createUploadHistory(history: InsertUploadHistory): Promise<UploadHistory>;
   getUploadHistory(agencyId: number): Promise<UploadHistory[]>;
   getUploadHistoryByAgency(agencyId: number): Promise<UploadHistory[]>;
-  getTravelerDataByUpload(uploadId: number): Promise<TravelerData[]>;
+  getTravelerDataByUpload(uploadId: number, agencyId?: number): Promise<TravelerData[]>;
 
   // Stats operations
   getSystemStats(): Promise<{
@@ -865,12 +865,33 @@ export class DatabaseStorage implements IStorage {
     return updatedHistory;
   }
 
-  async getTravelerDataByUpload(uploadId: number): Promise<TravelerData[]> {
+  async getTravelerDataByUpload(uploadId: number, agencyId?: number): Promise<TravelerData[]> {
     // Query by uploadId, handling both new uploads with uploadId and legacy data
-    return await this.db
-      .select()
-      .from(travelerData)
-      .where(eq(travelerData.uploadId, uploadId));
+    let query = this.db.select().from(travelerData);
+    
+    if (typeof uploadId === 'string' && uploadId.startsWith('legacy-')) {
+      // Handle legacy uploads
+      const [, busIdStr, dateStr] = uploadId.split('-');
+      const busId = parseInt(busIdStr);
+      const targetDate = new Date(dateStr).toDateString();
+      const allTravelers = await query;
+      return allTravelers.filter(t =>
+        t.busId === busId &&
+        !t.uploadId &&
+        new Date(t.createdAt || new Date()).toDateString() === targetDate &&
+        (!agencyId || t.agencyId === agencyId)
+      );
+    } else {
+      // Handle regular uploads
+      const uploadIdNum = typeof uploadId === 'string' ? parseInt(uploadId) : uploadId;
+      let conditions = [eq(travelerData.uploadId, uploadIdNum)];
+      
+      if (agencyId) {
+        conditions.push(eq(travelerData.agencyId, agencyId));
+      }
+      
+      return await query.where(and(...conditions));
+    }
   }
 
   async getSystemStats(): Promise<{
