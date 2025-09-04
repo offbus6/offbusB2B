@@ -35,6 +35,7 @@ interface ApiCallStats {
     note: string;
     possibleReasons: string[];
   };
+  recentCalls?: { travelerName: string; phone: string; status: string }[];
 }
 
 interface BatchApiStats {
@@ -50,11 +51,35 @@ interface BatchApiStats {
   lastProcessed: string;
 }
 
+interface RetryAnalytics {
+  retryBreakdown?: {
+    oneRetry?: { count: number };
+    twoRetries?: { count: number };
+    threeRetries?: { count: number };
+    fourPlusRetries?: { count: number };
+  };
+  summary?: {
+    message: string;
+    efficiency: string;
+  };
+  currentFailedNumbers?: {
+    total: number;
+    byRetryCount: {
+      '0'?: number;
+      '1'?: number;
+      '2'?: number;
+      '3'?: number;
+      '4'?: number;
+      '5'?: number;
+    };
+  };
+}
+
 export default function ApiDashboard() {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Default to today's date
 
-  // Get API call statistics for selected date
+  // Fetch API call statistics and retry analytics for the selected date
   const { data: apiStats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery<ApiCallStats>({
     queryKey: ["/api/agency/whatsapp/api-stats", selectedDate],
     queryFn: async () => {
@@ -69,6 +94,22 @@ export default function ApiDashboard() {
     refetchOnWindowFocus: true,
     staleTime: 0, // Always fetch fresh data
     gcTime: 0, // Don't cache
+  });
+
+  const { data: retryAnalytics, isLoading: retryLoading, error: retryError, refetch: refetchRetry } = useQuery<RetryAnalytics>({
+    queryKey: ["/api/agency/whatsapp/retry-analytics", selectedDate],
+    queryFn: async () => {
+      console.log(`🔄 Frontend: Fetching retry analytics for date: ${selectedDate}`);
+      const response = await fetch(`/api/agency/whatsapp/retry-analytics?date=${selectedDate}`);
+      if (!response.ok) throw new Error('Failed to fetch retry analytics');
+      const data = await response.json();
+      console.log('📊 Frontend: Received retry analytics:', data);
+      return data;
+    },
+    retry: 1,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+    gcTime: 0,
   });
 
   // Get batch-wise API statistics for selected date only
@@ -113,8 +154,8 @@ export default function ApiDashboard() {
     }
   };
 
-  const isLoading = statsLoading || batchLoading;
-  const hasError = statsError || batchError;
+  const isLoading = statsLoading || batchLoading || retryLoading;
+  const hasError = statsError || batchError || retryError;
 
   if (hasError) {
     return (
@@ -130,7 +171,7 @@ export default function ApiDashboard() {
                 <h3 className="text-lg font-medium text-gray-900">Unable to Load Dashboard</h3>
                 <p className="text-gray-500 mt-1">Please refresh the page and try again. If the problem continues, you may need to log in again.</p>
               </div>
-              <Button onClick={() => { refetchStats(); refetchBatch(); }} variant="outline">
+              <Button onClick={() => { refetchStats(); refetchBatch(); refetchRetry(); }} variant="outline">
                 Retry
               </Button>
             </div>
@@ -159,10 +200,11 @@ export default function ApiDashboard() {
             />
           </div>
           <Button
-            onClick={() => { 
+            onClick={() => {
               console.log(`🔄 Frontend: Force refreshing API stats for date: ${selectedDate}`);
-              refetchStats(); 
-              refetchBatch(); 
+              refetchStats();
+              refetchBatch();
+              refetchRetry();
             }}
             variant="outline"
             className="flex items-center gap-2"
@@ -249,6 +291,52 @@ export default function ApiDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Retry Analytics Section */}
+      {retryAnalytics && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-4">🔄 Retry Analytics</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div className="p-4 bg-blue-50 rounded">
+              <div className="text-2xl font-bold text-blue-600">{retryAnalytics.retryBreakdown?.oneRetry?.count || 0}</div>
+              <div className="text-sm text-gray-600">1 Retry</div>
+            </div>
+            <div className="p-4 bg-yellow-50 rounded">
+              <div className="text-2xl font-bold text-yellow-600">{retryAnalytics.retryBreakdown?.twoRetries?.count || 0}</div>
+              <div className="text-sm text-gray-600">2 Retries</div>
+            </div>
+            <div className="p-4 bg-orange-50 rounded">
+              <div className="text-2xl font-bold text-orange-600">{retryAnalytics.retryBreakdown?.threeRetries?.count || 0}</div>
+              <div className="text-sm text-gray-600">3 Retries</div>
+            </div>
+            <div className="p-4 bg-red-50 rounded">
+              <div className="text-2xl font-bold text-red-600">{retryAnalytics.retryBreakdown?.fourPlusRetries?.count || 0}</div>
+              <div className="text-sm text-gray-600">4+ Retries</div>
+            </div>
+          </div>
+
+          <div className="p-4 bg-gray-50 rounded mb-4">
+            <h4 className="font-semibold mb-2">Total API Usage Including Retries</h4>
+            <p className="text-sm text-gray-600">{retryAnalytics.summary?.message}</p>
+            <p className="text-sm text-green-600 font-medium">{retryAnalytics.summary?.efficiency}</p>
+          </div>
+
+          {retryAnalytics.currentFailedNumbers?.total > 0 && (
+            <div className="p-4 bg-red-50 rounded">
+              <h4 className="font-semibold mb-2 text-red-800">📞 Failed Numbers Requiring Retry</h4>
+              <div className="text-sm text-gray-600 mb-2">
+                Total: {retryAnalytics.currentFailedNumbers.total} numbers
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                <div>0 retries: {retryAnalytics.currentFailedNumbers.byRetryCount['0'] || 0}</div>
+                <div>1 retry: {retryAnalytics.currentFailedNumbers.byRetryCount['1'] || 0}</div>
+                <div>2 retries: {retryAnalytics.currentFailedNumbers.byRetryCount['2'] || 0}</div>
+                <div>3+ retries: {(retryAnalytics.currentFailedNumbers.byRetryCount['3'] || 0) + (retryAnalytics.currentFailedNumbers.byRetryCount['4'] || 0) + (retryAnalytics.currentFailedNumbers.byRetryCount['5'] || 0)}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Batch Details */}
       <Card>

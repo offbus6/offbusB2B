@@ -34,7 +34,7 @@ import {
   type InsertTaxConfig,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, count, sql, ne } from "drizzle-orm";
+import { eq, and, desc, count, sql, ne, timestamp, text, integer } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import validator from "validator";
@@ -586,7 +586,7 @@ export class DatabaseStorage implements IStorage {
     return await this.db.select().from(buses).where(eq(buses.agencyId, agencyId));
   }
 
-  async getAllBuses(): Promise<Bus[]> {
+  async getAllBuses(): Promise<Bus[]>{
     return await this.db.select().from(buses).orderBy(desc(buses.createdAt));
   }
 
