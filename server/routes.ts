@@ -3144,6 +3144,114 @@ Happy Travels!`;
   });
   */
 
+  // Get comprehensive retry analytics for failed API calls
+  app.get('/api/agency/whatsapp/retry-analytics', requireAuth(['agency']), async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any).user;
+      if (!user || user.role !== 'agency') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const agencyId = user.agency?.id;
+      if (!agencyId) {
+        return res.status(404).json({ error: 'Agency not found' });
+      }
+
+      const targetDate = (req.query.date as string) || new Date().toISOString().split('T')[0];
+      const allTravelers = await storage.getTravelerDataByAgency(agencyId);
+
+      console.log(`\n🔄 COMPREHENSIVE RETRY ANALYTICS for agency ${agencyId}, date ${targetDate}:`);
+
+      // Get all travelers with retry attempts
+      const travelersWithRetries = allTravelers.filter(t => (t.whatsappRetryCount || 0) > 0);
+
+      // Get today's retries specifically
+      const todaysRetries = travelersWithRetries.filter(t => {
+        if (!t.whatsappLastRetryAt) return false;
+        const retryDate = new Date(t.whatsappLastRetryAt).toISOString().split('T')[0];
+        return retryDate === targetDate;
+      });
+
+      // Comprehensive retry breakdown
+      const retryBreakdown = {
+        retry1: allTravelers.filter(t => (t.whatsappRetryCount || 0) === 1),
+        retry2: allTravelers.filter(t => (t.whatsappRetryCount || 0) === 2), 
+        retry3: allTravelers.filter(t => (t.whatsappRetryCount || 0) === 3),
+        retry4Plus: allTravelers.filter(t => (t.whatsappRetryCount || 0) >= 4)
+      };
+
+      // Calculate total API calls including retries
+      const totalApiCallsEver = allTravelers.reduce((sum, t) => {
+        const baseCall = (t.whatsappStatus === 'sent' || t.whatsappStatus === 'failed') ? 1 : 0;
+        const retryCalls = Math.max(0, (t.whatsappRetryCount || 0) - (baseCall > 0 ? 1 : 0));
+        return sum + baseCall + retryCalls;
+      }, 0);
+
+      // Today's retry API calls
+      const todaysRetryApiCalls = todaysRetries.reduce((sum, t) => sum + (t.whatsappRetryCount || 0), 0);
+
+      // Failed numbers still requiring retries
+      const failedNumbers = allTravelers.filter(t => t.whatsappStatus === 'failed');
+      const numbersByRetryCount = {};
+      for (let i = 0; i <= 5; i++) {
+        numbersByRetryCount[i] = failedNumbers.filter(t => (t.whatsappRetryCount || 0) === i).length;
+      }
+
+      console.log(`📊 RETRY ANALYTICS SUMMARY:`);
+      console.log(`   Total numbers with retries: ${travelersWithRetries.length}`);
+      console.log(`   Today's retry attempts: ${todaysRetries.length}`);
+      console.log(`   Total API calls including retries: ${totalApiCallsEver}`);
+      console.log(`   Failed numbers by retry count:`, numbersByRetryCount);
+
+      // Detailed failed number analysis
+      const detailedFailedNumbers = failedNumbers.map(t => ({
+        travelerName: t.travelerName,
+        phone: t.phone.substring(0, 6) + 'xxx',
+        retryCount: t.whatsappRetryCount || 0,
+        firstAttempt: t.whatsappFirstAttemptAt,
+        lastRetry: t.whatsappLastRetryAt,
+        daysSinceFirstAttempt: t.whatsappFirstAttemptAt ? 
+          Math.floor((Date.now() - new Date(t.whatsappFirstAttemptAt).getTime()) / (1000 * 60 * 60 * 24)) : 0
+      }));
+
+      res.json({
+        date: targetDate,
+        retryAnalytics: {
+          totalNumbersWithRetries: travelersWithRetries.length,
+          todaysRetryAttempts: todaysRetries.length,
+          totalApiCallsIncludingRetries: totalApiCallsEver,
+          todaysRetryApiCalls: todaysRetryApiCalls
+        },
+        retryBreakdown: {
+          oneRetry: { count: retryBreakdown.retry1.length, status: 'May succeed on next attempt' },
+          twoRetries: { count: retryBreakdown.retry2.length, status: 'Moderate failure risk' },
+          threeRetries: { count: retryBreakdown.retry3.length, status: 'High failure risk' },
+          fourPlusRetries: { count: retryBreakdown.retry4Plus.length, status: 'Critical - likely permanent failure' }
+        },
+        currentFailedNumbers: {
+          total: failedNumbers.length,
+          byRetryCount: numbersByRetryCount,
+          detailed: detailedFailedNumbers.slice(0, 20), // Show first 20 for performance
+          recommendations: failedNumbers.length > 0 ? [
+            `${numbersByRetryCount[0] || 0} numbers failed on first attempt - likely to succeed on retry`,
+            `${numbersByRetryCount[1] || 0} numbers failed after 1 retry - moderate success chance`,
+            `${numbersByRetryCount[2] || 0} numbers failed after 2 retries - low success chance`,
+            `${(numbersByRetryCount[3] || 0) + (numbersByRetryCount[4] || 0) + (numbersByRetryCount[5] || 0)} numbers failed 3+ times - consider manual investigation`
+          ] : ['No failed numbers requiring retries']
+        },
+        summary: {
+          message: `Total API calls made: ${totalApiCallsEver} (including ${totalApiCallsEver - allTravelers.filter(t => t.whatsappStatus === 'sent' || t.whatsappStatus === 'failed').length} retry attempts)`,
+          efficiency: allTravelers.length > 0 ? 
+            `${Math.round((allTravelers.filter(t => t.whatsappStatus === 'sent').length / totalApiCallsEver) * 100)}% success rate per API call` : '0%'
+        }
+      });
+
+    } catch (error) {
+      console.error('Error getting retry analytics:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // Get today's API call statistics with comprehensive tracking
   app.get('/api/agency/whatsapp/api-stats', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
@@ -3589,9 +3697,31 @@ Happy Travels!`;
         const isRetryAttempt = traveler.whatsappStatus === 'failed';
         const currentPhase = index < freshNumbers.length ? 'FRESH' : 'RETRY';
 
+        // Calculate retry information
+        const currentRetryCount = (traveler.whatsappRetryCount || 0) + (isRetryAttempt ? 1 : 0);
+        const isFirstAttempt = !traveler.whatsappFirstAttemptAt;
+        const now = new Date();
+
+        console.log(`📋 RETRY TRACKING - ${traveler.travelerName} (+91${normalizedPhone}):`);
+        console.log(`   Previous retry count: ${traveler.whatsappRetryCount || 0}`);
+        console.log(`   Current attempt: ${isFirstAttempt ? 'FIRST' : `RETRY #${currentRetryCount}`}`);
+        console.log(`   Last retry: ${traveler.whatsappLastRetryAt || 'Never'}`);
+        console.log(`   First attempt: ${traveler.whatsappFirstAttemptAt || 'Now'}`);
+
         try {
-          // Mark as processing BEFORE API call
-          await storage.updateTravelerData(traveler.id, { whatsappStatus: 'processing' });
+          // Mark as processing BEFORE API call with retry tracking
+          const updateData: any = { 
+            whatsappStatus: 'processing',
+            whatsappRetryCount: currentRetryCount,
+            whatsappLastRetryAt: now.toISOString()
+          };
+
+          // Set first attempt timestamp if this is the first try
+          if (isFirstAttempt) {
+            updateData.whatsappFirstAttemptAt = now.toISOString();
+          }
+
+          await storage.updateTravelerData(traveler.id, updateData);
 
           // Get agency data
           const agency = await storage.getAgencyById(user.agency.id);
@@ -3636,11 +3766,15 @@ Happy Travels!`;
           if (isSuccess) {
             processed++;
             if (isRetryAttempt) {
-              console.log(`✅ RETRY SUCCESS: ${traveler.travelerName} (+91${normalizedPhone}) - Now sent!`);
+              console.log(`✅ RETRY SUCCESS: ${traveler.travelerName} (+91${normalizedPhone}) - SUCCESS after ${currentRetryCount} retries!`);
+            } else {
+              console.log(`✅ FIRST ATTEMPT SUCCESS: ${traveler.travelerName} (+91${normalizedPhone})`);
             }
           } else {
             failed++;
-            console.log(`❌ ${isRetryAttempt ? 'RETRY FAILED' : 'FAILED'}: ${traveler.travelerName} (+91${normalizedPhone}): ${responseText}`);
+            const failureMessage = `❌ ${isRetryAttempt ? `RETRY #${currentRetryCount} FAILED` : 'FIRST ATTEMPT FAILED'}: ${traveler.travelerName} (+91${normalizedPhone}): ${responseText}`;
+            console.log(failureMessage);
+            console.log(`   📊 Retry Statistics: ${currentRetryCount} attempts total, ${currentRetryCount > 1 ? `${currentRetryCount - 1} previous failures` : 'first failure'}`);
           }
 
           // 1 second delay between calls
@@ -3686,6 +3820,14 @@ Happy Travels!`;
           processingOrder: {
             freshNumbersFirst: travelersToBatch.filter(t => t.whatsappStatus !== 'failed').length,
             failedNumbersLast: travelersToBatch.filter(t => t.whatsappStatus === 'failed').length
+          },
+          retryStatistics: {
+            totalRetryAttempts: travelersToBatch.reduce((sum, t) => sum + (t.whatsappRetryCount || 0), 0),
+            numbersWith1Retry: travelersToBatch.filter(t => (t.whatsappRetryCount || 0) === 1).length,
+            numbersWith2Retries: travelersToBatch.filter(t => (t.whatsappRetryCount || 0) === 2).length,
+            numbersWith3PlusRetries: travelersToBatch.filter(t => (t.whatsappRetryCount || 0) >= 3).length,
+            averageRetriesPerNumber: travelersToBatch.length > 0 ? 
+              (travelersToBatch.reduce((sum, t) => sum + (t.whatsappRetryCount || 0), 0) / travelersToBatch.length).toFixed(2) : 0
           }
         }
       });
