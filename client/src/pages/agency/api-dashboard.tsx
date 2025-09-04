@@ -17,16 +17,20 @@ interface ApiCallStats {
   todaysApiCalls: {
     sent: number;
     failed: number;
-    pending: number;
     total: number;
+    breakdown: any;
   };
   allTimeApiCalls: {
     sent: number;
     failed: number;
-    pending: number;
     total: number;
   };
-  note: string;
+  statistics: {
+    totalTravelers: number;
+    processedTravelers: number;
+    pendingTravelers: number;
+    processingRate: number;
+  };
   verification?: {
     note: string;
     possibleReasons: string[];
@@ -237,11 +241,14 @@ export default function ApiDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {apiStats?.todaysApiCalls?.pending || 0}
+              {apiStats?.statistics?.pendingTravelers || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Never sent
+              Travelers pending WhatsApp
             </p>
+            <div className="text-lg font-bold text-yellow-500 mt-1">
+              Total Travelers: {apiStats?.statistics?.totalTravelers || 0}
+            </div>
           </CardContent>
         </Card>
       </div>
