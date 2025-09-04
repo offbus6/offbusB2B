@@ -43,10 +43,18 @@ export default function WhatsAppScheduler() {
   // Send WhatsApp to all travelers in a batch
   const sendWhatsAppBatchMutation = useMutation({
     mutationFn: async (uploadId: string) => {
+      console.log("🔍 Frontend: Starting WhatsApp batch send for uploadId:", uploadId);
       setLoadingBatches(prev => new Set(prev).add(uploadId));
-      return await apiRequest(`/api/agency/whatsapp/send-batch/${uploadId}`, {
-        method: 'POST'
-      });
+      try {
+        const result = await apiRequest(`/api/agency/whatsapp/send-batch/${uploadId}`, {
+          method: 'POST'
+        });
+        console.log("✅ Frontend: WhatsApp batch send successful:", result);
+        return result;
+      } catch (error) {
+        console.error("❌ Frontend: WhatsApp batch send error:", error);
+        throw error;
+      }
     },
     onSuccess: (data: any, uploadId: string) => {
       setLoadingBatches(prev => {
@@ -109,6 +117,7 @@ export default function WhatsAppScheduler() {
   });
 
   const handleSendBatch = (uploadId: string) => {
+    console.log("🔍 Frontend: handleSendBatch called with uploadId:", uploadId);
     sendWhatsAppBatchMutation.mutate(uploadId);
   };
 
