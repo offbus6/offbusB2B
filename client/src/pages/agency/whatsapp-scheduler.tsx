@@ -65,16 +65,29 @@ export default function WhatsAppScheduler() {
         return newSet;
       });
       
+      // Extract stats from response
+      const processed = data.stats?.processed || 0;
+      const failed = data.stats?.failed || 0;
+      const remaining = data.stats?.remaining || 0;
+      const total = data.stats?.total || 0;
+      const batchComplete = data.stats?.batchComplete || false;
+      
       if (data.limitReached) {
         toast({
           title: "Daily Message Limit Reached",
-          description: `Sent ${data.sentCount} messages before hitting limit. ${data.remainingToProcess} messages remain. Please resume tomorrow.`,
+          description: `Sent ${processed} messages before hitting limit. ${remaining} messages remain. Please resume tomorrow.`,
           variant: "destructive",
+        });
+      } else if (batchComplete) {
+        toast({
+          title: "Batch Complete! 🎉",
+          description: `Successfully sent messages to ${processed} travelers. All done!`,
+          variant: "default",
         });
       } else {
         toast({
           title: "WhatsApp Messages Sent",
-          description: `Successfully sent messages to ${data.sentCount} travelers`,
+          description: `Sent messages to ${processed} travelers. ${remaining} remaining - click "Resume Batch" to continue.`,
           variant: "default",
         });
       }
@@ -308,15 +321,36 @@ export default function WhatsAppScheduler() {
                   </div>
                 )}
 
+                {/* Processing Status */}
+                {loadingBatches.has(batch.uploadId) && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-blue-800">Processing WhatsApp Messages</h4>
+                        <p className="text-sm text-blue-700 mt-1">
+                          Sending messages in batches of 50. This may take a few minutes depending on the number of travelers.
+                        </p>
+                        <div className="mt-2">
+                          <div className="text-xs text-blue-600">
+                            Processing batch... Please wait for completion before clicking again.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Action Button */}
                 <div className="flex justify-end pt-4 border-t">
                   <Button
                     onClick={() => handleSendBatch(batch.uploadId)}
                     disabled={loadingBatches.has(batch.uploadId) || batch.whatsappStatus === 'sent'}
                     className="flex items-center gap-2"
+                    data-testid={`button-send-whatsapp-${batch.uploadId}`}
                   >
                     <Send className="h-4 w-4" />
-                    {loadingBatches.has(batch.uploadId) ? 'Sending...' : 
+                    {loadingBatches.has(batch.uploadId) ? 'Processing...' : 
                      batch.whatsappStatus === 'sent' ? 'All Sent' :
                      batch.whatsappStatus === 'partial' ? `Resume Batch (${batch.pendingCount || (batch.travelerCount - batch.sentCount)} remaining)` :
                      'Send WhatsApp to All'}

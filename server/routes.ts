@@ -3660,21 +3660,21 @@ Happy Travels!`;
       console.log(`   Processing in this batch: ${travelersToBatch.length}`);
       console.log(`   Remaining after this batch: ${initialPendingTravelers.length - travelersToBatch.length}`);
 
-      // SMART PROCESSING: First process fresh numbers, then retry failed ones
+      // SMART PROCESSING: First process pending numbers, then retry failed ones
       let processed = 0;
       let failed = 0;
       const processedPhones = new Set<string>();
 
-      // Separate fresh numbers from previously failed ones
-      const freshNumbers = travelersToBatch.filter(t => t.whatsappStatus !== 'failed');
+      // Separate pending (fresh) numbers from previously failed ones
+      const pendingNumbers = travelersToBatch.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending');
       const failedNumbers = travelersToBatch.filter(t => t.whatsappStatus === 'failed');
 
       console.log(`📋 SMART PROCESSING ORDER:`);
-      console.log(`   Fresh numbers to process first: ${freshNumbers.length}`);
+      console.log(`   Pending numbers to process first: ${pendingNumbers.length}`);
       console.log(`   Failed numbers to retry last: ${failedNumbers.length}`);
 
-      // Process fresh numbers first (higher success rate)
-      const processInOrder = [...freshNumbers, ...failedNumbers];
+      // Process pending numbers first (higher success rate)
+      const processInOrder = [...pendingNumbers, ...failedNumbers];
 
       for (const [index, traveler] of processInOrder.entries()) {
         if (!traveler?.id || !traveler?.phone || !traveler?.travelerName) {
@@ -3708,7 +3708,7 @@ Happy Travels!`;
         processedPhones.add(normalizedPhone);
 
         const isRetryAttempt = traveler.whatsappStatus === 'failed';
-        const currentPhase = index < freshNumbers.length ? 'FRESH' : 'RETRY';
+        const currentPhase = index < pendingNumbers.length ? 'PENDING' : 'RETRY';
 
         // Calculate retry information
         const currentRetryCount = (traveler.whatsappRetryCount || 0) + (isRetryAttempt ? 1 : 0);
@@ -3826,12 +3826,12 @@ Happy Travels!`;
           remaining: remainingCount,
           batchComplete: isComplete,
           controlledProcessing: true,
-          smartProcessing: 'Fresh numbers processed first, failed numbers retried last',
+          smartProcessing: 'Pending numbers processed first, failed numbers retried last',
           maxBatchSize: MAX_BATCH_SIZE,
           delayBetweenCalls: '1 second',
           templateUsed: 'eddygoo_2807',
           processingOrder: {
-            freshNumbersFirst: travelersToBatch.filter(t => t.whatsappStatus !== 'failed').length,
+            pendingNumbersFirst: travelersToBatch.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending').length,
             failedNumbersLast: travelersToBatch.filter(t => t.whatsappStatus === 'failed').length
           },
           retryStatistics: {
