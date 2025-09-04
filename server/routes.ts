@@ -3683,9 +3683,17 @@ Happy Travels!`;
           continue;
         }
 
-        const normalizedPhone = traveler.phone.replace(/\D/g, '');
+        // Clean phone number - remove all non-digits first
+        let normalizedPhone = traveler.phone.replace(/\D/g, '');
+        
+        // If it has +91 prefix (12 digits starting with 91), remove the 91
+        if (normalizedPhone.startsWith('91') && normalizedPhone.length === 12) {
+          normalizedPhone = normalizedPhone.substring(2);
+        }
+        
+        // Now validate it's a proper 10-digit Indian mobile number
         if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
-          console.error(`❌ Invalid phone number format for traveler ${traveler.travelerName}: ${traveler.phone}`);
+          console.error(`❌ Invalid phone number format for traveler ${traveler.travelerName}: ${traveler.phone} (normalized: ${normalizedPhone})`);
           await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
           failed++;
           continue;
