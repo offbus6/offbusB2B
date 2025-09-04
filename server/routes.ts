@@ -1285,7 +1285,7 @@ export function registerRoutes(app: Express) {
 
       console.log("Processing pending WhatsApp messages via API endpoint");
       await whatsappService.processPendingMessages();
-
+      
       res.json({ 
         message: "WhatsApp message processing completed successfully",
         timestamp: new Date().toISOString()
@@ -2058,7 +2058,6 @@ Happy Travels!`;
         } catch (error) {
           failCount++;
           results.push({
-            travelerId: traveler.id,
             travelerName: traveler.travelerName,
             phone: traveler.phone,
             status: 'failed',
@@ -2204,7 +2203,7 @@ Happy Travels!`;
   app.post('/api/agency/whatsapp/log-api-call', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
       const { phoneNumber, requestId, apiResponse, success, timestamp } = req.body;
-
+      
       // Log every API call to separate tracking table
       await storage.logApiCall({
         agencyId: (req.session as any).user.agency.id,
@@ -2234,7 +2233,7 @@ Happy Travels!`;
 
       // Method 1: Get from dedicated API call log
       const apiCallLogs = await storage.getApiCallsForDate(agencyId, targetDate);
-
+      
       // Method 2: Get from traveler status changes
       const allTravelers = await storage.getTravelerDataByAgency(agencyId);
       const statusChangeTravelers = allTravelers.filter(t => {
@@ -2552,15 +2551,10 @@ Happy Travels!`;
           const bookingUrl = agency.bookingWebsite || agency.website || 'https://testtravelagency.com';
           const whatsappImageUrl = agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
 
-          console.log(`Sending individual WhatsApp to ${traveler.travelerName} at +91${cleanPhone}`);
-          console.log(`Using booking URL: ${bookingUrl}`);
-          console.log(`Using WhatsApp image: ${whatsappImageUrl}`);
-          console.log(`🎯 Individual WhatsApp Template: ${agency.whatsappTemplate || 'eddygoo_2807'}`);
-
           // Send via BhashSMS API using your exact template format
           const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
           const whatsappTemplate = agency.whatsappTemplate || 'eddygoo_2807';
-
+          
           // Build URL manually without encoding to avoid %2C, %3A, %2F issues
           const cleanParams = [
             `user=eddygoo1`,
@@ -2574,7 +2568,7 @@ Happy Travels!`;
             `htype=image`,
             `url=${whatsappImageUrl}`
           ].join('&');
-
+          
           const finalUrl = `${apiUrl}?${cleanParams}`;
 
           const controller = new AbortController();
@@ -2706,7 +2700,7 @@ Happy Travels!`;
       // Send via BhashSMS API using your exact template format
       const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
       const whatsappTemplate = agency.whatsappTemplate || 'eddygoo_2807';
-
+      
       // Build URL manually without encoding to avoid %2C, %3A, %2F issues
       const cleanParams = [
         `user=eddygoo1`,
@@ -2720,7 +2714,7 @@ Happy Travels!`;
         `htype=image`,
         `url=${whatsappImageUrl}`
       ].join('&');
-
+      
       const finalUrl = `${apiUrl}?${cleanParams}`;
 
       const controller = new AbortController();
@@ -2967,7 +2961,7 @@ Happy Travels!`;
 
       const memUsage = process.memoryUsage();
       const uptime = process.uptime();
-
+      
       res.json({
         status: 'healthy',
         uptime: Math.floor(uptime),
@@ -3029,7 +3023,7 @@ Happy Travels!`;
       }
 
       const initialPendingTravelers = allTravelers.filter(t => t && t.whatsappStatus !== 'sent');
-
+      
       // CRITICAL: Remove duplicate phone numbers to prevent multiple messages to same passenger
       const seenPhones = new Set();
       const pendingTravelers = initialPendingTravelers.filter(traveler => {
@@ -3045,7 +3039,7 @@ Happy Travels!`;
       if (duplicatesSkipped > 0) {
         console.log(`⚠️  DUPLICATE PREVENTION: Skipped ${duplicatesSkipped} duplicate phone numbers to prevent multiple messages`);
       }
-
+      
       if (pendingTravelers.length === 0) {
         return res.json({ success: true, message: 'No pending travelers to send WhatsApp', totalBatches: 0 });
       }
@@ -3056,7 +3050,7 @@ Happy Travels!`;
         batches.push(pendingTravelers.slice(i, i + batchSize));
       }
 
-      console.log(`\n📦 LARGE CAMPAIGN: Splitting ${pendingTravelers.length} travelers into ${batches.length} batches of ${batchSize}`);
+      console.log(`📦 LARGE CAMPAIGN: Splitting ${pendingTravelers.length} travelers into ${batches.length} batches of ${batchSize}`);
 
       let totalSent = 0;
       let totalFailed = 0;
@@ -3065,9 +3059,9 @@ Happy Travels!`;
       // Process each batch with delays
       for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
         const batch = batches[batchIndex];
-
+        
         console.log(`\n🚀 Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} travelers)`);
-
+        
         try {
           // Use the existing batch processing logic
           const batchResponse = await fetch(`http://localhost:5000/api/agency/whatsapp/send-batch/${uploadId}`, {
@@ -3079,7 +3073,7 @@ Happy Travels!`;
           });
 
           const batchResult = await batchResponse.json();
-
+          
           if (batchResult.success) {
             totalSent += batchResult.sentCount || 0;
             totalFailed += batchResult.failedCount || 0;
@@ -3144,113 +3138,6 @@ Happy Travels!`;
   });
   */
 
-  // Get comprehensive retry analytics for failed API calls
-  app.get('/api/agency/whatsapp/retry-analytics', requireAuth(['agency']), async (req: Request, res: Response) => {
-    try {
-      const user = (req.session as any).user;
-      if (!user || user.role !== 'agency') {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-
-      const agencyId = user.agency?.id;
-      if (!agencyId) {
-        return res.status(404).json({ error: 'Agency not found' });
-      }
-
-      const targetDate = (req.query.date as string) || new Date().toISOString().split('T')[0];
-      const allTravelers = await storage.getTravelerDataByAgency(agencyId);
-
-      console.log(`\n🔄 COMPREHENSIVE RETRY ANALYTICS for agency ${agencyId}, date ${targetDate}:`);
-
-      // Get all travelers with retry attempts
-      const travelersWithRetries = allTravelers.filter(t => (t.whatsappRetryCount || 0) > 0);
-
-      // Get today's retries specifically
-      const todaysRetries = travelersWithRetries.filter(t => {
-        if (!t.whatsappLastRetryAt) return false;
-        const retryDate = new Date(t.whatsappLastRetryAt).toISOString().split('T')[0];
-        return retryDate === targetDate;
-      });
-
-      // Comprehensive retry breakdown
-      const retryBreakdown = {
-        retry1: allTravelers.filter(t => (t.whatsappRetryCount || 0) === 1),
-        retry2: allTravelers.filter(t => (t.whatsappRetryCount || 0) === 2), 
-        retry3: allTravelers.filter(t => (t.whatsappRetryCount || 0) === 3),
-        retry4Plus: allTravelers.filter(t => (t.whatsappRetryCount || 0) >= 4)
-      };
-
-      // Calculate total API calls including retries
-      const totalApiCallsEver = allTravelers.reduce((sum, t) => {
-        const baseCall = (t.whatsappStatus === 'sent' || t.whatsappStatus === 'failed') ? 1 : 0;
-        const retryCalls = Math.max(0, (t.whatsappRetryCount || 0) - (baseCall > 0 ? 1 : 0));
-        return sum + baseCall + retryCalls;
-      }, 0);
-
-      // Today's retry API calls
-      const todaysRetryApiCalls = todaysRetries.reduce((sum, t) => sum + (t.whatsappRetryCount || 0), 0);
-
-      // Failed numbers still requiring retries
-      const failedNumbers = allTravelers.filter(t => t.whatsappStatus === 'failed');
-      const numbersByRetryCount = {};
-      for (let i = 0; i <= 5; i++) {
-        numbersByRetryCount[i] = failedNumbers.filter(t => (t.whatsappRetryCount || 0) === i).length;
-      }
-
-      console.log(`📊 RETRY ANALYTICS SUMMARY:`);
-      console.log(`   Total numbers with retries: ${travelersWithRetries.length}`);
-      console.log(`   Today's retry attempts: ${todaysRetries.length}`);
-      console.log(`   Total API calls including retries: ${totalApiCallsEver}`);
-      console.log(`   Failed numbers by retry count:`, numbersByRetryCount);
-
-      // Detailed failed number analysis
-      const detailedFailedNumbers = failedNumbers.map(t => ({
-        travelerName: t.travelerName,
-        phone: t.phone.substring(0, 6) + 'xxx',
-        retryCount: t.whatsappRetryCount || 0,
-        firstAttempt: t.whatsappFirstAttemptAt,
-        lastRetry: t.whatsappLastRetryAt,
-        daysSinceFirstAttempt: t.whatsappFirstAttemptAt ? 
-          Math.floor((Date.now() - new Date(t.whatsappFirstAttemptAt).getTime()) / (1000 * 60 * 60 * 24)) : 0
-      }));
-
-      res.json({
-        date: targetDate,
-        retryAnalytics: {
-          totalNumbersWithRetries: travelersWithRetries.length,
-          todaysRetryAttempts: todaysRetries.length,
-          totalApiCallsIncludingRetries: totalApiCallsEver,
-          todaysRetryApiCalls: todaysRetryApiCalls
-        },
-        retryBreakdown: {
-          oneRetry: { count: retryBreakdown.retry1.length, status: 'May succeed on next attempt' },
-          twoRetries: { count: retryBreakdown.retry2.length, status: 'Moderate failure risk' },
-          threeRetries: { count: retryBreakdown.retry3.length, status: 'High failure risk' },
-          fourPlusRetries: { count: retryBreakdown.retry4Plus.length, status: 'Critical - likely permanent failure' }
-        },
-        currentFailedNumbers: {
-          total: failedNumbers.length,
-          byRetryCount: numbersByRetryCount,
-          detailed: detailedFailedNumbers.slice(0, 20), // Show first 20 for performance
-          recommendations: failedNumbers.length > 0 ? [
-            `${numbersByRetryCount[0] || 0} numbers failed on first attempt - likely to succeed on retry`,
-            `${numbersByRetryCount[1] || 0} numbers failed after 1 retry - moderate success chance`,
-            `${numbersByRetryCount[2] || 0} numbers failed after 2 retries - low success chance`,
-            `${(numbersByRetryCount[3] || 0) + (numbersByRetryCount[4] || 0) + (numbersByRetryCount[5] || 0)} numbers failed 3+ times - consider manual investigation`
-          ] : ['No failed numbers requiring retries']
-        },
-        summary: {
-          message: `Total API calls made: ${totalApiCallsEver} (including ${totalApiCallsEver - allTravelers.filter(t => t.whatsappStatus === 'sent' || t.whatsappStatus === 'failed').length} retry attempts)`,
-          efficiency: allTravelers.length > 0 ? 
-            `${Math.round((allTravelers.filter(t => t.whatsappStatus === 'sent').length / totalApiCallsEver) * 100)}% success rate per API call` : '0%'
-        }
-      });
-
-    } catch (error) {
-      console.error('Error getting retry analytics:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
 
   // Get today's API call statistics with comprehensive tracking
   app.get('/api/agency/whatsapp/api-stats', requireAuth(['agency']), async (req: Request, res: Response) => {
@@ -3268,62 +3155,62 @@ Happy Travels!`;
       // Get date parameter or default to today
       const targetDate = (req.query.date as string) || new Date().toISOString().split('T')[0];
       const allTravelers = await storage.getTravelerDataByAgency(agencyId);
-
+      
       console.log(`\n🔍 COMPREHENSIVE API CALL TRACKING for agency ${agencyId}, date ${targetDate}:`);
       console.log(`📊 Total travelers in database: ${allTravelers.length}`);
-
+      
       // Count ALL travelers who had API calls (sent/failed) regardless of date
       const allApiCallTravelers = allTravelers.filter(t => 
         t.whatsappStatus === 'sent' || t.whatsappStatus === 'failed'
       );
-
+      
       console.log(`📞 Total travelers with API calls ever: ${allApiCallTravelers.length}`);
-
+      
       // For today specifically, filter by updatedAt (when WhatsApp status was changed from pending to sent/failed)
       const todaysApiCalls = allApiCallTravelers.filter(t => {
         if (!t.updatedAt) return false;
         const apiCallDate = new Date(t.updatedAt).toISOString().split('T')[0];
         return apiCallDate === targetDate;
       });
-
+      
       // Show detailed breakdown for today
       const todaysSent = todaysApiCalls.filter(t => t.whatsappStatus === 'sent').length;
       const todaysFailed = todaysApiCalls.filter(t => t.whatsappStatus === 'failed').length;
       const todaysTotalApiCalls = todaysSent + todaysFailed;
-
+      
       // Show all-time totals
       const allTimeSent = allApiCallTravelers.filter(t => t.whatsappStatus === 'sent').length;
       const allTimeFailed = allApiCallTravelers.filter(t => t.whatsappStatus === 'failed').length;
       const allTimeTotalApiCalls = allTimeSent + allTimeFailed;
-
+      
       // Get pending count (never had API calls)
       const pendingCount = allTravelers.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending').length;
-
+      
       // Enhanced logging for verification
       console.log(`\n📅 TODAY'S API CALLS (${targetDate}):`);
       console.log(`   ✅ Successful API calls (sent): ${todaysSent}`);
       console.log(`   ❌ Failed API calls (failed): ${todaysFailed}`);
       console.log(`   📞 TOTAL API CALLS TODAY: ${todaysTotalApiCalls}`);
-
+      
       console.log(`\n📈 ALL-TIME API CALLS:`);
       console.log(`   ✅ Total successful (sent): ${allTimeSent}`);
       console.log(`   ❌ Total failed (failed): ${allTimeFailed}`);
       console.log(`   📞 TOTAL API CALLS EVER: ${allTimeTotalApiCalls}`);
-
+      
       console.log(`\n⏳ PENDING (NO API CALLS YET): ${pendingCount}`);
-
+      
       // Show recent API calls for verification
       console.log(`\n📋 RECENT API CALLS FOR VERIFICATION:`);
       const recentApiCalls = allApiCallTravelers
         .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
         .slice(0, 10);
-
+      
       recentApiCalls.forEach((t, idx) => {
         const callDate = t.updatedAt ? new Date(t.updatedAt).toISOString().split('T')[0] : 'unknown';
         const callTime = t.updatedAt ? new Date(t.updatedAt).toLocaleTimeString() : 'unknown';
         console.log(`   ${idx + 1}. ${t.travelerName} (${t.phone}) - ${t.whatsappStatus} - ${callDate} ${callTime}`);
       });
-
+      
       // Get hourly breakdown for today
       const hourlyBreakdown = {};
       todaysApiCalls.forEach(t => {
@@ -3338,7 +3225,7 @@ Happy Travels!`;
           hourlyBreakdown[hourKey].total++;
         }
       });
-
+      
       console.log(`\n⏰ HOURLY BREAKDOWN FOR ${targetDate}:`);
       Object.entries(hourlyBreakdown).forEach(([hour, counts]) => {
         console.log(`   ${hour} - ${counts.total} API calls (${counts.sent} sent, ${counts.failed} failed)`);
@@ -3437,34 +3324,34 @@ Happy Travels!`;
             const apiCallDate = t.updatedAt ? new Date(t.updatedAt).toISOString().split('T')[0] : null;
             return apiCallDate === targetDate;
           });
-
+          
           // Skip this batch if no API calls were made on the target date
           if (apiCallTravelers.length === 0) {
             console.log(`📦 Skipping batch ${upload.id} - no API calls on ${targetDate}`);
             continue;
           }
-
+          
           console.log(`📦 Including batch ${upload.id} - ${apiCallTravelers.length} API calls on ${targetDate}`);
         }
 
         // When filtering by date, calculate counts based only on travelers with API calls on that date
         const relevantTravelers = targetDate ? apiCallTravelers : travelers;
-
+        
         // Calculate WhatsApp status counts based on relevant travelers
         const sentCount = targetDate 
           ? apiCallTravelers.filter(t => t.whatsappStatus === 'sent').length
           : travelers.filter(t => t.whatsappStatus === 'sent').length;
-
+        
         const failedCount = targetDate 
           ? apiCallTravelers.filter(t => t.whatsappStatus === 'failed').length
           : travelers.filter(t => t.whatsappStatus === 'failed').length;
-
+        
         const pendingCount = targetDate 
           ? 0 // When filtering by date, pending travelers aren't shown
           : travelers.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending').length;
-
+        
         const totalCount = travelers.length;
-
+        
         // When filtering by date, show only the count of travelers with API calls on that date
         const displayTravelerCount = targetDate ? apiCallTravelers.length : totalCount;
 
@@ -3592,142 +3479,176 @@ Happy Travels!`;
 
       // CRITICAL: Create atomic batch lock to prevent simultaneous processing
       const batchLockKey = `batch_${uploadId}_${agencyId}`;
-
+      
       // Check if batch is already being processed
       const existingLock = await storage.getBatchLock(batchLockKey);
       if (existingLock && existingLock.lockedAt > new Date(Date.now() - 5 * 60 * 1000)) {
         return res.status(409).json({ 
           error: 'Batch is already being processed',
-          message: 'Another send operation is currently in progress for this batch. Please wait for it to complete.'
+          message: 'Another batch operation is in progress. Please wait and try again.',
+          lockedSince: existingLock.lockedAt
         });
       }
 
-      // Create batch lock to prevent concurrent processing
+      // Create atomic lock
       await storage.createBatchLock(batchLockKey, agencyId);
+      
+      // CRITICAL: Reset any stuck 'processing' status to prevent duplicates
+      await storage.resetProcessingStatus(uploadId);
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      console.log(`\n🔒 BATCH LOCK ACQUIRED - Key: ${batchLockKey}`);
-      console.log(`   Processing can begin safely`);
+      const MAX_BATCH_SIZE = 1000;
+      let batchTravelers = [];
 
-      // Enhanced cleanup: Only reset records stuck for more than 5 minutes
-      const resetResult = await storage.resetProcessingStatus(uploadId);
-      console.log(`🧹 CLEANUP COMPLETED - Reset ${resetResult.modifiedCount} stuck 'processing' records older than 5 minutes`);
-
-      // Get batch travelers with enhanced filtering
-      const batchTravelers = await storage.getTravelerDataByUpload(uploadId, agencyId);
-      if (!batchTravelers || batchTravelers.length === 0) {
-        await storage.releaseBatchLock(batchLockKey);
-        return res.status(404).json({ error: 'No travelers found for this upload' });
+      // Handle legacy vs normal upload batches
+      if (uploadId.startsWith('legacy-')) {
+        const [, busIdStr, dateStr] = uploadId.split('-');
+        const busId = parseInt(busIdStr);
+        const targetDate = new Date(dateStr).toDateString();
+        const allTravelers = await storage.getTravelerDataByAgency(agencyId);
+        batchTravelers = allTravelers.filter(t => 
+          t.busId === busId && 
+          !t.uploadId && 
+          new Date(t.createdAt || new Date()).toDateString() === targetDate
+        );
+      } else {
+        const uploadIdNum = parseInt(uploadId);
+        if (isNaN(uploadIdNum)) {
+          return res.status(400).json({ error: 'Invalid upload ID' });
+        }
+        batchTravelers = await storage.getTravelerDataByUpload(uploadIdNum);
       }
 
-      console.log(`📊 BATCH ANALYSIS - Upload ID: ${uploadId}`);
-      console.log(`   Total travelers in upload: ${batchTravelers.length}`);
+      // Filter out already processed travelers
+      const initialPendingTravelers = (batchTravelers || []).filter(t => {
+        if (!t) return false;
+        const hasReceived = t.whatsappStatus === 'sent' || t.whatsappStatus === 'processing';
+        if (hasReceived) {
+          console.log(`✅ SKIPPING ALREADY PROCESSED: ${t.travelerName} (${t.phone}) - Status: ${t.whatsappStatus}`);
+        }
+        return !hasReceived;
+      });
 
-      // CRITICAL: Enhanced filtering to prevent duplicate API calls
-      const initialPendingTravelers = (batchTravelers || []).filter(t => 
-        t && 
-        t.whatsappStatus !== 'sent' && 
-        t.whatsappStatus !== 'processing'  // CRITICAL: Excludes travelers currently being processed
-      );
+      // CRITICAL: Enhanced duplicate detection with detailed tracking
+      const seenPhones = new Map();
+      const duplicateDetails = [];
+      const pendingTravelers = initialPendingTravelers.filter(traveler => {
+        const normalizedPhone = traveler.phone.replace(/\D/g, '');
+        
+        if (seenPhones.has(normalizedPhone)) {
+          const firstOccurrence = seenPhones.get(normalizedPhone);
+          duplicateDetails.push({
+            phone: traveler.phone,
+            travelerName: traveler.travelerName,
+            id: traveler.id,
+            firstOccurrence: firstOccurrence
+          });
+          console.log(`🚫 DUPLICATE PHONE PREVENTED: ${traveler.travelerName} (${traveler.phone}) - First seen: ${firstOccurrence.travelerName}`);
+          return false;
+        }
+        
+        seenPhones.set(normalizedPhone, {
+          id: traveler.id,
+          travelerName: traveler.travelerName,
+          phone: traveler.phone
+        });
+        return true;
+      });
 
-      console.log(`   Travelers already sent: ${batchTravelers.length - initialPendingTravelers.length}`);
-      console.log(`   Travelers pending processing: ${initialPendingTravelers.length}`);
+      // Log duplicate prevention statistics
+      console.log(`📊 DUPLICATE ANALYSIS:`);
+      console.log(`   Unique phones to process: ${pendingTravelers.length}`);
+      console.log(`   Duplicates prevented: ${duplicateDetails.length}`);
+      duplicateDetails.forEach((dup, idx) => {
+        console.log(`   ${idx + 1}. ${dup.phone} - Skipped ${dup.travelerName} (kept ${dup.firstOccurrence.travelerName})`);
+      });
 
-      if (initialPendingTravelers.length === 0) {
-        await storage.releaseBatchLock(batchLockKey);
-        return res.json({
-          success: true,
-          message: 'All travelers in this batch have already been sent WhatsApp messages',
-          stats: {
-            total: batchTravelers.length,
-            alreadySent: batchTravelers.length,
-            processed: 0,
-            failed: 0
-          }
+      console.log(`📊 BATCH ANALYSIS:`);
+      console.log(`   Total travelers in batch: ${(batchTravelers || []).length}`);
+      console.log(`   Already processed (sent/failed): ${(batchTravelers || []).length - initialPendingTravelers.length}`);
+      console.log(`   Duplicates skipped: ${initialPendingTravelers.length - pendingTravelers.length}`);
+      console.log(`   Will process (API calls): ${pendingTravelers.length}`);
+      console.log(`   Expected remaining after batch: ${initialPendingTravelers.length - pendingTravelers.length}`);
+
+      if (pendingTravelers.length === 0) {
+        const alreadySentCount = (batchTravelers || []).filter(t => t && t.whatsappStatus === 'sent').length;
+        return res.json({ 
+          success: true, 
+          message: `All travelers already received WhatsApp messages (${alreadySentCount} sent)`, 
+          sentCount: 0,
+          alreadySentCount,
+          totalCount: (batchTravelers || []).length
         });
       }
 
-      // CRITICAL: Limit batch processing to prevent unwanted API calls
-      const MAX_BATCH_SIZE = 50; // Process maximum 50 at a time
-      const travelersToBatch = initialPendingTravelers.slice(0, MAX_BATCH_SIZE);
+      if (pendingTravelers.length > MAX_BATCH_SIZE) {
+        return res.status(400).json({ 
+          error: `Batch too large. Max ${MAX_BATCH_SIZE}, current: ${pendingTravelers.length}`,
+          suggestion: 'Process smaller batches for reliability'
+        });
+      }
 
-      console.log(`🎯 CONTROLLED BATCH PROCESSING:`);
-      console.log(`   Total pending: ${initialPendingTravelers.length}`);
-      console.log(`   Processing in this batch: ${travelersToBatch.length}`);
-      console.log(`   Remaining after this batch: ${initialPendingTravelers.length - travelersToBatch.length}`);
+      // Get agency data
+      const agency = await storage.getAgencyById(user.agency.id);
+      if (!agency) {
+        return res.status(404).json({ error: 'Agency not found' });
+      }
 
-      // SMART PROCESSING: First process fresh numbers, then retry failed ones
-      let processed = 0;
-      let failed = 0;
-      const processedPhones = new Set<string>();
+      console.log(`🚀 PROCESSING ${pendingTravelers.length} TRAVELERS WITH TEMPLATE: ${agency.whatsappTemplate || 'eddygoo_2807'}`);
 
-      // Separate fresh numbers from previously failed ones
-      const freshNumbers = travelersToBatch.filter(t => t.whatsappStatus !== 'failed');
-      const failedNumbers = travelersToBatch.filter(t => t.whatsappStatus === 'failed');
+      let sentCount = 0;
+      let failedCount = 0;
+      let totalApiCalls = 0;
+      const deliveryResults = [];
 
-      console.log(`📋 SMART PROCESSING ORDER:`);
-      console.log(`   Fresh numbers to process first: ${freshNumbers.length}`);
-      console.log(`   Failed numbers to retry last: ${failedNumbers.length}`);
-
-      // Process fresh numbers first (higher success rate)
-      const processInOrder = [...freshNumbers, ...failedNumbers];
-
-      for (const [index, traveler] of processInOrder.entries()) {
+      // Process each traveler individually
+      for (let i = 0; i < pendingTravelers.length; i++) {
+        const traveler = pendingTravelers[i];
+        
         if (!traveler?.id || !traveler?.phone || !traveler?.travelerName) {
-          console.error(`❌ Invalid traveler data:`, traveler);
-          failed++;
+          console.error(`❌ Invalid traveler data at index ${i}`);
+          failedCount++;
+          deliveryResults.push({
+            travelerName: traveler?.travelerName || 'Unknown',
+            phone: traveler?.phone || 'Unknown',
+            status: 'failed',
+            reason: 'Invalid data'
+          });
           continue;
         }
-
-        const normalizedPhone = traveler.phone.replace(/\D/g, '');
-        if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
-          console.error(`❌ Invalid phone number format for traveler ${traveler.travelerName}: ${traveler.phone}`);
-          await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
-          failed++;
-          continue;
-        }
-
-        // Prevent duplicate API calls for the same phone number within this batch
-        if (processedPhones.has(normalizedPhone)) {
-          console.log(`🚫 DUPLICATE PHONE DETECTED: Skipping ${traveler.travelerName} (${traveler.phone}) - already processed in this batch`);
-          failed++; // Count as failed to prevent reprocessing
-          continue;
-        }
-        processedPhones.add(normalizedPhone);
-
-        const isRetryAttempt = traveler.whatsappStatus === 'failed';
-        const currentPhase = index < freshNumbers.length ? 'FRESH' : 'RETRY';
-
-        // Calculate retry information
-        const currentRetryCount = (traveler.whatsappRetryCount || 0) + (isRetryAttempt ? 1 : 0);
-        const isFirstAttempt = !traveler.whatsappFirstAttemptAt;
-        const now = new Date();
-
-        console.log(`📋 RETRY TRACKING - ${traveler.travelerName} (+91${normalizedPhone}):`);
-        console.log(`   Previous retry count: ${traveler.whatsappRetryCount || 0}`);
-        console.log(`   Current attempt: ${isFirstAttempt ? 'FIRST' : `RETRY #${currentRetryCount}`}`);
-        console.log(`   Last retry: ${traveler.whatsappLastRetryAt || 'Never'}`);
-        console.log(`   First attempt: ${traveler.whatsappFirstAttemptAt || 'Now'}`);
 
         try {
-          // Mark as processing BEFORE API call with retry tracking
-          const updateData: any = { 
-            whatsappStatus: 'processing',
-            whatsappRetryCount: currentRetryCount,
-            whatsappLastRetryAt: now.toISOString()
-          };
-
-          // Set first attempt timestamp if this is the first try
-          if (isFirstAttempt) {
-            updateData.whatsappFirstAttemptAt = now.toISOString();
+          // Clean phone number
+          let cleanPhone = traveler.phone.replace(/\D/g, '');
+          if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+            cleanPhone = cleanPhone.substring(2);
+          } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
+            cleanPhone = cleanPhone.substring(1);
           }
 
-          await storage.updateTravelerData(traveler.id, updateData);
-
-          // Get agency data
-          const agency = await storage.getAgencyById(user.agency.id);
-          if (!agency) {
-            throw new Error("Agency not found");
+          // Validate phone format
+          if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+            console.error(`❌ Invalid phone: ${cleanPhone}`);
+            await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
+            failedCount++;
+            deliveryResults.push({
+              travelerName: traveler.travelerName,
+              phone: traveler.phone,
+              status: 'failed',
+              reason: 'Invalid phone format'
+            });
+            continue;
           }
+
+          // Double check not already processed
+          const currentStatus = await storage.getTravelerData(traveler.id);
+          if (currentStatus?.whatsappStatus === 'sent' || currentStatus?.whatsappStatus === 'processing') {
+            console.log(`🚫 RACE CONDITION SKIP: ${traveler.travelerName} already ${currentStatus.whatsappStatus}`);
+            continue;
+          }
+
+          // Mark as processing BEFORE API call
+          await storage.updateTravelerData(traveler.id, { whatsappStatus: 'processing' });
 
           // Get bus and URL info
           const bus = await storage.getBus(traveler.busId);
@@ -3741,7 +3662,7 @@ Happy Travels!`;
             `user=eddygoo1`,
             `pass=123456`,
             `sender=BUZWAP`,
-            `phone=${normalizedPhone}`,
+            `phone=${cleanPhone}`,
             `text=${template}`,
             `priority=wa`,
             `stype=normal`,
@@ -3749,86 +3670,189 @@ Happy Travels!`;
             `htype=image`,
             `url=${imageUrl}`
           ].join('&');
+          
           const fullUrl = `${apiUrl}?${params}`;
 
-          console.log(`📞 ${currentPhase} API CALL ${processed + failed + 1}/${travelersToBatch.length}: ${traveler.travelerName} (+91${normalizedPhone})${isRetryAttempt ? ' [RETRY]' : ''}`);
+          console.log(`📞 API CALL ${i + 1}/${pendingTravelers.length}: ${traveler.travelerName} (+91${cleanPhone})`);
 
+          // CRITICAL: Pre-API call validation
+          console.log(`📞 PRE-API VALIDATION ${i + 1}/${pendingTravelers.length}:`);
+          console.log(`   Traveler: ${traveler.travelerName}`);
+          console.log(`   Phone: ${cleanPhone}`);
+          console.log(`   Status: ${currentStatus?.whatsappStatus || 'unknown'}`);
+
+          // Generate unique request ID for tracking
+          const requestId = `batch_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`;
+
+          // Make API call with strict counting
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 15000);
+
+          console.log(`🌐 MAKING API CALL ${totalApiCalls + 1} to ${cleanPhone} - Request ID: ${requestId}`);
+          const callStartTime = new Date();
+          
           const response = await fetch(fullUrl, {
             method: 'GET',
-            headers: { 'User-Agent': 'TravelFlow-WhatsApp/1.0' },
-            signal: new AbortController().signal
+            signal: controller.signal,
+            headers: { 'User-Agent': 'TravelFlow-WhatsApp/1.0' }
           });
-          const responseText = (await response.text()).trim();
-          const isSuccess = response.ok && responseText.startsWith('S.');
 
-          await storage.updateTravelerData(traveler.id, { whatsappStatus: isSuccess ? 'sent' : 'failed' });
+          totalApiCalls++;
+          console.log(`📊 API CALL COUNTER: ${totalApiCalls} (Expected max: ${pendingTravelers.length})`);
+          clearTimeout(timeout);
+          const responseText = await response.text().then(t => t.trim());
+          const callEndTime = new Date();
+
+          // CRITICAL: Log every API call for exact tracking
+          try {
+            await storage.logApiCall({
+              agencyId: user.agency.id,
+              phoneNumber: cleanPhone,
+              requestId,
+              apiResponse: responseText.substring(0, 100),
+              success: response.ok && responseText.startsWith('S.') && responseText.length > 2,
+              timestamp: callEndTime,
+              endpoint: 'batch/whatsapp/send'
+            });
+            console.log(`✅ API CALL LOGGED: ${requestId}`);
+          } catch (logError) {
+            console.error(`❌ FAILED TO LOG API CALL: ${requestId}`, logError);
+          }
+
+          // Update status immediately
+          const isSuccess = response.ok && 
+                           responseText.startsWith('S.') && 
+                           responseText.length > 2 &&
+                           !responseText.includes('ERROR');
+          
+          const finalStatus = isSuccess ? 'sent' : 'failed';
+          await storage.updateTravelerData(traveler.id, { whatsappStatus: finalStatus });
+
+          // Check for daily limit
+          if (responseText.includes('Daily Message Limit Reached')) {
+            console.log(`🚫 DAILY LIMIT REACHED after ${i + 1} travelers`);
+            failedCount++;
+            deliveryResults.push({
+              travelerName: traveler.travelerName,
+              phone: `+91${cleanPhone}`,
+              status: 'failed',
+              reason: 'Daily limit reached'
+            });
+
+            const alreadySent = (batchTravelers || []).length - pendingTravelers.length;
+            return res.json({
+              success: sentCount > 0,
+              limitReached: true,
+              message: `Daily limit reached after ${sentCount} messages. Resume tomorrow.`,
+              sentCount,
+              failedCount,
+              alreadySentCount: alreadySent,
+              totalProcessed: i + 1,
+              remainingToProcess: pendingTravelers.length - (i + 1),
+              deliveryResults
+            });
+          }
 
           if (isSuccess) {
-            processed++;
-            if (isRetryAttempt) {
-              console.log(`✅ RETRY SUCCESS: ${traveler.travelerName} (+91${normalizedPhone}) - SUCCESS after ${currentRetryCount} retries!`);
-            } else {
-              console.log(`✅ FIRST ATTEMPT SUCCESS: ${traveler.travelerName} (+91${normalizedPhone})`);
-            }
+            console.log(`✅ SUCCESS: ${traveler.travelerName} (+91${cleanPhone}) - ID: ${responseText}`);
+            sentCount++;
+            deliveryResults.push({
+              travelerName: traveler.travelerName,
+              phone: `+91${cleanPhone}`,
+              status: 'sent',
+              messageId: responseText
+            });
           } else {
-            failed++;
-            const failureMessage = `❌ ${isRetryAttempt ? `RETRY #${currentRetryCount} FAILED` : 'FIRST ATTEMPT FAILED'}: ${traveler.travelerName} (+91${normalizedPhone}): ${responseText}`;
-            console.log(failureMessage);
-            console.log(`   📊 Retry Statistics: ${currentRetryCount} attempts total, ${currentRetryCount > 1 ? `${currentRetryCount - 1} previous failures` : 'first failure'}`);
+            console.log(`❌ FAILED: ${traveler.travelerName} (+91${cleanPhone}): ${responseText}`);
+            failedCount++;
+            deliveryResults.push({
+              travelerName: traveler.travelerName,
+              phone: `+91${cleanPhone}`,
+              status: 'failed',
+              apiResponse: responseText
+            });
           }
 
           // 1 second delay between calls
-          if (processed + failed < travelersToBatch.length) {
+          if (i < pendingTravelers.length - 1) {
             await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+
+          // Memory cleanup for large batches
+          if (i > 0 && i % 100 === 0 && global.gc) {
+            global.gc();
           }
 
         } catch (error) {
           console.error(`❌ Exception for ${traveler.travelerName}:`, error);
           await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
-          failed++;
+          failedCount++;
+          deliveryResults.push({
+            travelerName: traveler.travelerName,
+            phone: traveler.phone,
+            status: 'error',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
         }
       }
 
-      // CRITICAL: Always release lock after processing
+      console.log(`\n📊 BATCH COMPLETE - Sent: ${sentCount}, Failed: ${failedCount}, API Calls: ${totalApiCalls}`);
+
+      const alreadySentCount = (batchTravelers || []).length - pendingTravelers.length;
+
+      // CRITICAL: Release batch lock
       await storage.releaseBatchLock(batchLockKey);
 
-      console.log(`\n🔓 BATCH LOCK RELEASED - Key: ${batchLockKey}`);
-      console.log(`✅ CONTROLLED BATCH PROCESSING COMPLETE`);
-      console.log(`   Total processed in this batch: ${processed}`);
-      console.log(`   Failed: ${failed}`);
-      console.log(`   Remaining pending: ${initialPendingTravelers.length - travelersToBatch.length}`);
+      // CRITICAL: Verify API call count matches expectations
+      const expectedApiCalls = pendingTravelers.length;
+      if (totalApiCalls > expectedApiCalls) {
+        console.error(`🚨 API CALL MISMATCH: Expected ${expectedApiCalls}, Made ${totalApiCalls}`);
+        console.error(`🚨 POTENTIAL DUPLICATE CALLS DETECTED`);
+      } else {
+        console.log(`✅ API CALL COUNT CORRECT: Expected ${expectedApiCalls}, Made ${totalApiCalls}`);
+      }
 
-      const remainingCount = initialPendingTravelers.length - travelersToBatch.length;
-      const isComplete = remainingCount === 0;
+      // CRITICAL: Verify the counts make sense
+      const totalBeforeProcessing = (batchTravelers || []).length;
+      const duplicatesSkipped = initialPendingTravelers.length - pendingTravelers.length;
+      const expectedRemaining = totalBeforeProcessing - sentCount - failedCount - alreadySentCount;
+      
+      console.log(`\n🔍 FINAL COUNT VERIFICATION:`);
+      console.log(`   Total travelers in batch: ${totalBeforeProcessing}`);
+      console.log(`   Already sent before batch: ${alreadySentCount}`);
+      console.log(`   Sent in this batch: ${sentCount}`);
+      console.log(`   Failed in this batch: ${failedCount}`);
+      console.log(`   Duplicates prevented: ${duplicatesSkipped}`);
+      console.log(`   Expected remaining: ${expectedRemaining}`);
 
       res.json({
-        success: true,
-        message: isComplete 
-          ? `WhatsApp messages sent to ${processed} travelers - Batch Complete!`
-          : `WhatsApp messages sent to ${processed} travelers - ${remainingCount} remaining (click "Resume Batch" to continue)`,
-        stats: {
-          total: batchTravelers.length,
-          processed,
-          failed,
-          remaining: remainingCount,
-          batchComplete: isComplete,
-          controlledProcessing: true,
-          smartProcessing: 'Fresh numbers processed first, failed numbers retried last',
-          maxBatchSize: MAX_BATCH_SIZE,
+        success: sentCount > 0,
+        message: `Batch complete: ${sentCount} sent, ${failedCount} failed${alreadySentCount > 0 ? `, ${alreadySentCount} already sent` : ''}${duplicatesSkipped > 0 ? `, ${duplicatesSkipped} duplicates prevented` : ''}`,
+        sentCount,
+        failedCount,
+        alreadySentCount,
+        duplicatesSkipped,
+        totalInBatch: totalBeforeProcessing,
+        totalProcessed: pendingTravelers.length,
+        totalApiCallsMade: totalApiCalls,
+        expectedApiCalls: expectedApiCalls,
+        apiCallsMatch: totalApiCalls === expectedApiCalls,
+        expectedRemaining: expectedRemaining,
+        countingDetails: {
+          beforeProcessing: totalBeforeProcessing,
+          alreadyProcessed: alreadySentCount,
+          newlySent: sentCount,
+          newlyFailed: failedCount,
+          duplicatesPrevented: duplicatesSkipped,
+          calculatedRemaining: expectedRemaining
+        },
+        deliveryResults,
+        processingDetails: {
+          individualApiCalls: true,
           delayBetweenCalls: '1 second',
           templateUsed: agency.whatsappTemplate || 'eddygoo_2807',
-          processingOrder: {
-            freshNumbersFirst: travelersToBatch.filter(t => t.whatsappStatus !== 'failed').length,
-            failedNumbersLast: travelersToBatch.filter(t => t.whatsappStatus === 'failed').length
-          },
-          retryStatistics: {
-            totalRetryAttempts: travelersToBatch.reduce((sum, t) => sum + (t.whatsappRetryCount || 0), 0),
-            numbersWith1Retry: travelersToBatch.filter(t => (t.whatsappRetryCount || 0) === 1).length,
-            numbersWith2Retries: travelersToBatch.filter(t => (t.whatsappRetryCount || 0) === 2).length,
-            numbersWith3PlusRetries: travelersToBatch.filter(t => (t.whatsappRetryCount || 0) >= 3).length,
-            averageRetriesPerNumber: travelersToBatch.length > 0 ? 
-              (travelersToBatch.reduce((sum, t) => sum + (t.whatsappRetryCount || 0), 0) / travelersToBatch.length).toFixed(2) : 0
-          }
+          duplicatesPrevented: true,
+          batchLocked: true
         }
       });
 
@@ -3877,9 +3901,9 @@ Happy Travels!`;
 
       console.log(`\n🔍 COUNT VERIFICATION for Agency ${agencyId}`);
 
-      // Get all travelers for this agency
+      // Get ALL travelers for this agency
       const allTravelers = await storage.getTravelerDataByAgency(agencyId);
-
+      
       // Count by status
       const sentTravelers = allTravelers.filter(t => t.whatsappStatus === 'sent');
       const failedTravelers = allTravelers.filter(t => t.whatsappStatus === 'failed');
@@ -3941,22 +3965,22 @@ Happy Travels!`;
       }
 
       console.log('\n📊 CHECKING WHATSAPP DAILY LIMIT 📊');
-
+      
       // Check account balance and status via BhashSMS API
       const balanceUrl = 'https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=9900408817&text=balance';
-
+      
       try {
         const response = await fetch(balanceUrl);
         const responseText = (await response.text()).trim();
-
+        
         console.log(`Balance API Response: "${responseText}"`);
-
+        
         // Get today's sent count from database for this agency
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-
+        
         const travelers = await storage.getTravelerDataByAgency(user.id);
         const todaysSent = travelers.filter(t => {
           const updatedAt = new Date(t.updatedAt || t.createdAt || new Date());
@@ -3964,29 +3988,29 @@ Happy Travels!`;
                  updatedAt >= today && 
                  updatedAt < tomorrow;
         }).length;
-
+        
         // Parse balance response for limit information
         let dailyLimit = 'Unknown';
         let currentUsage = todaysSent;
         let accountBalance = 'Unknown';
         let limitReached = false;
-
+        
         if (responseText.includes('Daily Message Limit Reached')) {
           limitReached = true;
         } else if (responseText.startsWith('S.')) {
           accountBalance = 'Active';
         }
-
+        
         // Estimate daily limit based on common BhashSMS plans
         let estimatedLimit = 1000; // Default assumption
         if (responseText.includes('500')) estimatedLimit = 500;
         if (responseText.includes('1000')) estimatedLimit = 1000;
         if (responseText.includes('2000')) estimatedLimit = 2000;
         if (responseText.includes('5000')) estimatedLimit = 5000;
-
+        
         const remainingMessages = limitReached ? 0 : estimatedLimit - currentUsage;
         const usagePercentage = Math.round((currentUsage / estimatedLimit) * 100);
-
+        
         res.json({
           success: true,
           dailyLimit: {
@@ -4016,7 +4040,7 @@ Happy Travels!`;
             'Consider upgrading if you frequently approach limits'
           ]
         });
-
+        
       } catch (error) {
         console.error('Error checking balance:', error);
         res.status(500).json({
@@ -4025,7 +4049,7 @@ Happy Travels!`;
           message: 'Could not connect to BhashSMS API'
         });
       }
-
+      
     } catch (error) {
       console.error('Daily limit check error:', error);
       res.status(500).json({ 
@@ -4058,13 +4082,13 @@ Happy Travels!`;
         const balanceUrl = `https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=${testPhone}&text=balance`;
         const balanceResponse = await fetch(balanceUrl);
         const balanceText = (await balanceResponse.text()).trim();
-
+        
         verificationResults.push({
           test: 'Account Balance',
           response: balanceText,
           status: balanceText.includes('S.') ? 'success' : 'warning'
         });
-
+        
         console.log(`Account Status: "${balanceText}"`);
       } catch (error) {
         verificationResults.push({
@@ -4078,19 +4102,19 @@ Happy Travels!`;
       console.log('\n2️⃣ Testing WhatsApp template approval...');
       try {
         const templateUrl = `https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=${testPhone}&text=eddygoo_2807&priority=wa&stype=normal&Params=TestUser,${agency.name},TEST20,${agency.bookingWebsite || 'https://test.com'}&htype=image&url=${agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg'}`;
-
+        
         const templateResponse = await fetch(templateUrl);
         const templateText = (await templateResponse.text()).trim();
-
+        
         const isApproved = templateText.startsWith('S.');
-
+        
         verificationResults.push({
           test: 'WhatsApp Template (eddygoo_2807)',
           response: templateText,
           status: isApproved ? 'success' : 'critical_error',
           note: isApproved ? 'Template appears approved' : 'TEMPLATE NOT APPROVED - Messages will not deliver'
         });
-
+        
         console.log(`Template Test: "${templateText}"`);
         if (!isApproved) {
           console.log('🚨 CRITICAL: Template not approved for WhatsApp delivery');
@@ -4107,17 +4131,17 @@ Happy Travels!`;
       console.log('\n3️⃣ Testing SMS delivery as fallback...');
       try {
         const smsUrl = `https://bhashsms.com/api/sendmsg.php?user=eddygoo1&pass=123456&sender=BUZWAP&phone=${testPhone}&text=SMS Test from ${agency.name} - If you receive this, SMS works fine&priority=ndnd&stype=normal`;
-
+        
         const smsResponse = await fetch(smsUrl);
         const smsText = (await smsResponse.text()).trim();
-
+        
         verificationResults.push({
           test: 'SMS Fallback',
           response: smsText,
           status: smsText.startsWith('S.') ? 'success' : 'error',
           note: 'SMS can be used as backup if WhatsApp fails'
         });
-
+        
         console.log(`SMS Test: "${smsText}"`);
       } catch (error) {
         verificationResults.push({
@@ -4195,7 +4219,7 @@ Happy Travels!`;
       }
 
       console.log('\n🔍 BULK WHATSAPP DELIVERY ANALYSIS 🔍');
-
+      
       // Get agency data
       const agency = await storage.getAgency(user.id);
       if (!agency) {
@@ -4237,7 +4261,7 @@ Happy Travels!`;
           });
 
           console.log(`Test ${testPhone}: ${responseText}`);
-
+          
           // 5 second delay between test calls
           await new Promise(resolve => setTimeout(resolve, 5000));
         } catch (error) {
