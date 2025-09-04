@@ -2198,6 +2198,167 @@ Happy Travels!`;
 
       await storage.updateAgency(agencyId, updateData);
 
+
+  // Detailed API call audit for provider verification
+  app.get('/api/agency/whatsapp/audit-calls', requireAuth(['agency']), async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any).user;
+      if (!user || user.role !== 'agency') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const agencyId = user.agency?.id;
+      if (!agencyId) {
+        return res.status(404).json({ error: 'Agency not found' });
+      }
+
+      // Get date parameter or default to today
+      const targetDate = (req.query.date as string) || new Date().toISOString().split('T')[0];
+      const allTravelers = await storage.getTravelerDataByAgency(agencyId);
+      
+      console.log(`\n🔍 API CALL AUDIT for agency ${agencyId}, date ${targetDate}:`);
+      
+      // Get all travelers with API calls
+      const apiCallTravelers = allTravelers.filter(t => 
+        t.whatsappStatus === 'sent' || t.whatsappStatus === 'failed'
+      );
+      
+      // Filter by specific date if provided
+      let filteredTravelers = apiCallTravelers;
+      if (targetDate) {
+        filteredTravelers = apiCallTravelers.filter(t => {
+          if (!t.updatedAt) return false;
+          const apiCallDate = new Date(t.updatedAt).toISOString().split('T')[0];
+          return apiCallDate === targetDate;
+        });
+      }
+      
+      // Sort by timestamp for chronological order
+      filteredTravelers.sort((a, b) => 
+        new Date(a.updatedAt || 0).getTime() - new Date(b.updatedAt || 0).getTime()
+      );
+      
+      // Create detailed audit log
+      const auditLog = filteredTravelers.map((traveler, index) => {
+        const timestamp = traveler.updatedAt ? new Date(traveler.updatedAt) : null;
+        return {
+          sequence: index + 1,
+          travelerName: traveler.travelerName,
+          phone: traveler.phone,
+          status: traveler.whatsappStatus,
+          apiCallTime: timestamp ? timestamp.toISOString() : null,
+          localTime: timestamp ? timestamp.toLocaleString() : null,
+          date: timestamp ? timestamp.toISOString().split('T')[0] : null,
+          uploadId: traveler.uploadId || 'legacy',
+          travelerId: traveler.id
+        };
+      });
+      
+      // Group by hour for better analysis
+      const hourlyGroups = {};
+      auditLog.forEach(call => {
+        if (call.apiCallTime) {
+          const hour = new Date(call.apiCallTime).getHours();
+          const hourKey = `${hour.toString().padStart(2, '0')}:00-${(hour + 1).toString().padStart(2, '0')}:00`;
+          if (!hourlyGroups[hourKey]) {
+            hourlyGroups[hourKey] = [];
+          }
+          hourlyGroups[hourKey].push(call);
+        }
+      });
+      
+      console.log(`📞 AUDIT SUMMARY for ${targetDate}:`);
+      console.log(`   Total API calls found: ${filteredTravelers.length}`);
+      console.log(`   Successful (sent): ${filteredTravelers.filter(t => t.whatsappStatus === 'sent').length}`);
+      console.log(`   Failed (failed): ${filteredTravelers.filter(t => t.whatsappStatus === 'failed').length}`);
+      
+      console.log(`\n⏰ HOURLY DISTRIBUTION:`);
+      Object.entries(hourlyGroups).forEach(([timeRange, calls]) => {
+        console.log(`   ${timeRange}: ${calls.length} API calls`);
+      });
+      
+      // Check for potential discrepancies
+      const discrepancyChecks = {
+        duplicatePhones: [],
+        missingTimestamps: [],
+        suspiciousPatterns: []
+      };
+      
+      // Check for duplicate phone numbers (same phone, multiple API calls)
+      const phoneCount = {};
+      auditLog.forEach(call => {
+        const phone = call.phone;
+        if (!phoneCount[phone]) {
+          phoneCount[phone] = [];
+        }
+        phoneCount[phone].push(call);
+      });
+      
+      Object.entries(phoneCount).forEach(([phone, calls]) => {
+        if (calls.length > 1) {
+          discrepancyChecks.duplicatePhones.push({
+            phone,
+            callCount: calls.length,
+            calls: calls
+          });
+        }
+      });
+      
+      // Check for missing timestamps
+      discrepancyChecks.missingTimestamps = auditLog.filter(call => !call.apiCallTime);
+      
+      if (discrepancyChecks.duplicatePhones.length > 0) {
+        console.log(`\n⚠️ DUPLICATE PHONE NUMBERS FOUND:`);
+        discrepancyChecks.duplicatePhones.forEach(dup => {
+          console.log(`   ${dup.phone}: ${dup.callCount} API calls`);
+        });
+      }
+      
+      if (discrepancyChecks.missingTimestamps.length > 0) {
+        console.log(`\n⚠️ MISSING TIMESTAMPS: ${discrepancyChecks.missingTimestamps.length} calls`);
+      }
+
+      res.json({
+        success: true,
+        audit: {
+          date: targetDate,
+          totalApiCalls: filteredTravelers.length,
+          breakdown: {
+            sent: filteredTravelers.filter(t => t.whatsappStatus === 'sent').length,
+            failed: filteredTravelers.filter(t => t.whatsappStatus === 'failed').length
+          },
+          hourlyGroups,
+          auditLog,
+          discrepancyChecks,
+          providerComparison: {
+            providerCount: 78,
+            databaseCount: filteredTravelers.length,
+            difference: 78 - filteredTravelers.length,
+            match: filteredTravelers.length === 78,
+            explanation: filteredTravelers.length === 78 
+              ? 'Counts match perfectly!' 
+              : `Provider shows ${78 - filteredTravelers.length} ${78 > filteredTravelers.length ? 'more' : 'fewer'} calls than database`
+          }
+        },
+        recommendations: [
+          'Check if provider counts test calls or authentication attempts',
+          'Verify timezone differences between provider and database',
+          'Look for retry attempts that might be counted by provider',
+          'Check if failed network requests are counted by provider'
+        ]
+      });
+
+    } catch (error) {
+      console.error('Error getting API audit:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to generate API audit',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+
       // Update session with fresh agency data from database
       if (req.session) {
         const updatedAgency = await storage.getAgencyById(agencyId);
@@ -3038,7 +3199,7 @@ Happy Travels!`;
   */
 
 
-  // Get today's API call statistics
+  // Get today's API call statistics with comprehensive tracking
   app.get('/api/agency/whatsapp/api-stats', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
       const user = (req.session as any).user;
@@ -3055,75 +3216,129 @@ Happy Travels!`;
       const targetDate = (req.query.date as string) || new Date().toISOString().split('T')[0];
       const allTravelers = await storage.getTravelerDataByAgency(agencyId);
       
-      // DEBUG: Count ALL travelers who had API calls (sent/failed) on ANY date first
+      console.log(`\n🔍 COMPREHENSIVE API CALL TRACKING for agency ${agencyId}, date ${targetDate}:`);
+      console.log(`📊 Total travelers in database: ${allTravelers.length}`);
+      
+      // Count ALL travelers who had API calls (sent/failed) regardless of date
       const allApiCallTravelers = allTravelers.filter(t => 
         t.whatsappStatus === 'sent' || t.whatsappStatus === 'failed'
       );
       
-      console.log(`\n🔍 API STATS DEBUG for agency ${agencyId}, date ${targetDate}:`);
-      console.log(`📊 Total travelers: ${allTravelers.length}`);
-      console.log(`📞 Travelers with API calls ever: ${allApiCallTravelers.length}`);
+      console.log(`📞 Total travelers with API calls ever: ${allApiCallTravelers.length}`);
       
-      // Show sample of travelers and their timestamps to understand the data
-      console.log(`\n📋 SAMPLE OF TRAVELERS WITH API CALLS:`);
-      allApiCallTravelers.slice(0, 10).forEach((t, idx) => {
-        console.log(`${idx + 1}. ${t.travelerName} - Status: ${t.whatsappStatus} - Created: ${t.createdAt} - Updated: ${t.updatedAt}`);
+      // For today specifically, filter by updatedAt (when WhatsApp status was changed from pending to sent/failed)
+      const todaysApiCalls = allApiCallTravelers.filter(t => {
+        if (!t.updatedAt) return false;
+        const apiCallDate = new Date(t.updatedAt).toISOString().split('T')[0];
+        return apiCallDate === targetDate;
       });
       
-      // For the target date, filter by updatedAt (when WhatsApp status was set)
-      const travelersWithApiCalls = allApiCallTravelers.filter(t => {
-        // Use updatedAt as the date when WhatsApp was actually sent
-        const apiCallDate = t.updatedAt ? new Date(t.updatedAt).toISOString().split('T')[0] : 
-                           (t.createdAt ? new Date(t.createdAt).toISOString().split('T')[0] : targetDate);
-        const matches = apiCallDate === targetDate;
-        if (matches) {
-          console.log(`✅ Found API call for ${targetDate}: ${t.travelerName} (${t.whatsappStatus}) - Updated: ${t.updatedAt}`);
-        }
-        return matches;
-      });
-      console.log(`📅 Date ${targetDate} - found ${travelersWithApiCalls.length} API calls`);
-
-      const sentCount = travelersWithApiCalls.filter(t => t.whatsappStatus === 'sent').length;
-      const failedCount = travelersWithApiCalls.filter(t => t.whatsappStatus === 'failed').length;
-      const totalApiCallsForDate = sentCount + failedCount;
+      // Show detailed breakdown for today
+      const todaysSent = todaysApiCalls.filter(t => t.whatsappStatus === 'sent').length;
+      const todaysFailed = todaysApiCalls.filter(t => t.whatsappStatus === 'failed').length;
+      const todaysTotalApiCalls = todaysSent + todaysFailed;
       
-      // Also include ALL sent and failed travelers regardless of date to show total usage
-      const allSentEver = allTravelers.filter(t => t.whatsappStatus === 'sent').length;
-      const allFailedEver = allTravelers.filter(t => t.whatsappStatus === 'failed').length;
-      const totalApiCallsEver = allSentEver + allFailedEver;
+      // Show all-time totals
+      const allTimeSent = allApiCallTravelers.filter(t => t.whatsappStatus === 'sent').length;
+      const allTimeFailed = allApiCallTravelers.filter(t => t.whatsappStatus === 'failed').length;
+      const allTimeTotalApiCalls = allTimeSent + allTimeFailed;
       
-      // Get all pending (never had API calls)
+      // Get pending count (never had API calls)
       const pendingCount = allTravelers.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending').length;
-
-      console.log(`\n📊 FINAL CALCULATION for ${targetDate}:`);
-      console.log(`   Selected date API calls: ${totalApiCallsForDate} (sent: ${sentCount}, failed: ${failedCount})`);
-      console.log(`   Total ever API calls: ${totalApiCallsEver} (sent: ${allSentEver}, failed: ${allFailedEver})`);
-      console.log(`   Pending never sent: ${pendingCount}`);
+      
+      // Enhanced logging for verification
+      console.log(`\n📅 TODAY'S API CALLS (${targetDate}):`);
+      console.log(`   ✅ Successful API calls (sent): ${todaysSent}`);
+      console.log(`   ❌ Failed API calls (failed): ${todaysFailed}`);
+      console.log(`   📞 TOTAL API CALLS TODAY: ${todaysTotalApiCalls}`);
+      
+      console.log(`\n📈 ALL-TIME API CALLS:`);
+      console.log(`   ✅ Total successful (sent): ${allTimeSent}`);
+      console.log(`   ❌ Total failed (failed): ${allTimeFailed}`);
+      console.log(`   📞 TOTAL API CALLS EVER: ${allTimeTotalApiCalls}`);
+      
+      console.log(`\n⏳ PENDING (NO API CALLS YET): ${pendingCount}`);
+      
+      // Show recent API calls for verification
+      console.log(`\n📋 RECENT API CALLS FOR VERIFICATION:`);
+      const recentApiCalls = allApiCallTravelers
+        .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
+        .slice(0, 10);
+      
+      recentApiCalls.forEach((t, idx) => {
+        const callDate = t.updatedAt ? new Date(t.updatedAt).toISOString().split('T')[0] : 'unknown';
+        const callTime = t.updatedAt ? new Date(t.updatedAt).toLocaleTimeString() : 'unknown';
+        console.log(`   ${idx + 1}. ${t.travelerName} (${t.phone}) - ${t.whatsappStatus} - ${callDate} ${callTime}`);
+      });
+      
+      // Get hourly breakdown for today
+      const hourlyBreakdown = {};
+      todaysApiCalls.forEach(t => {
+        if (t.updatedAt) {
+          const hour = new Date(t.updatedAt).getHours();
+          const hourKey = `${hour.toString().padStart(2, '0')}:00`;
+          if (!hourlyBreakdown[hourKey]) {
+            hourlyBreakdown[hourKey] = { sent: 0, failed: 0, total: 0 };
+          }
+          if (t.whatsappStatus === 'sent') hourlyBreakdown[hourKey].sent++;
+          if (t.whatsappStatus === 'failed') hourlyBreakdown[hourKey].failed++;
+          hourlyBreakdown[hourKey].total++;
+        }
+      });
+      
+      console.log(`\n⏰ HOURLY BREAKDOWN FOR ${targetDate}:`);
+      Object.entries(hourlyBreakdown).forEach(([hour, counts]) => {
+        console.log(`   ${hour} - ${counts.total} API calls (${counts.sent} sent, ${counts.failed} failed)`);
+      });
 
       const response = {
         date: targetDate,
-        totalApiCallsToday: totalApiCallsForDate,
-        totalApiCallsEver: totalApiCallsEver,
-        breakdown: {
-          sent: sentCount,
-          failed: failedCount,
-          pending: pendingCount,
-          total: allTravelers.length
+        todaysApiCalls: {
+          total: todaysTotalApiCalls,
+          sent: todaysSent,
+          failed: todaysFailed,
+          breakdown: hourlyBreakdown
         },
-        everBreakdown: {
-          sent: allSentEver,
-          failed: allFailedEver,
-          pending: pendingCount,
-          total: allTravelers.length
+        allTimeApiCalls: {
+          total: allTimeTotalApiCalls,
+          sent: allTimeSent,
+          failed: allTimeFailed
         },
-        note: `API calls for ${targetDate}: ${totalApiCallsForDate}. Total ever: ${totalApiCallsEver}`
+        statistics: {
+          totalTravelers: allTravelers.length,
+          processedTravelers: allTimeTotalApiCalls,
+          pendingTravelers: pendingCount,
+          processingRate: allTravelers.length > 0 ? Math.round((allTimeTotalApiCalls / allTravelers.length) * 100) : 0
+        },
+        verification: {
+          databaseCount: todaysTotalApiCalls,
+          note: `Your provider shows 78 API calls. Database shows ${todaysTotalApiCalls} for ${targetDate}.`,
+          possibleReasons: todaysTotalApiCalls !== 78 ? [
+            'Provider might count test calls or retries',
+            'Time zone differences between provider and database',
+            'Provider might include failed authentication attempts',
+            'Database only counts successful status changes'
+          ] : ['Counts match perfectly!']
+        },
+        recentCalls: recentApiCalls.map(t => ({
+          travelerName: t.travelerName,
+          phone: t.phone.substring(0, 6) + 'xxx',
+          status: t.whatsappStatus,
+          timestamp: t.updatedAt,
+          date: t.updatedAt ? new Date(t.updatedAt).toISOString().split('T')[0] : null
+        }))
       };
 
-      console.log(`🔍 Response object:`, JSON.stringify(response, null, 2));
+      console.log(`\n🎯 FINAL VERIFICATION:`);
+      console.log(`   Provider Dashboard: 78 API calls`);
+      console.log(`   Database Count Today: ${todaysTotalApiCalls} API calls`);
+      console.log(`   Database Count All Time: ${allTimeTotalApiCalls} API calls`);
+      console.log(`   Match Status: ${todaysTotalApiCalls === 78 ? '✅ PERFECT MATCH' : '⚠️ MISMATCH - See verification notes'}`);
+
       res.json(response);
 
     } catch (error) {
-      console.error('Error getting API stats:', error);
+      console.error('Error getting comprehensive API stats:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
