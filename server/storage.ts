@@ -34,7 +34,7 @@ import {
   type InsertTaxConfig,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, count, sql, ne, timestamp, text, integer } from "drizzle-orm";
+import { eq, and, desc, count, sql, ne } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import validator from "validator";
@@ -129,7 +129,7 @@ export interface IStorage {
   createUploadHistory(history: InsertUploadHistory): Promise<UploadHistory>;
   getUploadHistory(agencyId: number): Promise<UploadHistory[]>;
   getUploadHistoryByAgency(agencyId: number): Promise<UploadHistory[]>;
-  getTravelerDataByUpload(uploadId: number, agencyId?: number): Promise<TravelerData[]>;
+  getTravelerDataByUpload(uploadId: number): Promise<TravelerData[]>;
 
   // Stats operations
   getSystemStats(): Promise<{
@@ -586,7 +586,7 @@ export class DatabaseStorage implements IStorage {
     return await this.db.select().from(buses).where(eq(buses.agencyId, agencyId));
   }
 
-  async getAllBuses(): Promise<Bus[]>{
+  async getAllBuses(): Promise<Bus[]> {
     return await this.db.select().from(buses).orderBy(desc(buses.createdAt));
   }
 
@@ -725,7 +725,7 @@ export class DatabaseStorage implements IStorage {
     console.log(`🔓 BATCH LOCK RELEASED: ${lockKey}`);
   }
 
-  async resetProcessingStatus(uploadId: string): Promise<{ modifiedCount: number }> {
+  async resetProcessingStatus(uploadId: string): Promise<void> {
     console.log(`🔧 CLEANUP: Checking stuck 'processing' records in batch ${uploadId}`);
 
     let batchTravelers = [];
@@ -789,8 +789,6 @@ export class DatabaseStorage implements IStorage {
       console.log(`⏳ Found ${activeProcessingRecords.length} active 'processing' records (<10 min old)`);
       console.log(`📱 These will be skipped in current batch to avoid duplicates`);
     }
-
-    return { modifiedCount: stuckProcessingRecords.length };
   }
 
   async deleteTravelerData(id: number): Promise<void> {
@@ -865,33 +863,12 @@ export class DatabaseStorage implements IStorage {
     return updatedHistory;
   }
 
-  async getTravelerDataByUpload(uploadId: number, agencyId?: number): Promise<TravelerData[]> {
+  async getTravelerDataByUpload(uploadId: number): Promise<TravelerData[]> {
     // Query by uploadId, handling both new uploads with uploadId and legacy data
-    let query = this.db.select().from(travelerData);
-    
-    if (typeof uploadId === 'string' && uploadId.startsWith('legacy-')) {
-      // Handle legacy uploads
-      const [, busIdStr, dateStr] = uploadId.split('-');
-      const busId = parseInt(busIdStr);
-      const targetDate = new Date(dateStr).toDateString();
-      const allTravelers = await query;
-      return allTravelers.filter(t =>
-        t.busId === busId &&
-        !t.uploadId &&
-        new Date(t.createdAt || new Date()).toDateString() === targetDate &&
-        (!agencyId || t.agencyId === agencyId)
-      );
-    } else {
-      // Handle regular uploads
-      const uploadIdNum = typeof uploadId === 'string' ? parseInt(uploadId) : uploadId;
-      let conditions = [eq(travelerData.uploadId, uploadIdNum)];
-      
-      if (agencyId) {
-        conditions.push(eq(travelerData.agencyId, agencyId));
-      }
-      
-      return await query.where(and(...conditions));
-    }
+    return await this.db
+      .select()
+      .from(travelerData)
+      .where(eq(travelerData.uploadId, uploadId));
   }
 
   async getSystemStats(): Promise<{

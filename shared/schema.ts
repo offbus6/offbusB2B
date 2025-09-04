@@ -95,9 +95,6 @@ export const travelerData = pgTable("traveler_data", {
   whatsappStatus: varchar("whatsapp_status", { 
     enum: ["pending", "sent", "failed", "processing"] 
   }).notNull().default("pending"),
-  whatsappRetryCount: integer("whatsapp_retry_count").default(0).notNull(),
-  whatsappLastRetryAt: timestamp("whatsapp_last_retry_at"),
-  whatsappFirstAttemptAt: timestamp("whatsapp_first_attempt_at"),
   whatsappOptOut: boolean("whatsapp_opt_out").default(false),
   optOutDate: timestamp("opt_out_date"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -165,10 +162,6 @@ export const insertTravelerDataSchema = createInsertSchema(travelerData).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-}).extend({
-  whatsappRetryCount: z.number().default(0).optional(),
-  whatsappLastRetryAt: z.string().optional(),
-  whatsappFirstAttemptAt: z.string().optional(),
 });
 
 export const insertUploadHistorySchema = createInsertSchema(uploadHistory).omit({
