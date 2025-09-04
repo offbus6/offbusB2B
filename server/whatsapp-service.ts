@@ -106,9 +106,14 @@ export class WhatsappService {
 
   /**
    * Process pending messages that are ready to be sent
+   * WARNING: This method makes real API calls - only call explicitly
    */
   async processPendingMessages(): Promise<void> {
     try {
+      // SECURITY: Log all attempts to process messages
+      console.log('🚨 SECURITY ALERT: processPendingMessages() called - This makes real API calls');
+      console.trace('Call stack for processPendingMessages');
+      
       const config = await storage.getWhatsappConfig();
       if (!config || !config.isActive) {
         console.log('WhatsApp configuration not found or inactive');

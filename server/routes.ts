@@ -1182,16 +1182,9 @@ export function registerRoutes(app: Express) {
       // Save to database using upsert (update existing or create new)
       const upsertedData = await storage.upsertTravelerData(validatedData);
 
-      // Schedule WhatsApp messages for each uploaded traveler
-      try {
-        for (const traveler of upsertedData) {
-          await whatsappService.scheduleMessagesForTraveler(traveler.id);
-        }
-        console.log(`Scheduled WhatsApp messages for ${upsertedData.length} travelers`);
-      } catch (error) {
-        console.error('Error scheduling WhatsApp messages:', error);
-        // Continue with upload even if scheduling fails
-      }
+      // NOTE: WhatsApp scheduling removed to prevent unwanted API calls
+      // Users must explicitly use batch send functionality to send messages
+      console.log(`Uploaded ${upsertedData.length} travelers successfully - WhatsApp messages NOT automatically scheduled`);
 
       // Update upload history record status to completed
       await storage.updateUploadHistory(uploadRecord.id, {
