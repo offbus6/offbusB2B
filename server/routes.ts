@@ -3393,10 +3393,11 @@ Happy Travels!`;
       });
 
       console.log(`📊 BATCH ANALYSIS:`);
-      console.log(`   Total travelers: ${(batchTravelers || []).length}`);
-      console.log(`   Already processed: ${(batchTravelers || []).length - initialPendingTravelers.length}`);
+      console.log(`   Total travelers in batch: ${(batchTravelers || []).length}`);
+      console.log(`   Already processed (sent/failed): ${(batchTravelers || []).length - initialPendingTravelers.length}`);
       console.log(`   Duplicates skipped: ${initialPendingTravelers.length - pendingTravelers.length}`);
-      console.log(`   Will process: ${pendingTravelers.length}`);
+      console.log(`   Will process (API calls): ${pendingTravelers.length}`);
+      console.log(`   Expected remaining after batch: ${initialPendingTravelers.length - pendingTravelers.length}`);
 
       if (pendingTravelers.length === 0) {
         const alreadySentCount = (batchTravelers || []).filter(t => t && t.whatsappStatus === 'sent').length;
@@ -3619,17 +3620,40 @@ Happy Travels!`;
         console.log(`✅ API CALL COUNT CORRECT: Expected ${expectedApiCalls}, Made ${totalApiCalls}`);
       }
 
+      // CRITICAL: Verify the counts make sense
+      const totalBeforeProcessing = (batchTravelers || []).length;
+      const duplicatesSkipped = initialPendingTravelers.length - pendingTravelers.length;
+      const expectedRemaining = totalBeforeProcessing - sentCount - failedCount - alreadySentCount;
+      
+      console.log(`\n🔍 FINAL COUNT VERIFICATION:`);
+      console.log(`   Total travelers in batch: ${totalBeforeProcessing}`);
+      console.log(`   Already sent before batch: ${alreadySentCount}`);
+      console.log(`   Sent in this batch: ${sentCount}`);
+      console.log(`   Failed in this batch: ${failedCount}`);
+      console.log(`   Duplicates prevented: ${duplicatesSkipped}`);
+      console.log(`   Expected remaining: ${expectedRemaining}`);
+
       res.json({
         success: sentCount > 0,
-        message: `Batch complete: ${sentCount} sent, ${failedCount} failed${alreadySentCount > 0 ? `, ${alreadySentCount} already sent` : ''}`,
+        message: `Batch complete: ${sentCount} sent, ${failedCount} failed${alreadySentCount > 0 ? `, ${alreadySentCount} already sent` : ''}${duplicatesSkipped > 0 ? `, ${duplicatesSkipped} duplicates prevented` : ''}`,
         sentCount,
         failedCount,
         alreadySentCount,
-        totalInBatch: (batchTravelers || []).length,
+        duplicatesSkipped,
+        totalInBatch: totalBeforeProcessing,
         totalProcessed: pendingTravelers.length,
         totalApiCallsMade: totalApiCalls,
         expectedApiCalls: expectedApiCalls,
         apiCallsMatch: totalApiCalls === expectedApiCalls,
+        expectedRemaining: expectedRemaining,
+        countingDetails: {
+          beforeProcessing: totalBeforeProcessing,
+          alreadyProcessed: alreadySentCount,
+          newlySent: sentCount,
+          newlyFailed: failedCount,
+          duplicatesPrevented: duplicatesSkipped,
+          calculatedRemaining: expectedRemaining
+        },
         deliveryResults,
         processingDetails: {
           individualApiCalls: true,
@@ -3667,6 +3691,76 @@ Happy Travels!`;
     } catch (error) {
       console.error('WhatsApp debug error:', error);
       res.status(500).json({ error: 'Failed to run WhatsApp debugging' });
+    }
+  });
+
+  // Verify WhatsApp message counts for debugging
+  app.get("/api/agency/whatsapp/count-verification", requireAuth(['agency']), async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any).user;
+      if (!user || user.role !== 'agency') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const agencyId = user.agency?.id;
+      if (!agencyId) {
+        return res.status(404).json({ error: 'Agency not found' });
+      }
+
+      console.log(`\n🔍 COUNT VERIFICATION for Agency ${agencyId}`);
+
+      // Get ALL travelers for this agency
+      const allTravelers = await storage.getTravelerDataByAgency(agencyId);
+      
+      // Count by status
+      const sentTravelers = allTravelers.filter(t => t.whatsappStatus === 'sent');
+      const failedTravelers = allTravelers.filter(t => t.whatsappStatus === 'failed');
+      const pendingTravelers = allTravelers.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending');
+      const processingTravelers = allTravelers.filter(t => t.whatsappStatus === 'processing');
+
+      // Get unique phone numbers to check for duplicates
+      const phoneNumbers = allTravelers.map(t => t.phone);
+      const uniquePhones = [...new Set(phoneNumbers)];
+      const duplicatePhones = phoneNumbers.length - uniquePhones.length;
+
+      console.log(`Total travelers: ${allTravelers.length}`);
+      console.log(`Sent: ${sentTravelers.length}`);
+      console.log(`Failed: ${failedTravelers.length}`);
+      console.log(`Pending: ${pendingTravelers.length}`);
+      console.log(`Processing: ${processingTravelers.length}`);
+      console.log(`Duplicate phone numbers: ${duplicatePhones}`);
+
+      res.json({
+        success: true,
+        counts: {
+          total: allTravelers.length,
+          sent: sentTravelers.length,
+          failed: failedTravelers.length,
+          pending: pendingTravelers.length,
+          processing: processingTravelers.length,
+          uniquePhones: uniquePhones.length,
+          duplicatePhones: duplicatePhones
+        },
+        analysis: {
+          totalProcessed: sentTravelers.length + failedTravelers.length,
+          totalRemaining: pendingTravelers.length + processingTravelers.length,
+          verificationPassed: (sentTravelers.length + failedTravelers.length + pendingTravelers.length + processingTravelers.length) === allTravelers.length
+        },
+        explanation: {
+          sent: `${sentTravelers.length} travelers successfully received WhatsApp messages`,
+          failed: `${failedTravelers.length} travelers failed to receive messages (API errors)`,
+          pending: `${pendingTravelers.length} travelers have not been processed yet`,
+          processing: `${processingTravelers.length} travelers are currently being processed`,
+          duplicates: duplicatePhones > 0 ? `${duplicatePhones} duplicate phone numbers detected in database` : 'No duplicate phone numbers found'
+        }
+      });
+
+    } catch (error) {
+      console.error('Count verification error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to verify counts' 
+      });
     }
   });
 
