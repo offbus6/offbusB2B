@@ -3724,7 +3724,7 @@ Happy Travels!`;
           await storage.updateTravelerData(traveler.id, updateData);
 
           // Get agency data
-          const agency = await storage.getAgencyById(user.agency.id);
+          const agency = await storage.getAgencyById(agencyId);
           if (!agency) {
             throw new Error("Agency not found");
           }
