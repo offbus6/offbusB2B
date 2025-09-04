@@ -213,13 +213,20 @@ export default function ApiDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={(apiStats?.todaysApiCalls?.failed || 0) > 0 ? "border-red-200 bg-red-50" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Failed Attempts</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              Failed Attempts
+              {(apiStats?.todaysApiCalls?.failed || 0) > 0 && (
+                <Badge variant="destructive" className="text-xs px-2 py-0.5">
+                  NEEDS RETRY
+                </Badge>
+              )}
+            </CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+            <div className={`text-2xl font-bold ${(apiStats?.todaysApiCalls?.failed || 0) > 0 ? 'text-red-700' : 'text-red-600'}`}>
               {apiStats?.todaysApiCalls?.failed || 0}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -228,6 +235,11 @@ export default function ApiDashboard() {
             <div className="text-lg font-bold text-red-500 mt-1">
               Total: {apiStats?.allTimeApiCalls?.failed || 0}
             </div>
+            {(apiStats?.todaysApiCalls?.failed || 0) > 0 && (
+              <p className="text-xs text-red-700 mt-2 font-medium">
+                ⚠️ Use "Retry Failed" button in WhatsApp Scheduler
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -291,7 +303,10 @@ export default function ApiDashboard() {
                           <span className="font-medium text-green-600">{batch.sent}</span>
                         </td>
                         <td className="text-center p-3">
-                          <span className="font-medium text-red-600">{batch.failed}</span>
+                          <span className={`font-medium ${batch.failed > 0 ? 'text-red-700 bg-red-100 px-2 py-1 rounded-md font-bold' : 'text-red-600'}`}>
+                            {batch.failed}
+                            {batch.failed > 0 && " ⚠️"}
+                          </span>
                         </td>
                         <td className="text-center p-3">
                           <Badge className={getStatusColor(batch.status)}>

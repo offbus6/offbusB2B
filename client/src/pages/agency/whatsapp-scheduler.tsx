@@ -6,7 +6,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, MapPin, Gift, Send, CheckCircle, Clock, RefreshCw, MessageSquare, AlertTriangle } from "lucide-react";
+import { Calendar, Users, MapPin, Gift, Send, CheckCircle, Clock, RefreshCw, MessageSquare, AlertTriangle, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 
 interface UploadBatch {
@@ -39,6 +39,7 @@ export default function WhatsAppScheduler() {
 
   // Track loading state for each batch separately
   const [loadingBatches, setLoadingBatches] = useState<Set<string>>(new Set());
+  const [retryingBatches, setRetryingBatches] = useState<Set<string>>(new Set());
 
   // Send WhatsApp to all travelers in a batch
   const sendWhatsAppBatchMutation = useMutation({
@@ -85,6 +86,43 @@ export default function WhatsAppScheduler() {
     },
   });
 
+  // Retry failed WhatsApp messages in a batch
+  const retryFailedMutation = useMutation({
+    mutationFn: async (uploadId: string) => {
+      setRetryingBatches(prev => new Set(prev).add(uploadId));
+      return await apiRequest(`/api/agency/whatsapp/retry-failed/${uploadId}`, {
+        method: 'POST'
+      });
+    },
+    onSuccess: (data: any, uploadId: string) => {
+      setRetryingBatches(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(uploadId);
+        return newSet;
+      });
+      
+      toast({
+        title: "Retry Complete",
+        description: `Retry complete: ${data.retriedCount} successful, ${data.stillFailedCount} still failed`,
+        variant: data.retriedCount > 0 ? "default" : "destructive",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/agency/upload-batches"] });
+    },
+    onError: (error: any, uploadId: string) => {
+      setRetryingBatches(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(uploadId);
+        return newSet;
+      });
+      
+      toast({
+        title: "Retry Error", 
+        description: error.message || "Failed to retry failed messages",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Verify WhatsApp template
   const verifyTemplateMutation = useMutation({
     mutationFn: async () => {
@@ -110,6 +148,10 @@ export default function WhatsAppScheduler() {
 
   const handleSendBatch = (uploadId: string) => {
     sendWhatsAppBatchMutation.mutate(uploadId);
+  };
+
+  const handleRetryFailed = (uploadId: string) => {
+    retryFailedMutation.mutate(uploadId);
   };
 
   const verifyTemplate = () => {
@@ -297,12 +339,28 @@ export default function WhatsAppScheduler() {
                   </div>
                 )}
 
-                {/* Action Button */}
-                <div className="flex justify-end pt-4 border-t">
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  {/* Retry Failed Button - Show if there are failed messages */}
+                  {(batch.failedCount || 0) > 0 && (
+                    <Button
+                      onClick={() => handleRetryFailed(batch.uploadId)}
+                      disabled={retryingBatches.has(batch.uploadId)}
+                      variant="outline"
+                      className="flex items-center gap-2 text-orange-600 border-orange-200 hover:bg-orange-50"
+                      data-testid={`button-retry-failed-${batch.uploadId}`}
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      {retryingBatches.has(batch.uploadId) ? 'Retrying...' : `Retry Failed (${batch.failedCount})`}
+                    </Button>
+                  )}
+                  
+                  {/* Main Send Button */}
                   <Button
                     onClick={() => handleSendBatch(batch.uploadId)}
                     disabled={loadingBatches.has(batch.uploadId) || batch.whatsappStatus === 'sent'}
                     className="flex items-center gap-2"
+                    data-testid={`button-send-whatsapp-${batch.uploadId}`}
                   >
                     <Send className="h-4 w-4" />
                     {loadingBatches.has(batch.uploadId) ? 'Sending...' : 

@@ -3868,6 +3868,176 @@ Happy Travels!`;
     }
   });
 
+  // Retry failed WhatsApp messages for a specific batch
+  app.post('/api/agency/whatsapp/retry-failed/:uploadId', requireAuth(['agency']), async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any).user;
+      if (!user || user.role !== 'agency') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const { uploadId } = req.params;
+      const agencyId = user.agency?.id;
+
+      console.log(`\n🔄 RETRY FAILED REQUEST - Upload ID: ${uploadId}, Agency: ${agencyId}`);
+
+      if (!agencyId) {
+        return res.status(404).json({ error: 'Agency not found' });
+      }
+
+      // Get batch travelers
+      let batchTravelers = [];
+      if (uploadId.startsWith('legacy-')) {
+        const [, busIdStr, dateStr] = uploadId.split('-');
+        const busId = parseInt(busIdStr);
+        const targetDate = new Date(dateStr).toDateString();
+        const allTravelers = await storage.getTravelerDataByAgency(agencyId);
+        batchTravelers = allTravelers.filter(t => 
+          t.busId === busId && 
+          !t.uploadId && 
+          new Date(t.createdAt || new Date()).toDateString() === targetDate
+        );
+      } else {
+        const uploadIdNum = parseInt(uploadId);
+        if (isNaN(uploadIdNum)) {
+          return res.status(400).json({ error: 'Invalid upload ID' });
+        }
+        batchTravelers = await storage.getTravelerDataByUpload(uploadIdNum);
+      }
+
+      // Filter to only failed travelers
+      const failedTravelers = (batchTravelers || []).filter(t => 
+        t && t.whatsappStatus === 'failed'
+      );
+
+      console.log(`📊 RETRY ANALYSIS:`);
+      console.log(`   Total travelers in batch: ${(batchTravelers || []).length}`);
+      console.log(`   Failed travelers to retry: ${failedTravelers.length}`);
+
+      if (failedTravelers.length === 0) {
+        return res.json({ 
+          success: true, 
+          message: 'No failed travelers to retry',
+          retriedCount: 0,
+          totalFailedCount: 0
+        });
+      }
+
+      // Get agency data
+      const agency = await storage.getAgencyById(user.agency.id);
+      if (!agency) {
+        return res.status(404).json({ error: 'Agency not found' });
+      }
+
+      console.log(`🔄 RETRYING ${failedTravelers.length} FAILED TRAVELERS`);
+
+      let retriedCount = 0;
+      let stillFailedCount = 0;
+
+      // Process each failed traveler
+      for (let i = 0; i < failedTravelers.length; i++) {
+        const traveler = failedTravelers[i];
+
+        try {
+          // Clean phone number
+          let cleanPhone = traveler.phone.replace(/\D/g, '');
+          if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+            cleanPhone = cleanPhone.substring(2);
+          } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
+            cleanPhone = cleanPhone.substring(1);
+          }
+
+          // Validate phone format
+          if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+            console.error(`❌ Invalid phone for retry: ${cleanPhone}`);
+            stillFailedCount++;
+            continue;
+          }
+
+          // Mark as processing BEFORE API call
+          await storage.updateTravelerData(traveler.id, { whatsappStatus: 'processing' });
+
+          // Get bus and URL info
+          const bus = await storage.getBus(traveler.busId);
+          const bookingUrl = agency.bookingWebsite || agency.website || 'https://testtravelagency.com';
+          const imageUrl = agency.whatsappImageUrl || 'https://i.ibb.co/9w4vXVY/Whats-App-Image-2022-07-26-at-2-57-21-PM.jpg';
+          const template = agency.whatsappTemplate || 'eddygoo_2807';
+
+          // Build API URL
+          const apiUrl = 'https://bhashsms.com/api/sendmsg.php';
+          const params = [
+            `user=eddygoo1`,
+            `pass=123456`,
+            `sender=BUZWAP`,
+            `phone=${cleanPhone}`,
+            `text=${template}`,
+            `priority=wa`,
+            `stype=normal`,
+            `Params=${traveler.travelerName},${agency.name},${traveler.couponCode || 'SAVE20'},${bookingUrl}`,
+            `htype=image`,
+            `url=${imageUrl}`
+          ].join('&');
+          
+          const fullUrl = `${apiUrl}?${params}`;
+
+          console.log(`🔄 RETRY ${i + 1}/${failedTravelers.length}: ${traveler.travelerName} (+91${cleanPhone})`);
+
+          // Make API call
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 15000);
+          
+          const response = await fetch(fullUrl, {
+            method: 'GET',
+            signal: controller.signal,
+            headers: { 'User-Agent': 'TravelFlow-WhatsApp/1.0' }
+          });
+
+          clearTimeout(timeout);
+          const responseText = await response.text().then(t => t.trim());
+
+          // Check if successful
+          const isSuccess = /^\d+$/.test(responseText);
+          
+          // Update status immediately after API call
+          const newStatus = isSuccess ? 'sent' : 'failed';
+          await storage.updateTravelerData(traveler.id, { whatsappStatus: newStatus });
+
+          if (isSuccess) {
+            console.log(`✅ RETRY SUCCESS: ${traveler.travelerName} (+91${cleanPhone})`);
+            retriedCount++;
+          } else {
+            console.log(`❌ RETRY FAILED: ${traveler.travelerName} (+91${cleanPhone}): ${responseText}`);
+            stillFailedCount++;
+          }
+
+          // 1 second delay between calls
+          if (i < failedTravelers.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+
+        } catch (error) {
+          console.error(`❌ Exception during retry for ${traveler.travelerName}:`, error);
+          await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
+          stillFailedCount++;
+        }
+      }
+
+      console.log(`\n📊 RETRY COMPLETE - Successfully retried: ${retriedCount}, Still failed: ${stillFailedCount}`);
+
+      res.json({
+        success: retriedCount > 0,
+        message: `Retry complete: ${retriedCount} successful, ${stillFailedCount} still failed`,
+        retriedCount,
+        stillFailedCount,
+        totalAttempted: failedTravelers.length
+      });
+
+    } catch (error) {
+      console.error('Retry failed processing error:', error);
+      res.status(500).json({ error: 'Failed to retry failed WhatsApp messages' });
+    }
+  });
+
   // WhatsApp delivery debugging route
   app.post("/api/debug/whatsapp-delivery", async (req: Request, res: Response) => {
     try {
