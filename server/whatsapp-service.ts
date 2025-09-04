@@ -212,14 +212,23 @@ export class WhatsappService {
    * Send WhatsApp message using exact working BhashSMS API format with image support
    */
   private async sendWhatsappMessage(phoneNumber: string, message: string, config: any, imageUrl?: string): Promise<boolean> {
+    const requestId = `whatsapp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     try {
+      // CRITICAL: Log EVERY API call attempt for audit trail
+      console.log(`🚨 API CALL INITIATED - Request ID: ${requestId}`);
+      console.log(`   Phone: ${phoneNumber}`);
+      console.log(`   Timestamp: ${new Date().toISOString()}`);
+      console.log(`   Stack trace:`, new Error().stack);
+
       // Security: Validate phone number format
       if (!phoneNumber || !/^\d{10,15}$/.test(phoneNumber.replace(/\D/g, ''))) {
+        console.log(`❌ API CALL FAILED - Invalid phone format - Request ID: ${requestId}`);
         securityMonitor.logSecurityEvent({
           type: 'INVALID_INPUT',
           ip: 'system',
           endpoint: '/whatsapp/send',
-          details: { phoneNumber: 'invalid_format' },
+          details: { phoneNumber: 'invalid_format', requestId },
           severity: 'MEDIUM'
         });
         throw new Error('Invalid phone number format');
@@ -227,11 +236,12 @@ export class WhatsappService {
 
       // Security: Validate message content
       if (!message || message.length > 1000) {
+        console.log(`❌ API CALL FAILED - Invalid message - Request ID: ${requestId}`);
         securityMonitor.logSecurityEvent({
           type: 'INVALID_INPUT',
           ip: 'system',
           endpoint: '/whatsapp/send',
-          details: { messageLength: message?.length || 0 },
+          details: { messageLength: message?.length || 0, requestId },
           severity: 'MEDIUM'
         });
         throw new Error('Invalid message content');
@@ -262,12 +272,14 @@ export class WhatsappService {
         params.append('Params', '54,877,966,52'); // Default fallback
       }
 
-      console.log(`Sending WhatsApp message to ${cleanPhone} via BhashSMS API`);
-      console.log(`API URL: ${apiUrl}?${params.toString()}`);
+      console.log(`📞 MAKING ACTUAL API CALL - Request ID: ${requestId}`);
+      console.log(`   Clean Phone: ${cleanPhone}`);
+      console.log(`   API URL: ${apiUrl}?${params.toString()}`);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
+      // CRITICAL: This is the actual billable API call
       const response = await fetch(`${apiUrl}?${params}`, {
         method: 'GET',
         headers: {
@@ -277,51 +289,65 @@ export class WhatsappService {
       });
 
       clearTimeout(timeoutId);
+      const result = await response.text();
+
+      // CRITICAL: Log API response for audit
+      console.log(`📊 API CALL COMPLETED - Request ID: ${requestId}`);
+      console.log(`   Response Status: ${response.status}`);
+      console.log(`   Response Body: "${result}"`);
+      console.log(`   Success: ${result.startsWith('S.')}`);
+      console.log(`   Timestamp: ${new Date().toISOString()}`);
+
+      // Log to security monitor for audit trail
+      securityMonitor.logSecurityEvent({
+        type: 'AUTH_FAILURE', // Using as general audit event
+        ip: 'system',
+        endpoint: '/whatsapp/send',
+        details: { 
+          requestId,
+          phoneNumber: cleanPhone,
+          apiResponse: result.substring(0, 50),
+          success: result.startsWith('S.'),
+          httpStatus: response.status,
+          hasImage: !!imageUrl,
+          timestamp: new Date().toISOString()
+        },
+        severity: 'LOW'
+      });
 
       if (!response.ok) {
+        console.log(`❌ HTTP ERROR - Request ID: ${requestId} - Status: ${response.status}`);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const result = await response.text();
-      console.log(`BhashSMS API Response: ${result}`);
-
       // Check if message was sent successfully
       if (result.startsWith('S.')) {
-        console.log(`WhatsApp message with image sent successfully to ${cleanPhone}. ID: ${result}`);
+        console.log(`✅ API CALL SUCCESS - Request ID: ${requestId} - Message ID: ${result}`);
         return true;
       } else {
-        // Log failed attempts for monitoring
-        securityMonitor.logSecurityEvent({
-          type: 'INVALID_INPUT',
-          ip: 'system',
-          endpoint: '/whatsapp/send',
-          details: { 
-            phoneNumber: cleanPhone,
-            apiResponse: result,
-            provider: 'bhashsms',
-            hasImage: !!imageUrl
-          },
-          severity: 'MEDIUM'
-        });
-
-        console.error(`Failed to send WhatsApp message. Response: ${result}`);
+        console.log(`❌ API CALL FAILED - Request ID: ${requestId} - Provider Response: ${result}`);
         return false;
       }
     } catch (error) {
-      // Security: Log failed API calls
+      // CRITICAL: Log failed API calls with full details
+      console.log(`🚨 API CALL EXCEPTION - Request ID: ${requestId}`);
+      console.log(`   Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.log(`   Timestamp: ${new Date().toISOString()}`);
+
       securityMonitor.logSecurityEvent({
         type: 'INVALID_INPUT',
         ip: 'system',
         endpoint: '/whatsapp/send',
         details: { 
+          requestId,
           error: error instanceof Error ? error.message : 'Unknown error',
-          phoneNumber: phoneNumber?.substring(0, 5) + 'xxxxx', // Partially mask phone
-          hasImage: !!imageUrl
+          phoneNumber: phoneNumber?.substring(0, 5) + 'xxxxx',
+          hasImage: !!imageUrl,
+          timestamp: new Date().toISOString()
         },
         severity: 'HIGH'
       });
 
-      console.error('Error sending WhatsApp message:', error);
       return false;
     }
   }
