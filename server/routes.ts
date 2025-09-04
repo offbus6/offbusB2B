@@ -3821,7 +3821,7 @@ Happy Travels!`;
           smartProcessing: 'Fresh numbers processed first, failed numbers retried last',
           maxBatchSize: MAX_BATCH_SIZE,
           delayBetweenCalls: '1 second',
-          templateUsed: agency.whatsappTemplate || 'eddygoo_2807',
+          templateUsed: 'eddygoo_2807',
           processingOrder: {
             freshNumbersFirst: travelersToBatch.filter(t => t.whatsappStatus !== 'failed').length,
             failedNumbersLast: travelersToBatch.filter(t => t.whatsappStatus === 'failed').length
@@ -3841,7 +3841,13 @@ Happy Travels!`;
       console.error('Batch processing error:', error);
       // CRITICAL: Always release lock on error
       try {
-        await storage.releaseBatchLock(batchLockKey);
+        const { uploadId } = req.params;
+        const user = (req.session as any).user;
+        const agencyId = user.agency?.id;
+        const lockKey = `batch_${uploadId}_${agencyId}`;
+        if (agencyId) {
+          await storage.releaseBatchLock(lockKey);
+        }
       } catch (lockError) {
         console.error('Error releasing batch lock:', lockError);
       }
