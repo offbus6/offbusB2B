@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -36,14 +37,24 @@ export default function WhatsAppScheduler() {
     staleTime: 5000, // Consider data stale after 5 seconds
   });
 
+  // Track loading state for each batch separately
+  const [loadingBatches, setLoadingBatches] = useState<Set<string>>(new Set());
+
   // Send WhatsApp to all travelers in a batch
   const sendWhatsAppBatchMutation = useMutation({
     mutationFn: async (uploadId: string) => {
+      setLoadingBatches(prev => new Set(prev).add(uploadId));
       return await apiRequest(`/api/agency/whatsapp/send-batch/${uploadId}`, {
         method: 'POST'
       });
     },
     onSuccess: (data: any, uploadId: string) => {
+      setLoadingBatches(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(uploadId);
+        return newSet;
+      });
+      
       if (data.limitReached) {
         toast({
           title: "Daily Message Limit Reached",
@@ -59,7 +70,13 @@ export default function WhatsAppScheduler() {
       }
       queryClient.invalidateQueries({ queryKey: ["/api/agency/upload-batches"] });
     },
-    onError: (error: any) => {
+    onError: (error: any, uploadId: string) => {
+      setLoadingBatches(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(uploadId);
+        return newSet;
+      });
+      
       toast({
         title: "Error", 
         description: error.message || "Failed to send WhatsApp messages",
@@ -284,11 +301,11 @@ export default function WhatsAppScheduler() {
                 <div className="flex justify-end pt-4 border-t">
                   <Button
                     onClick={() => handleSendBatch(batch.uploadId)}
-                    disabled={sendWhatsAppBatchMutation.isPending || batch.whatsappStatus === 'sent'}
+                    disabled={loadingBatches.has(batch.uploadId) || batch.whatsappStatus === 'sent'}
                     className="flex items-center gap-2"
                   >
                     <Send className="h-4 w-4" />
-                    {sendWhatsAppBatchMutation.isPending ? 'Sending...' : 
+                    {loadingBatches.has(batch.uploadId) ? 'Sending...' : 
                      batch.whatsappStatus === 'sent' ? 'All Sent' :
                      batch.whatsappStatus === 'partial' ? `Resume Batch (${batch.pendingCount || (batch.travelerCount - batch.sentCount)} remaining)` :
                      'Send WhatsApp to All'}
