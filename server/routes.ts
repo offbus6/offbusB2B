@@ -2199,193 +2199,101 @@ Happy Travels!`;
       await storage.updateAgency(agencyId, updateData);
 
 
-  // Detailed API call audit for provider verification with system-wide tracking
-  app.get('/api/agency/whatsapp/audit-calls', requireAuth(['agency']), async (req: Request, res: Response) => {
+  // Comprehensive API Call Logging System
+  app.post('/api/agency/whatsapp/log-api-call', requireAuth(['agency']), async (req: Request, res: Response) => {
+    try {
+      const { phoneNumber, requestId, apiResponse, success, timestamp } = req.body;
+      
+      // Log every API call to separate tracking table
+      await storage.logApiCall({
+        agencyId: (req.session as any).user.agency.id,
+        phoneNumber,
+        requestId,
+        apiResponse,
+        success,
+        timestamp: timestamp || new Date(),
+        endpoint: 'whatsapp/send'
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error logging API call:', error);
+      res.status(500).json({ success: false });
+    }
+  });
+
+  // Get exact API call count with comprehensive tracking
+  app.get('/api/agency/whatsapp/exact-api-count', requireAuth(['agency']), async (req: Request, res: Response) => {
     try {
       const user = (req.session as any).user;
-      if (!user || user.role !== 'agency') {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-
       const agencyId = user.agency?.id;
-      if (!agencyId) {
-        return res.status(404).json({ error: 'Agency not found' });
-      }
-
-      // Get date parameter or default to today
       const targetDate = (req.query.date as string) || new Date().toISOString().split('T')[0];
+
+      console.log(`\n🎯 EXACT API COUNT TRACKING for ${targetDate}:`);
+
+      // Method 1: Get from dedicated API call log
+      const apiCallLogs = await storage.getApiCallsForDate(agencyId, targetDate);
+      
+      // Method 2: Get from traveler status changes
       const allTravelers = await storage.getTravelerDataByAgency(agencyId);
-      
-      console.log(`\n🔍 COMPREHENSIVE API AUDIT for agency ${agencyId}, date ${targetDate}:`);
-      
-      // Get all travelers with API calls (any status change indicates API call)
-      const apiCallTravelers = allTravelers.filter(t => 
-        t.whatsappStatus === 'sent' || t.whatsappStatus === 'failed' || t.whatsappStatus === 'processing'
+      const statusChangeTravelers = allTravelers.filter(t => {
+        if (!t.updatedAt || (t.whatsappStatus !== 'sent' && t.whatsappStatus !== 'failed')) return false;
+        const updateDate = new Date(t.updatedAt).toISOString().split('T')[0];
+        return updateDate === targetDate;
+      });
+
+      // Method 3: Get from security monitor logs
+      const securityEvents = securityMonitor.getRecentEvents(24).filter(event => {
+        const eventDate = event.timestamp.toISOString().split('T')[0];
+        return eventDate === targetDate && 
+               event.endpoint === '/whatsapp/send' && 
+               event.details?.success !== undefined;
+      });
+
+      // CRITICAL: Count actual API calls made
+      const exactApiCalls = Math.max(
+        apiCallLogs.length,
+        statusChangeTravelers.length,
+        securityEvents.length
       );
-      
-      // Filter by specific date if provided
-      let filteredTravelers = apiCallTravelers;
-      if (targetDate) {
-        filteredTravelers = apiCallTravelers.filter(t => {
-          if (!t.updatedAt) return false;
-          const apiCallDate = new Date(t.updatedAt).toISOString().split('T')[0];
-          return apiCallDate === targetDate;
-        });
-      }
-      
-      // Sort by timestamp for chronological order
-      filteredTravelers.sort((a, b) => 
-        new Date(a.updatedAt || 0).getTime() - new Date(b.updatedAt || 0).getTime()
-      );
-      
-      // Create detailed audit log with enhanced tracking
-      const auditLog = filteredTravelers.map((traveler, index) => {
-        const timestamp = traveler.updatedAt ? new Date(traveler.updatedAt) : null;
-        return {
-          sequence: index + 1,
-          travelerName: traveler.travelerName,
-          phone: traveler.phone,
-          status: traveler.whatsappStatus,
-          apiCallTime: timestamp ? timestamp.toISOString() : null,
-          localTime: timestamp ? timestamp.toLocaleString() : null,
-          date: timestamp ? timestamp.toISOString().split('T')[0] : null,
-          uploadId: traveler.uploadId || 'legacy',
-          travelerId: traveler.id,
-          createdAt: traveler.createdAt,
-          timeSinceCreation: timestamp ? Math.round((timestamp.getTime() - new Date(traveler.createdAt || timestamp).getTime()) / 1000 / 60) : null
-        };
-      });
-      
-      // Advanced duplicate detection
-      const phoneCount = new Map();
-      const duplicateDetails = [];
-      
-      auditLog.forEach(call => {
-        const normalizedPhone = call.phone.replace(/\D/g, '');
-        if (!phoneCount.has(normalizedPhone)) {
-          phoneCount.set(normalizedPhone, []);
-        }
-        phoneCount.get(normalizedPhone).push(call);
-      });
-      
-      // Find duplicates
-      phoneCount.forEach((calls, phone) => {
-        if (calls.length > 1) {
-          duplicateDetails.push({
-            phone,
-            normalizedPhone: phone,
-            callCount: calls.length,
-            calls: calls,
-            timeDifference: calls.length > 1 ? 
-              (new Date(calls[calls.length - 1].apiCallTime || 0).getTime() - 
-               new Date(calls[0].apiCallTime || 0).getTime()) / 1000 / 60 : 0
-          });
-        }
-      });
-      
-      // Calculate potential missing calls
-      const potentialMissingCalls = 78 - filteredTravelers.length;
-      const possibleSources = [];
-      
-      if (potentialMissingCalls > 0) {
-        possibleSources.push({
-          source: 'Test API Calls',
-          description: 'Manual testing or debug calls not tracked in traveler data',
-          estimatedCalls: Math.min(potentialMissingCalls, 10)
-        });
-        
-        if (duplicateDetails.length > 0) {
-          const duplicateCalls = duplicateDetails.reduce((sum, dup) => sum + (dup.callCount - 1), 0);
-          possibleSources.push({
-            source: 'Duplicate Prevention Failures',
-            description: 'Same phone number called multiple times due to race conditions',
-            estimatedCalls: duplicateCalls
-          });
-        }
-        
-        possibleSources.push({
-          source: 'Failed Authentication/Retry',
-          description: 'BhashSMS counts failed auth attempts or network retries',
-          estimatedCalls: Math.min(potentialMissingCalls, 5)
-        });
-        
-        possibleSources.push({
-          source: 'System Health Checks',
-          description: 'Balance checks or connectivity tests',
-          estimatedCalls: Math.min(potentialMissingCalls, 3)
-        });
-      }
-      
-      console.log(`📞 COMPREHENSIVE AUDIT SUMMARY for ${targetDate}:`);
-      console.log(`   Database API calls: ${filteredTravelers.length}`);
-      console.log(`   Provider reports: 78 calls`);
-      console.log(`   Difference: ${potentialMissingCalls} calls unaccounted for`);
-      console.log(`   Successful (sent): ${filteredTravelers.filter(t => t.whatsappStatus === 'sent').length}`);
-      console.log(`   Failed (failed): ${filteredTravelers.filter(t => t.whatsappStatus === 'failed').length}`);
-      console.log(`   Processing: ${filteredTravelers.filter(t => t.whatsappStatus === 'processing').length}`);
-      
-      if (duplicateDetails.length > 0) {
-        console.log(`\n⚠️ DUPLICATE PHONE ANALYSIS:`);
-        duplicateDetails.forEach(dup => {
-          console.log(`   ${dup.phone}: ${dup.callCount} calls (${dup.timeDifference.toFixed(1)}min apart)`);
-        });
-      }
+
+      console.log(`📊 EXACT COUNT VERIFICATION:`);
+      console.log(`   API Call Logs: ${apiCallLogs.length}`);
+      console.log(`   Status Changes: ${statusChangeTravelers.length}`);
+      console.log(`   Security Events: ${securityEvents.length}`);
+      console.log(`   EXACT API CALLS: ${exactApiCalls}`);
 
       res.json({
         success: true,
-        audit: {
-          date: targetDate,
-          summary: {
-            databaseApiCalls: filteredTravelers.length,
-            providerReported: 78,
-            difference: potentialMissingCalls,
-            accountedFor: filteredTravelers.length,
-            unaccountedFor: potentialMissingCalls
-          },
-          breakdown: {
-            sent: filteredTravelers.filter(t => t.whatsappStatus === 'sent').length,
-            failed: filteredTravelers.filter(t => t.whatsappStatus === 'failed').length,
-            processing: filteredTravelers.filter(t => t.whatsappStatus === 'processing').length
-          },
-          auditLog,
-          duplicateAnalysis: {
-            found: duplicateDetails.length > 0,
-            count: duplicateDetails.length,
-            details: duplicateDetails,
-            totalDuplicateCalls: duplicateDetails.reduce((sum, dup) => sum + (dup.callCount - 1), 0)
-          },
-          possibleSources,
-          providerComparison: {
-            providerCount: 78,
-            databaseCount: filteredTravelers.length,
-            difference: potentialMissingCalls,
-            match: filteredTravelers.length === 78,
-            discrepancyAnalysis: potentialMissingCalls === 0 ? 
-              'Perfect match - all calls accounted for' : 
-              `${potentialMissingCalls} calls missing from database tracking`
-          }
+        date: targetDate,
+        exactApiCalls,
+        verificationMethods: {
+          apiCallLogs: apiCallLogs.length,
+          statusChanges: statusChangeTravelers.length,
+          securityEvents: securityEvents.length
         },
-        recommendations: [
-          potentialMissingCalls > 0 ? 'Investigate test/debug calls made outside main flow' : 'Counts match perfectly!',
-          'Check BhashSMS logs for exact timestamps and call details',
-          'Implement API call logging for all requests (including failures)',
-          'Add request ID tracking to match provider logs with database records',
-          'Set up alerts for API count discrepancies > 5 calls'
-        ],
-        nextSteps: [
-          'Contact BhashSMS support for detailed call logs with timestamps',
-          'Compare exact timestamps between systems',
-          'Implement comprehensive API request logging',
-          'Add provider webhook integration for real-time tracking'
-        ]
+        match: exactApiCalls === 78,
+        difference: 78 - exactApiCalls,
+        details: {
+          apiCallLogs: apiCallLogs.map(log => ({
+            phoneNumber: log.phoneNumber?.substring(0, 6) + 'xxx',
+            timestamp: log.timestamp,
+            success: log.success,
+            requestId: log.requestId
+          })),
+          statusChanges: statusChangeTravelers.map(t => ({
+            phoneNumber: t.phone?.substring(0, 6) + 'xxx',
+            status: t.whatsappStatus,
+            updatedAt: t.updatedAt
+          }))
+        }
       });
 
     } catch (error) {
-      console.error('Error getting comprehensive API audit:', error);
+      console.error('Error getting exact API count:', error);
       res.status(500).json({ 
         success: false, 
-        error: 'Failed to generate comprehensive API audit',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Failed to get exact API count'
       });
     }
   });
@@ -3757,11 +3665,15 @@ Happy Travels!`;
           console.log(`   Phone: ${cleanPhone}`);
           console.log(`   Status: ${currentStatus?.whatsappStatus || 'unknown'}`);
 
+          // Generate unique request ID for tracking
+          const requestId = `batch_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`;
+
           // Make API call with strict counting
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 15000);
 
-          console.log(`🌐 MAKING API CALL ${totalApiCalls + 1} to ${cleanPhone}`);
+          console.log(`🌐 MAKING API CALL ${totalApiCalls + 1} to ${cleanPhone} - Request ID: ${requestId}`);
+          const callStartTime = new Date();
           
           const response = await fetch(fullUrl, {
             method: 'GET',
@@ -3773,6 +3685,23 @@ Happy Travels!`;
           console.log(`📊 API CALL COUNTER: ${totalApiCalls} (Expected max: ${pendingTravelers.length})`);
           clearTimeout(timeout);
           const responseText = await response.text().then(t => t.trim());
+          const callEndTime = new Date();
+
+          // CRITICAL: Log every API call for exact tracking
+          try {
+            await storage.logApiCall({
+              agencyId: user.agency.id,
+              phoneNumber: cleanPhone,
+              requestId,
+              apiResponse: responseText.substring(0, 100),
+              success: response.ok && responseText.startsWith('S.') && responseText.length > 2,
+              timestamp: callEndTime,
+              endpoint: 'batch/whatsapp/send'
+            });
+            console.log(`✅ API CALL LOGGED: ${requestId}`);
+          } catch (logError) {
+            console.error(`❌ FAILED TO LOG API CALL: ${requestId}`, logError);
+          }
 
           // Update status immediately
           const isSuccess = response.ok && 

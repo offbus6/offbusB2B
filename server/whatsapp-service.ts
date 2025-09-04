@@ -290,13 +290,30 @@ export class WhatsappService {
 
       clearTimeout(timeoutId);
       const result = await response.text();
+      const callTimestamp = new Date();
+      const isSuccess = result.startsWith('S.');
 
       // CRITICAL: Log API response for audit
       console.log(`📊 API CALL COMPLETED - Request ID: ${requestId}`);
       console.log(`   Response Status: ${response.status}`);
       console.log(`   Response Body: "${result}"`);
-      console.log(`   Success: ${result.startsWith('S.')}`);
-      console.log(`   Timestamp: ${new Date().toISOString()}`);
+      console.log(`   Success: ${isSuccess}`);
+      console.log(`   Timestamp: ${callTimestamp.toISOString()}`);
+
+      // CRITICAL: Log to database for exact tracking
+      try {
+        await storage.logApiCall({
+          agencyId: 0, // Will be set by calling function if available
+          phoneNumber: cleanPhone,
+          requestId,
+          apiResponse: result.substring(0, 100),
+          success: isSuccess,
+          timestamp: callTimestamp,
+          endpoint: '/whatsapp/send'
+        });
+      } catch (logError) {
+        console.error(`❌ FAILED TO LOG API CALL: ${requestId}`, logError);
+      }
 
       // Log to security monitor for audit trail
       securityMonitor.logSecurityEvent({
@@ -307,10 +324,10 @@ export class WhatsappService {
           requestId,
           phoneNumber: cleanPhone,
           apiResponse: result.substring(0, 50),
-          success: result.startsWith('S.'),
+          success: isSuccess,
           httpStatus: response.status,
           hasImage: !!imageUrl,
-          timestamp: new Date().toISOString()
+          timestamp: callTimestamp.toISOString()
         },
         severity: 'LOW'
       });

@@ -195,12 +195,28 @@ export interface IStorage {
     pendingCount: number;
     overdueCount: number;
   }>;
+
+  // API Call Logging Methods
+  logApiCall(apiCall: {
+    agencyId: number;
+    phoneNumber: string;
+    requestId: string;
+    apiResponse: string;
+    success: boolean;
+    timestamp: Date;
+    endpoint: string;
+  }): Promise<void>;
+  getApiCallsForDate(agencyId: number, date: string): Promise<any[]>;
+  getTotalApiCallsForAgency(agencyId: number): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
+  // Use the provided db instance directly
+  private db = db;
+
   async getUser(id: string): Promise<User | undefined> {
     try {
-      const [user] = await db.select().from(users).where(eq(users.id, id));
+      const [user] = await this.db.select().from(users).where(eq(users.id, id));
       return user;
     } catch (error) {
       console.error('Error fetching user:', error);
@@ -209,12 +225,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await this.db.select().from(users).where(eq(users.email, email));
     return user;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
+    const [user] = await this.db
       .insert(users)
       .values(userData)
       .onConflictDoUpdate({
@@ -229,7 +245,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserRole(id: string, role: string): Promise<User> {
-    const [user] = await db
+    const [user] = await this.db
       .update(users)
       .set({ role: role as any, updatedAt: new Date() })
       .where(eq(users.id, id))
@@ -265,7 +281,7 @@ export class DatabaseStorage implements IStorage {
       updatedAt: new Date(),
     };
 
-    const [newAgency] = await db
+    const [newAgency] = await this.db
       .insert(agencies)
       .values(sanitizedData)
       .returning();
@@ -273,15 +289,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAgency(id: number): Promise<Agency | undefined> {
-    const [agency] = await db.select().from(agencies).where(eq(agencies.id, id));
+    const [agency] = await this.db.select().from(agencies).where(eq(agencies.id, id));
     return agency;
   }
 
   async getAgencyWithDetails(id: number): Promise<any> {
-    const [agency] = await db.select().from(agencies).where(eq(agencies.id, id));
+    const [agency] = await this.db.select().from(agencies).where(eq(agencies.id, id));
     if (!agency) return undefined;
 
-    const busCount = await db
+    const busCount = await this.db
       .select({ count: count() })
       .from(buses)
       .where(eq(buses.agencyId, id));
@@ -296,17 +312,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAgencyByUserId(userId: string): Promise<Agency | undefined> {
-    const [agency] = await db.select().from(agencies).where(eq(agencies.userId, userId));
+    const [agency] = await this.db.select().from(agencies).where(eq(agencies.userId, userId));
     return agency;
   }
 
   async getAgencyByUsername(username: string): Promise<Agency | undefined> {
-    const [agency] = await db.select().from(agencies).where(eq(agencies.username, username));
+    const [agency] = await this.db.select().from(agencies).where(eq(agencies.username, username));
     return agency;
   }
 
   async getAgencyByEmail(email: string): Promise<Agency | undefined> {
-    const [agency] = await db.select().from(agencies).where(eq(agencies.email, email));
+    const [agency] = await this.db.select().from(agencies).where(eq(agencies.email, email));
     return agency;
   }
 
@@ -320,7 +336,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       const sanitizedEmail = validator.normalizeEmail(email) || email;
-      const [agency] = await db
+      const [agency] = await this.db
         .select()
         .from(agencies)
         .where(eq(agencies.email, sanitizedEmail))
@@ -364,7 +380,7 @@ export class DatabaseStorage implements IStorage {
     // Hash password with higher cost factor for admin accounts
     const passwordToStore = await bcrypt.hash(admin.password, 12);
 
-    const [credentials] = await db
+    const [credentials] = await this.db
       .insert(adminCredentials)
       .values({
         email: sanitizedEmail,
@@ -388,14 +404,14 @@ export class DatabaseStorage implements IStorage {
 
       const sanitizedEmail = validator.normalizeEmail(email) || email;
 
-      const [admin] = await db
+      const [admin] = await this.db
         .select()
         .from(adminCredentials)
         .where(eq(adminCredentials.email, sanitizedEmail))
         .limit(1);
 
       // Always perform hash comparison to prevent timing attacks
-      const isValidPassword = admin 
+      const isValidPassword = admin
         ? await bcrypt.compare(password, admin.password)
         : await bcrypt.compare(password, "$2b$12$dummy.hash.to.prevent.timing.attacks");
 
@@ -420,7 +436,7 @@ export class DatabaseStorage implements IStorage {
       updateData.password = await bcrypt.hash(updates.password, 12);
     }
 
-    const [credentials] = await db
+    const [credentials] = await this.db
       .update(adminCredentials)
       .set(updateData)
       .where(eq(adminCredentials.id, id))
@@ -430,14 +446,81 @@ export class DatabaseStorage implements IStorage {
 
   async checkAdminExists(): Promise<boolean> {
     try {
-      const [admin] = await db
-        .select({ id: adminCredentials.id })
-        .from(adminCredentials)
-        .limit(1);
-      return !!admin;
+      const result = await this.db.select({ count: sql`count(*)` }).from(adminCredentials);
+      return Number(result[0]?.count || 0) > 0;
     } catch (error) {
       console.error('Error checking admin existence:', error);
       return false;
+    }
+  }
+
+  // API Call Logging Methods
+  async logApiCall(apiCall: {
+    agencyId: number;
+    phoneNumber: string;
+    requestId: string;
+    apiResponse: string;
+    success: boolean;
+    timestamp: Date;
+    endpoint: string;
+  }): Promise<void> {
+    try {
+      // Create api_calls table if it doesn't exist
+      await this.db.execute(sql`
+        CREATE TABLE IF NOT EXISTS api_calls (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          agency_id INTEGER NOT NULL,
+          phone_number TEXT NOT NULL,
+          request_id TEXT NOT NULL,
+          api_response TEXT,
+          success BOOLEAN NOT NULL,
+          timestamp DATETIME NOT NULL,
+          endpoint TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      await this.db.execute(sql`
+        INSERT INTO api_calls (agency_id, phone_number, request_id, api_response, success, timestamp, endpoint)
+        VALUES (${apiCall.agencyId}, ${apiCall.phoneNumber}, ${apiCall.requestId}, ${apiCall.apiResponse}, ${apiCall.success}, ${apiCall.timestamp.toISOString()}, ${apiCall.endpoint})
+      `);
+
+      console.log(`✅ API CALL LOGGED: ${apiCall.requestId} - ${apiCall.phoneNumber} - ${apiCall.success}`);
+    } catch (error) {
+      console.error('Error logging API call:', error);
+    }
+  }
+
+  async getApiCallsForDate(agencyId: number, date: string): Promise<any[]> {
+    try {
+      const startDate = `${date} 00:00:00`;
+      const endDate = `${date} 23:59:59`;
+
+      const result = await this.db.execute(sql`
+        SELECT * FROM api_calls
+        WHERE agency_id = ${agencyId}
+        AND timestamp BETWEEN ${startDate} AND ${endDate}
+        ORDER BY timestamp ASC
+      `);
+
+      return result.rows as any[];
+    } catch (error) {
+      console.error('Error getting API calls for date:', error);
+      return [];
+    }
+  }
+
+  async getTotalApiCallsForAgency(agencyId: number): Promise<number> {
+    try {
+      const result = await this.db.execute(sql`
+        SELECT COUNT(*) as count FROM api_calls
+        WHERE agency_id = ${agencyId}
+      `);
+
+      return Number(result.rows[0]?.count || 0);
+    } catch (error) {
+      console.error('Error getting total API calls:', error);
+      return 0;
     }
   }
 
@@ -446,7 +529,7 @@ export class DatabaseStorage implements IStorage {
   async getPendingAgencies(): Promise<Agency[]> {
     try {
       console.log("Fetching pending agencies from database...");
-      const result = await db.select().from(agencies).where(eq(agencies.status, "pending"));
+      const result = await this.db.select().from(agencies).where(eq(agencies.status, "pending"));
       console.log("Database result:", result);
       return result;
     } catch (error) {
@@ -456,15 +539,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getApprovedAgencies(): Promise<Agency[]> {
-    return await db.select().from(agencies).where(eq(agencies.status, "approved"));
+    return await this.db.select().from(agencies).where(eq(agencies.status, "approved"));
   }
 
   async getAllAgencies(): Promise<Agency[]> {
-    return await db.select().from(agencies).orderBy(desc(agencies.createdAt));
+    return await this.db.select().from(agencies).orderBy(desc(agencies.createdAt));
   }
 
   async updateAgencyStatus(id: number, status: string): Promise<Agency> {
-    const [agency] = await db
+    const [agency] = await this.db
       .update(agencies)
       .set({ status: status as any, updatedAt: new Date() })
       .where(eq(agencies.id, id))
@@ -475,19 +558,19 @@ export class DatabaseStorage implements IStorage {
 
 
   async deleteAgency(id: number): Promise<void> {
-    await db.delete(agencies).where(eq(agencies.id, id));
+    await this.db.delete(agencies).where(eq(agencies.id, id));
   }
   async getAgencies(): Promise<Agency[]> {
-    return await db.select().from(agencies);
+    return await this.db.select().from(agencies);
   }
 
   async getAgencyById(id: number): Promise<Agency | null> {
-    const result = await db.select().from(agencies).where(eq(agencies.id, id)).limit(1);
+    const result = await this.db.select().from(agencies).where(eq(agencies.id, id)).limit(1);
     return result[0] || null;
   }
 
   async createBus(bus: InsertBus): Promise<Bus> {
-    const [newBus] = await db
+    const [newBus] = await this.db
       .insert(buses)
       .values(bus)
       .returning();
@@ -495,20 +578,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBus(id: number): Promise<Bus | undefined> {
-    const [bus] = await db.select().from(buses).where(eq(buses.id, id));
+    const [bus] = await this.db.select().from(buses).where(eq(buses.id, id));
     return bus;
   }
 
   async getBusesByAgency(agencyId: number): Promise<Bus[]> {
-    return await db.select().from(buses).where(eq(buses.agencyId, agencyId));
+    return await this.db.select().from(buses).where(eq(buses.agencyId, agencyId));
   }
 
   async getAllBuses(): Promise<Bus[]> {
-    return await db.select().from(buses).orderBy(desc(buses.createdAt));
+    return await this.db.select().from(buses).orderBy(desc(buses.createdAt));
   }
 
   async updateBus(id: number, updates: Partial<InsertBus>): Promise<Bus> {
-    const [bus] = await db
+    const [bus] = await this.db
       .update(buses)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(buses.id, id))
@@ -518,15 +601,15 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBus(id: number): Promise<void> {
     // First, delete all related traveler data and upload history
-    await db.delete(travelerData).where(eq(travelerData.busId, id));
-    await db.delete(uploadHistory).where(eq(uploadHistory.busId, id));
+    await this.db.delete(travelerData).where(eq(travelerData.busId, id));
+    await this.db.delete(uploadHistory).where(eq(uploadHistory.busId, id));
 
     // Then delete the bus
-    await db.delete(buses).where(eq(buses.id, id));
+    await this.db.delete(buses).where(eq(buses.id, id));
   }
 
   async createTravelerData(data: InsertTravelerData[]): Promise<TravelerData[]> {
-    return await db
+    return await this.db
       .insert(travelerData)
       .values(data)
       .returning();
@@ -534,19 +617,19 @@ export class DatabaseStorage implements IStorage {
 
   async upsertTravelerData(data: InsertTravelerData[]): Promise<TravelerData[]> {
     // Always create new records for each trip - passengers can travel multiple times
-    return await db
+    return await this.db
       .insert(travelerData)
       .values(data)
       .returning();
   }
 
   async getTravelerData(id: number): Promise<TravelerData | undefined> {
-    const [traveler] = await db.select().from(travelerData).where(eq(travelerData.id, id));
+    const [traveler] = await this.db.select().from(travelerData).where(eq(travelerData.id, id));
     return traveler;
   }
 
   async getTravelerDataByAgency(agencyId: number): Promise<TravelerData[]> {
-    return await db
+    return await this.db
       .select()
       .from(travelerData)
       .where(eq(travelerData.agencyId, agencyId))
@@ -554,7 +637,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllTravelerData(): Promise<any[]> {
-    return await db
+    return await this.db
       .select({
         id: travelerData.id,
         busId: travelerData.busId,
@@ -592,7 +675,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTravelerDataByBus(busId: number): Promise<TravelerData[]> {
-    return await db
+    return await this.db
       .select()
       .from(travelerData)
       .where(eq(travelerData.busId, busId))
@@ -600,7 +683,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTravelerData(id: number, updates: Partial<InsertTravelerData>): Promise<TravelerData> {
-    const [data] = await db
+    const [data] = await this.db
       .update(travelerData)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(travelerData.id, id))
@@ -613,9 +696,9 @@ export class DatabaseStorage implements IStorage {
 
     // Update all travelers in batch to prevent race conditions
     for (const id of travelerIds) {
-      await db
+      await this.db
         .update(travelerData)
-        .set({ 
+        .set({
           whatsappStatus: status as any,
           updatedAt: new Date()
         })
@@ -651,16 +734,16 @@ export class DatabaseStorage implements IStorage {
       const [, busIdStr, dateStr] = uploadId.split('-');
       const busId = parseInt(busIdStr);
       const targetDate = new Date(dateStr).toDateString();
-      const allTravelers = await db.select().from(travelerData);
-      batchTravelers = allTravelers.filter(t => 
-        t.busId === busId && 
-        !t.uploadId && 
+      const allTravelers = await this.db.select().from(travelerData);
+      batchTravelers = allTravelers.filter(t =>
+        t.busId === busId &&
+        !t.uploadId &&
         new Date(t.createdAt || new Date()).toDateString() === targetDate
       );
     } else {
       const uploadIdNum = parseInt(uploadId);
       if (!isNaN(uploadIdNum)) {
-        batchTravelers = await db
+        batchTravelers = await this.db
           .select()
           .from(travelerData)
           .where(eq(travelerData.uploadId, uploadIdNum));
@@ -669,9 +752,9 @@ export class DatabaseStorage implements IStorage {
 
     // Find processing records older than 10 minutes (likely stuck)
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const stuckProcessingRecords = batchTravelers.filter(t => 
-      t.whatsappStatus === 'processing' && 
-      t.updatedAt && 
+    const stuckProcessingRecords = batchTravelers.filter(t =>
+      t.whatsappStatus === 'processing' &&
+      t.updatedAt &&
       new Date(t.updatedAt) < tenMinutesAgo
     );
 
@@ -680,9 +763,9 @@ export class DatabaseStorage implements IStorage {
       console.log(`📱 Assuming these completed successfully to prevent duplicates`);
 
       for (const record of stuckProcessingRecords) {
-        await db
+        await this.db
           .update(travelerData)
-          .set({ 
+          .set({
             whatsappStatus: 'sent', // Assume success to prevent duplicates
             updatedAt: new Date()
           })
@@ -697,8 +780,8 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Also find any processing records less than 10 minutes old (active processing)
-    const activeProcessingRecords = batchTravelers.filter(t => 
-      t.whatsappStatus === 'processing' && 
+    const activeProcessingRecords = batchTravelers.filter(t =>
+      t.whatsappStatus === 'processing' &&
       (!t.updatedAt || new Date(t.updatedAt) >= tenMinutesAgo)
     );
 
@@ -710,18 +793,18 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTravelerData(id: number): Promise<void> {
     // First, delete any related WhatsApp queue entries to avoid foreign key constraint violation
-    await db
+    await this.db
       .delete(whatsappQueue)
       .where(eq(whatsappQueue.travelerId, id));
 
     // Then delete the traveler data
-    await db
+    await this.db
       .delete(travelerData)
       .where(eq(travelerData.id, id));
   }
 
   async updateAgency(id: number, updates: Partial<InsertAgency>): Promise<Agency> {
-    const [agency] = await db
+    const [agency] = await this.db
       .update(agencies)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(agencies.id, id))
@@ -732,19 +815,19 @@ export class DatabaseStorage implements IStorage {
 
   // WhatsApp opt-out operations
   async optOutTravelerFromWhatsapp(phoneNumber: string): Promise<TravelerData[]> {
-    return await db
+    return await this.db
       .update(travelerData)
-      .set({ 
-        whatsappOptOut: true, 
+      .set({
+        whatsappOptOut: true,
         optOutDate: new Date(),
-        updatedAt: new Date() 
+        updatedAt: new Date()
       })
       .where(eq(travelerData.phone, phoneNumber))
       .returning();
   }
 
   async getTravelerByPhone(phoneNumber: string): Promise<TravelerData | undefined> {
-    const [traveler] = await db
+    const [traveler] = await this.db
       .select()
       .from(travelerData)
       .where(eq(travelerData.phone, phoneNumber));
@@ -752,7 +835,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUploadHistory(history: InsertUploadHistory): Promise<UploadHistory> {
-    const [newHistory] = await db
+    const [newHistory] = await this.db
       .insert(uploadHistory)
       .values(history)
       .returning();
@@ -760,7 +843,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUploadHistoryByAgency(agencyId: number): Promise<UploadHistory[]> {
-    return await db
+    return await this.db
       .select()
       .from(uploadHistory)
       .where(eq(uploadHistory.agencyId, agencyId))
@@ -772,7 +855,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUploadHistory(id: number, updates: Partial<InsertUploadHistory>): Promise<UploadHistory> {
-    const [updatedHistory] = await db
+    const [updatedHistory] = await this.db
       .update(uploadHistory)
       .set(updates)
       .where(eq(uploadHistory.id, id))
@@ -782,7 +865,7 @@ export class DatabaseStorage implements IStorage {
 
   async getTravelerDataByUpload(uploadId: number): Promise<TravelerData[]> {
     // Query by uploadId, handling both new uploads with uploadId and legacy data
-    return await db
+    return await this.db
       .select()
       .from(travelerData)
       .where(eq(travelerData.uploadId, uploadId));
@@ -794,21 +877,21 @@ export class DatabaseStorage implements IStorage {
     totalMessages: number;
     totalCoupons: number;
   }> {
-    const [agencyCount] = await db
+    const [agencyCount] = await this.db
       .select({ count: count() })
       .from(agencies)
       .where(eq(agencies.status, "approved"));
 
-    const [busCount] = await db
+    const [busCount] = await this.db
       .select({ count: count() })
       .from(buses);
 
-    const [messageCount] = await db
+    const [messageCount] = await this.db
       .select({ count: count() })
       .from(travelerData)
       .where(eq(travelerData.whatsappStatus, "sent"));
 
-    const [couponCount] = await db
+    const [couponCount] = await this.db
       .select({ count: count() })
       .from(travelerData);
 
@@ -835,12 +918,12 @@ export class DatabaseStorage implements IStorage {
     totalCoupons: number;
     totalTravelers: number;
   }> {
-    const [busCount] = await db
+    const [busCount] = await this.db
       .select({ count: count() })
       .from(buses)
       .where(eq(buses.agencyId, agencyId));
 
-    const [messageCount] = await db
+    const [messageCount] = await this.db
       .select({ count: count() })
       .from(travelerData)
       .where(and(
@@ -848,12 +931,12 @@ export class DatabaseStorage implements IStorage {
         eq(travelerData.whatsappStatus, "sent")
       ));
 
-    const [couponCount] = await db
+    const [couponCount] = await this.db
       .select({ count: count() })
       .from(travelerData)
       .where(eq(travelerData.agencyId, agencyId));
 
-    const [travelerCount] = await db
+    const [travelerCount] = await this.db
       .select({ count: count() })
       .from(travelerData)
       .where(eq(travelerData.agencyId, agencyId));
@@ -868,17 +951,17 @@ export class DatabaseStorage implements IStorage {
 
   // WhatsApp operations
   async getWhatsappConfig(): Promise<WhatsappConfig | undefined> {
-    const [config] = await db.select().from(whatsappConfig).limit(1);
+    const [config] = await this.db.select().from(whatsappConfig).limit(1);
     return config;
   }
 
   async createWhatsappConfig(config: InsertWhatsappConfig): Promise<WhatsappConfig> {
-    const [newConfig] = await db.insert(whatsappConfig).values(config).returning();
+    const [newConfig] = await this.db.insert(whatsappConfig).values(config).returning();
     return newConfig;
   }
 
   async updateWhatsappConfig(id: number, config: Partial<InsertWhatsappConfig>): Promise<WhatsappConfig> {
-    const [updatedConfig] = await db
+    const [updatedConfig] = await this.db
       .update(whatsappConfig)
       .set({ ...config, updatedAt: new Date() })
       .where(eq(whatsappConfig.id, id))
@@ -887,16 +970,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWhatsappTemplates(): Promise<WhatsappTemplate[]> {
-    return await db.select().from(whatsappTemplates).orderBy(whatsappTemplates.dayTrigger);
+    return await this.db.select().from(whatsappTemplates).orderBy(whatsappTemplates.dayTrigger);
   }
 
   async createWhatsappTemplate(template: InsertWhatsappTemplate): Promise<WhatsappTemplate> {
-    const [newTemplate] = await db.insert(whatsappTemplates).values(template).returning();
+    const [newTemplate] = await this.db.insert(whatsappTemplates).values(template).returning();
     return newTemplate;
   }
 
   async updateWhatsappTemplate(id: number, template: Partial<InsertWhatsappTemplate>): Promise<WhatsappTemplate> {
-    const [updatedTemplate] = await db
+    const [updatedTemplate] = await this.db
       .update(whatsappTemplates)
       .set({ ...template, updatedAt: new Date() })
       .where(eq(whatsappTemplates.id, id))
@@ -905,20 +988,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteWhatsappTemplate(id: number): Promise<void> {
-    await db.delete(whatsappTemplates).where(eq(whatsappTemplates.id, id));
+    await this.db.delete(whatsappTemplates).where(eq(whatsappTemplates.id, id));
   }
 
   async getWhatsappQueue(): Promise<WhatsappQueue[]> {
-    return await db.select().from(whatsappQueue).orderBy(desc(whatsappQueue.createdAt));
+    return await this.db.select().from(whatsappQueue).orderBy(desc(whatsappQueue.createdAt));
   }
 
   async createWhatsappQueue(queue: InsertWhatsappQueue): Promise<WhatsappQueue> {
-    const [newQueue] = await db.insert(whatsappQueue).values(queue).returning();
+    const [newQueue] = await this.db.insert(whatsappQueue).values(queue).returning();
     return newQueue;
   }
 
   async updateWhatsappQueueStatus(id: number, status: string): Promise<WhatsappQueue> {
-    const [updatedQueue] = await db
+    const [updatedQueue] = await this.db
       .update(whatsappQueue)
       .set({ status: status as any, updatedAt: new Date() })
       .where(eq(whatsappQueue.id, id))
@@ -932,7 +1015,7 @@ export class DatabaseStorage implements IStorage {
     sentMessages: number;
     failedMessages: number;
   }> {
-    const [stats] = await db
+    const [stats] = await this.db
       .select({
         totalMessages: count(),
         pendingMessages: count(sql`case when status = 'pending' then 1 end`),
@@ -951,7 +1034,7 @@ export class DatabaseStorage implements IStorage {
 
   // Payment history operations
   async getPaymentHistory(agencyId: number): Promise<PaymentHistory[]> {
-    return await db
+    return await this.db
       .select({
         id: paymentHistory.id,
         billId: paymentHistory.billId,
@@ -977,27 +1060,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPaymentRecord(payment: InsertPaymentHistory): Promise<PaymentHistory> {
-    const [newPayment] = await db.insert(paymentHistory).values(payment).returning();
+    const [newPayment] = await this.db.insert(paymentHistory).values(payment).returning();
     return newPayment;
   }
 
   async updatePaymentStatus(
-    id: number, 
-    status: string, 
-    paymentMethod?: string, 
-    paymentDate?: Date, 
+    id: number,
+    status: string,
+    paymentMethod?: string,
+    paymentDate?: Date,
     notes?: string
   ): Promise<PaymentHistory> {
-    const updateData: any = { 
-      paymentStatus: status as any, 
-      updatedAt: new Date() 
+    const updateData: any = {
+      paymentStatus: status as any,
+      updatedAt: new Date()
     };
 
     if (paymentMethod) updateData.paymentMethod = paymentMethod as any;
     if (paymentDate) updateData.paymentDate = paymentDate;
     if (notes) updateData.notes = notes;
 
-    const [updatedPayment] = await db
+    const [updatedPayment] = await this.db
       .update(paymentHistory)
       .set(updateData)
       .where(eq(paymentHistory.id, id))
@@ -1010,7 +1093,7 @@ export class DatabaseStorage implements IStorage {
     const agency = await this.getAgency(agencyId);
     if (!agency) throw new Error("Agency not found");
 
-    const [busCount] = await db
+    const [busCount] = await this.db
       .select({ count: count() })
       .from(buses)
       .where(eq(buses.agencyId, agencyId));
@@ -1051,7 +1134,7 @@ export class DatabaseStorage implements IStorage {
 
   // Tax configuration operations
   async getTaxConfig(): Promise<TaxConfig | undefined> {
-    const [config] = await db
+    const [config] = await this.db
       .select()
       .from(taxConfig)
       .where(eq(taxConfig.isActive, true))
@@ -1061,13 +1144,13 @@ export class DatabaseStorage implements IStorage {
 
   async updateTaxConfig(percentage: number): Promise<TaxConfig> {
     // First, deactivate all existing configs
-    await db
+    await this.db
       .update(taxConfig)
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(taxConfig.isActive, true));
 
     // Create new active config
-    const [newConfig] = await db
+    const [newConfig] = await this.db
       .insert(taxConfig)
       .values({
         name: "GST",
@@ -1082,7 +1165,7 @@ export class DatabaseStorage implements IStorage {
   async getOverduePayments() {
     try {
       const currentDate = new Date();
-      const overduePayments = await db
+      const overduePayments = await this.db
         .select({
           id: paymentHistory.id,
           agencyId: paymentHistory.agencyId,
@@ -1112,7 +1195,7 @@ export class DatabaseStorage implements IStorage {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 7); // 7 days reminder
 
-      const reminders = await db
+      const reminders = await this.db
         .select({
           id: paymentHistory.id,
           amount: paymentHistory.totalAmount,
@@ -1147,7 +1230,7 @@ export class DatabaseStorage implements IStorage {
 
   async getAllPayments() {
     try {
-      const allPayments = await db
+      const allPayments = await this.db
         .select({
           id: paymentHistory.id,
           agencyId: paymentHistory.agencyId,
@@ -1174,25 +1257,25 @@ export class DatabaseStorage implements IStorage {
 
   async getPaymentStats() {
     try {
-      const [totalRevenue] = await db
-        .select({ 
-          sum: sql<number>`cast(sum(${paymentHistory.totalAmount}) as integer)` 
+      const [totalRevenue] = await this.db
+        .select({
+          sum: sql<number>`cast(sum(${paymentHistory.totalAmount}) as integer)`
         })
         .from(paymentHistory)
         .where(eq(paymentHistory.paymentStatus, 'paid'));
 
-      const [paidCount] = await db
+      const [paidCount] = await this.db
         .select({ count: sql<number>`cast(count(*) as integer)` })
         .from(paymentHistory)
         .where(eq(paymentHistory.paymentStatus, 'paid'));
 
-      const [pendingCount] = await db
+      const [pendingCount] = await this.db
         .select({ count: sql<number>`cast(count(*) as integer)` })
         .from(paymentHistory)
         .where(eq(paymentHistory.paymentStatus, 'pending'));
 
       const currentDate = new Date();
-      const [overdueCount] = await db
+      const [overdueCount] = await this.db
         .select({ count: sql<number>`cast(count(*) as integer)` })
         .from(paymentHistory)
         .where(
