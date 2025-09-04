@@ -3316,9 +3316,10 @@ Happy Travels!`;
         if (travelers.length === 0) continue; // Skip empty uploads
 
         // CRITICAL: If filtering by date, only include batches that had API calls on that date
+        let apiCallTravelers = travelers; // Default to all travelers
         if (targetDate) {
           // Filter travelers who had API calls made on the target date
-          const apiCallTravelers = travelers.filter(t => {
+          apiCallTravelers = travelers.filter(t => {
             if (t.whatsappStatus !== 'sent' && t.whatsappStatus !== 'failed') return false;
             const apiCallDate = t.updatedAt ? new Date(t.updatedAt).toISOString().split('T')[0] : null;
             return apiCallDate === targetDate;
@@ -3338,6 +3339,9 @@ Happy Travels!`;
         const failedCount = travelers.filter(t => t.whatsappStatus === 'failed').length;
         const pendingCount = travelers.filter(t => !t.whatsappStatus || t.whatsappStatus === 'pending').length;
         const totalCount = travelers.length;
+        
+        // When filtering by date, show only the count of travelers with API calls on that date
+        const displayTravelerCount = targetDate ? apiCallTravelers.length : totalCount;
 
         let whatsappStatus: 'pending' | 'sent' | 'partial' = 'pending';
         if (sentCount === totalCount && totalCount > 0) {
@@ -3355,7 +3359,7 @@ Happy Travels!`;
         batches.push({
           uploadId: upload.id.toString(), // Ensure it's a string for consistency
           uploadDate: upload.createdAt || new Date(),
-          travelerCount: totalCount || 0,
+          travelerCount: displayTravelerCount || 0,
           routes: routes || [],
           coupons: coupons || [],
           whatsappStatus,
