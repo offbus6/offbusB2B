@@ -8,24 +8,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RefreshCw, Activity, Phone, Calendar, AlertTriangle, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
+import { BarChart3 } from "lucide-react";
 
 interface ApiCallStats {
   date: string;
   totalApiCallsToday: number;
   totalApiCallsEver: number;
-  breakdown: {
+  todaysApiCalls: {
     sent: number;
     failed: number;
     pending: number;
     total: number;
   };
-  everBreakdown: {
+  allTimeApiCalls: {
     sent: number;
     failed: number;
     pending: number;
     total: number;
   };
   note: string;
+  verification?: {
+    note: string;
+    possibleReasons: string[];
+  };
 }
 
 interface BatchApiStats {
@@ -196,13 +201,13 @@ export default function ApiDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {apiStats?.breakdown.sent || 0}
+              {apiStats?.todaysApiCalls?.sent || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              On selected date
+              Successful API calls today
             </p>
             <div className="text-lg font-bold text-green-500 mt-1">
-              Total: {apiStats?.everBreakdown?.sent || 0}
+              Total: {apiStats?.allTimeApiCalls?.sent || 0}
             </div>
           </CardContent>
         </Card>
@@ -210,17 +215,17 @@ export default function ApiDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Failed Attempts</CardTitle>
-            <Activity className="h-4 w-4 text-red-600" />
+            <AlertTriangle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {apiStats?.breakdown.failed || 0}
+              {apiStats?.todaysApiCalls?.failed || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              On selected date  
+              Failed API calls today
             </p>
             <div className="text-lg font-bold text-red-500 mt-1">
-              Total: {apiStats?.everBreakdown?.failed || 0}
+              Total: {apiStats?.allTimeApiCalls?.failed || 0}
             </div>
           </CardContent>
         </Card>
@@ -232,7 +237,7 @@ export default function ApiDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {apiStats?.breakdown.pending || 0}
+              {apiStats?.todaysApiCalls?.pending || 0}
             </div>
             <p className="text-xs text-muted-foreground">
               Never sent
@@ -311,7 +316,7 @@ export default function ApiDashboard() {
             <div>
               <h3 className="font-medium text-red-900">Important API Usage Notice</h3>
               <p className="text-sm text-red-800 mt-1">
-                Every API call (successful or failed) costs money. The system should ONLY send messages when you explicitly click "Send WhatsApp" for a specific batch. 
+                Every API call (successful or failed) costs money. The system should ONLY send messages when you explicitly click "Send WhatsApp" for a specific batch.
                 If you see API calls being made without your action, this indicates a system bug that needs immediate fixing.
               </p>
               <div className="mt-2 text-xs text-red-700">
