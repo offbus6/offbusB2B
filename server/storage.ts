@@ -725,6 +725,32 @@ export class DatabaseStorage implements IStorage {
     console.log(`🔓 BATCH LOCK RELEASED: ${lockKey}`);
   }
 
+  async clearAllBatchLocks(): Promise<void> {
+    const lockCount = this.batchLocks.size;
+    this.batchLocks.clear();
+    console.log(`🧹 CLEARED ALL BATCH LOCKS: ${lockCount} locks removed`);
+  }
+
+  async clearExpiredBatchLocks(): Promise<void> {
+    const now = new Date();
+    const expiredKeys = [];
+    
+    for (const [key, lock] of this.batchLocks.entries()) {
+      // Clear locks older than 10 minutes
+      if (now.getTime() - lock.lockedAt.getTime() > 10 * 60 * 1000) {
+        expiredKeys.push(key);
+      }
+    }
+    
+    for (const key of expiredKeys) {
+      this.batchLocks.delete(key);
+    }
+    
+    if (expiredKeys.length > 0) {
+      console.log(`🧹 CLEARED ${expiredKeys.length} EXPIRED BATCH LOCKS:`, expiredKeys);
+    }
+  }
+
   async resetProcessingStatus(uploadId: string): Promise<void> {
     console.log(`🔧 CLEANUP: Checking stuck 'processing' records in batch ${uploadId}`);
 

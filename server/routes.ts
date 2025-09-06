@@ -3460,6 +3460,17 @@ Happy Travels!`;
     }
   });
 
+  // Clear all batch locks (admin endpoint)
+  app.post('/api/admin/clear-batch-locks', requireAuth(['super_admin']), async (req: Request, res: Response) => {
+    try {
+      await storage.clearAllBatchLocks();
+      res.json({ success: true, message: 'All batch locks cleared' });
+    } catch (error) {
+      console.error('Error clearing batch locks:', error);
+      res.status(500).json({ error: 'Failed to clear batch locks' });
+    }
+  });
+
   // Send WhatsApp to all travelers in a batch with proper individual API calls and delays
   app.post('/api/agency/whatsapp/send-batch/:uploadId', requireAuth(['agency']), async (req: Request, res: Response) => {
     const { uploadId } = req.params;
@@ -3487,6 +3498,10 @@ Happy Travels!`;
       
       // Check if batch is already being processed
       console.log(`📊 STEP 2: Checking for existing batch locks...`);
+      
+      // Clear any expired locks first (older than 10 minutes)
+      await storage.clearExpiredBatchLocks();
+      
       const existingLock = await storage.getBatchLock(batchLockKey);
       console.log(`✅ STEP 2 COMPLETED: Lock check done, existing lock:`, existingLock ? 'Yes' : 'No');
       if (existingLock && existingLock.lockedAt > new Date(Date.now() - 5 * 60 * 1000)) {
