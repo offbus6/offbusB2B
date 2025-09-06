@@ -3808,14 +3808,29 @@ Happy Travels!`;
           }
 
         } catch (error) {
-          console.error(`❌ Exception for ${traveler.travelerName}:`, error);
+          console.error(`🚨 EXCEPTION for ${traveler.travelerName}:`, error);
+          console.error(`🔍 ERROR TYPE: ${error instanceof Error ? error.constructor.name : typeof error}`);
+          console.error(`🔍 ERROR MESSAGE: ${error instanceof Error ? error.message : error}`);
+          
+          // Determine if this is an API error or application error
+          const isApiError = error instanceof Error && (
+            error.message.includes('fetch') ||
+            error.message.includes('timeout') ||
+            error.message.includes('network') ||
+            error.message.includes('ECONNREFUSED') ||
+            error.message.includes('ENOTFOUND')
+          );
+          
+          console.error(`🔍 ERROR CLASSIFICATION: ${isApiError ? 'API_ERROR' : 'APPLICATION_ERROR'}`);
+          
           await storage.updateTravelerData(traveler.id, { whatsappStatus: 'failed' });
           failedCount++;
           deliveryResults.push({
             travelerName: traveler.travelerName,
             phone: traveler.phone,
             status: 'error',
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: error instanceof Error ? error.message : 'Unknown error',
+            errorType: isApiError ? 'API_ERROR' : 'APPLICATION_ERROR'
           });
         }
       }
