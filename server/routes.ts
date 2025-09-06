@@ -3463,14 +3463,17 @@ Happy Travels!`;
   // Send WhatsApp to all travelers in a batch with proper individual API calls and delays
   app.post('/api/agency/whatsapp/send-batch/:uploadId', requireAuth(['agency']), async (req: Request, res: Response) => {
     const { uploadId } = req.params;
-    const user = (req.session as any).user;
-    const agencyId = user.agency?.id;
-    const batchLockKey = `batch_${uploadId}_${agencyId}`;
+    let batchLockKey = '';
     
     try {
+      const user = (req.session as any).user;
       if (!user || user.role !== 'agency') {
+        console.log(`🚨 AUTH FAILED: User role: ${user?.role}, User exists: ${!!user}`);
         return res.status(403).json({ error: 'Access denied' });
       }
+
+      const agencyId = user.agency?.id;
+      batchLockKey = `batch_${uploadId}_${agencyId}`;
 
       console.log(`\n🎯 BATCH SEND REQUEST - Upload ID: ${uploadId}, Agency: ${agencyId}`);
       console.log(`📊 STEP 1: Authentication and basic validation passed`);
@@ -3868,10 +3871,12 @@ Happy Travels!`;
       console.error('Error message:', error instanceof Error ? error.message : error);
       
       // CRITICAL: Always release lock on error
-      try {
-        await storage.releaseBatchLock(batchLockKey);
-      } catch (lockError) {
-        console.error('Error releasing batch lock:', lockError);
+      if (batchLockKey) {
+        try {
+          await storage.releaseBatchLock(batchLockKey);
+        } catch (lockError) {
+          console.error('Error releasing batch lock:', lockError);
+        }
       }
       
       // Return more detailed error information
