@@ -3473,13 +3473,19 @@ Happy Travels!`;
       }
 
       console.log(`\n🎯 BATCH SEND REQUEST - Upload ID: ${uploadId}, Agency: ${agencyId}`);
+      console.log(`📊 STEP 1: Authentication and basic validation passed`);
 
       if (!agencyId) {
+        console.log(`❌ STEP 1 FAILED: Agency ID is missing`);
         return res.status(404).json({ error: 'Agency not found' });
       }
       
+      console.log(`✅ STEP 1 COMPLETED: Agency ID validated: ${agencyId}`);
+      
       // Check if batch is already being processed
+      console.log(`📊 STEP 2: Checking for existing batch locks...`);
       const existingLock = await storage.getBatchLock(batchLockKey);
+      console.log(`✅ STEP 2 COMPLETED: Lock check done, existing lock:`, existingLock ? 'Yes' : 'No');
       if (existingLock && existingLock.lockedAt > new Date(Date.now() - 5 * 60 * 1000)) {
         return res.status(409).json({ 
           error: 'Batch is already being processed',
@@ -3489,7 +3495,9 @@ Happy Travels!`;
       }
 
       // Create atomic lock
+      console.log(`📊 STEP 3: Creating batch lock...`);
       await storage.createBatchLock(batchLockKey, agencyId);
+      console.log(`✅ STEP 3 COMPLETED: Batch lock created`);
       
       // CRITICAL: Reset any stuck 'processing' status to prevent duplicates
       await storage.resetProcessingStatus(uploadId);
@@ -3855,14 +3863,25 @@ Happy Travels!`;
       });
 
     } catch (error) {
-      console.error('Batch processing error:', error);
+      console.error('🚨 CRITICAL ERROR - Batch processing failed:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('Error message:', error instanceof Error ? error.message : error);
+      
       // CRITICAL: Always release lock on error
       try {
         await storage.releaseBatchLock(batchLockKey);
       } catch (lockError) {
         console.error('Error releasing batch lock:', lockError);
       }
-      res.status(500).json({ error: 'Failed to send WhatsApp messages' });
+      
+      // Return more detailed error information
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`🚨 Returning 500 error to client: ${errorMessage}`);
+      res.status(500).json({ 
+        error: 'Failed to send WhatsApp messages',
+        details: errorMessage,
+        timestamp: new Date().toISOString()
+      });
     }
   });
 
