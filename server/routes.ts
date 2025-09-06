@@ -3212,7 +3212,7 @@ Happy Travels!`;
       });
       
       // Get hourly breakdown for today
-      const hourlyBreakdown = {};
+      const hourlyBreakdown: Record<string, { sent: number; failed: number; total: number }> = {};
       todaysApiCalls.forEach(t => {
         if (t.updatedAt) {
           const hour = new Date(t.updatedAt).getHours();
@@ -3462,23 +3462,21 @@ Happy Travels!`;
 
   // Send WhatsApp to all travelers in a batch with proper individual API calls and delays
   app.post('/api/agency/whatsapp/send-batch/:uploadId', requireAuth(['agency']), async (req: Request, res: Response) => {
+    const { uploadId } = req.params;
+    const user = (req.session as any).user;
+    const agencyId = user.agency?.id;
+    const batchLockKey = `batch_${uploadId}_${agencyId}`;
+    
     try {
-      const user = (req.session as any).user;
       if (!user || user.role !== 'agency') {
         return res.status(403).json({ error: 'Access denied' });
       }
-
-      const { uploadId } = req.params;
-      const agencyId = user.agency?.id;
 
       console.log(`\n🎯 BATCH SEND REQUEST - Upload ID: ${uploadId}, Agency: ${agencyId}`);
 
       if (!agencyId) {
         return res.status(404).json({ error: 'Agency not found' });
       }
-
-      // CRITICAL: Create atomic batch lock to prevent simultaneous processing
-      const batchLockKey = `batch_${uploadId}_${agencyId}`;
       
       // Check if batch is already being processed
       const existingLock = await storage.getBatchLock(batchLockKey);
@@ -3530,8 +3528,8 @@ Happy Travels!`;
       });
 
       // CRITICAL: Enhanced duplicate detection with detailed tracking
-      const seenPhones = new Map();
-      const duplicateDetails = [];
+      const seenPhones = new Map<string, { id: number; travelerName: string; phone: string }>();
+      const duplicateDetails: Array<{ phone: string; travelerName: string; id: number; firstOccurrence: any }> = [];
       const pendingTravelers = initialPendingTravelers.filter(traveler => {
         const normalizedPhone = traveler.phone.replace(/\D/g, '');
         
@@ -3543,7 +3541,7 @@ Happy Travels!`;
             id: traveler.id,
             firstOccurrence: firstOccurrence
           });
-          console.log(`🚫 DUPLICATE PHONE PREVENTED: ${traveler.travelerName} (${traveler.phone}) - First seen: ${firstOccurrence.travelerName}`);
+          console.log(`🚫 DUPLICATE PHONE PREVENTED: ${traveler.travelerName} (${traveler.phone}) - First seen: ${firstOccurrence?.travelerName}`);
           return false;
         }
         
