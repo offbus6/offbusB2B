@@ -32,6 +32,9 @@ import {
   type InsertPaymentHistory,
   type TaxConfig,
   type InsertTaxConfig,
+  apiConfigurations,
+  type ApiConfiguration,
+  type InsertApiConfiguration,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql, ne } from "drizzle-orm";
@@ -112,6 +115,14 @@ export interface IStorage {
   getAllBuses(): Promise<Bus[]>;
   updateBus(id: number, updates: Partial<InsertBus>): Promise<Bus>;
   deleteBus(id: number): Promise<void>;
+
+  // API Configuration operations
+  createApiConfiguration(config: InsertApiConfiguration): Promise<ApiConfiguration>;
+  getApiConfiguration(id: number): Promise<ApiConfiguration | undefined>;
+  getApiConfigurationsByAgency(agencyId: number): Promise<ApiConfiguration[]>;
+  getApiConfigurationByType(agencyId: number, apiType: string): Promise<ApiConfiguration | undefined>;
+  updateApiConfiguration(id: number, updates: Partial<InsertApiConfiguration>): Promise<ApiConfiguration>;
+  deleteApiConfiguration(id: number): Promise<void>;
 
   // Traveler data operations
   createTravelerData(data: InsertTravelerData[]): Promise<TravelerData[]>;
@@ -606,6 +617,57 @@ export class DatabaseStorage implements IStorage {
 
     // Then delete the bus
     await this.db.delete(buses).where(eq(buses.id, id));
+  }
+
+  // API Configuration operations
+  async createApiConfiguration(config: InsertApiConfiguration): Promise<ApiConfiguration> {
+    const [newConfig] = await this.db
+      .insert(apiConfigurations)
+      .values({ ...config, createdAt: new Date(), updatedAt: new Date() })
+      .returning();
+    return newConfig;
+  }
+
+  async getApiConfiguration(id: number): Promise<ApiConfiguration | undefined> {
+    const [config] = await this.db
+      .select()
+      .from(apiConfigurations)
+      .where(eq(apiConfigurations.id, id))
+      .limit(1);
+    return config;
+  }
+
+  async getApiConfigurationsByAgency(agencyId: number): Promise<ApiConfiguration[]> {
+    return await this.db
+      .select()
+      .from(apiConfigurations)
+      .where(eq(apiConfigurations.agencyId, agencyId))
+      .orderBy(apiConfigurations.apiType);
+  }
+
+  async getApiConfigurationByType(agencyId: number, apiType: string): Promise<ApiConfiguration | undefined> {
+    const [config] = await this.db
+      .select()
+      .from(apiConfigurations)
+      .where(and(
+        eq(apiConfigurations.agencyId, agencyId),
+        eq(apiConfigurations.apiType, apiType)
+      ))
+      .limit(1);
+    return config;
+  }
+
+  async updateApiConfiguration(id: number, updates: Partial<InsertApiConfiguration>): Promise<ApiConfiguration> {
+    const [config] = await this.db
+      .update(apiConfigurations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(apiConfigurations.id, id))
+      .returning();
+    return config;
+  }
+
+  async deleteApiConfiguration(id: number): Promise<void> {
+    await this.db.delete(apiConfigurations).where(eq(apiConfigurations.id, id));
   }
 
   async createTravelerData(data: InsertTravelerData[]): Promise<TravelerData[]> {

@@ -282,3 +282,45 @@ export type PaymentHistory = typeof paymentHistory.$inferSelect;
 export type InsertPaymentHistory = typeof paymentHistory.$inferInsert;
 export type TaxConfig = typeof taxConfig.$inferSelect;
 export type InsertTaxConfig = typeof taxConfig.$inferInsert;
+
+// API configurations table for agencies
+export const apiConfigurations = pgTable("api_configurations", {
+  id: serial("id").primaryKey(),
+  agencyId: integer("agency_id").notNull().references(() => agencies.id),
+  apiType: varchar("api_type", { 
+    enum: ["get_routes", "book_seat", "routes_with_coupon", "daily_booking_summary"] 
+  }).notNull(),
+  name: varchar("name").notNull(), // Display name for the API
+  baseUrl: varchar("base_url").notNull(),
+  headers: jsonb("headers"), // JSON object for headers configuration
+  payloadTemplate: jsonb("payload_template"), // JSON template for request payload
+  responseStructure: jsonb("response_structure"), // JSON describing response structure
+  dataExtractionPath: varchar("data_extraction_path"), // JSONPath or dot notation to find data
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Relations for API configurations
+export const apiConfigurationsRelations = relations(apiConfigurations, ({ one }) => ({
+  agency: one(agencies, { fields: [apiConfigurations.agencyId], references: [agencies.id] }),
+}));
+
+// Update agencies relations to include API configurations
+export const agenciesRelationsUpdated = relations(agencies, ({ one, many }) => ({
+  user: one(users, { fields: [agencies.userId], references: [users.id] }),
+  buses: many(buses),
+  travelerData: many(travelerData),
+  uploadHistory: many(uploadHistory),
+  apiConfigurations: many(apiConfigurations),
+}));
+
+// API configuration schemas
+export const insertApiConfigurationSchema = createInsertSchema(apiConfigurations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ApiConfiguration = typeof apiConfigurations.$inferSelect;
+export type InsertApiConfiguration = z.infer<typeof insertApiConfigurationSchema>;
