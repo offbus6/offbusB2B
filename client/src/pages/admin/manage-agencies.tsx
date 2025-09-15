@@ -8,6 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { 
   Search, 
   Building2, 
@@ -20,17 +26,51 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  Plus
 } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useEffect } from "react";
 import { Link } from "wouter";
+
+const addAgencySchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  agencyName: z.string().min(1, "Agency name is required"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  city: z.string().min(1, "City is required"),
+  state: z.string().min(1, "State is required"),
+  logoUrl: z.string().optional().or(z.literal("")).refine(
+    (val) => !val || val === "" || /^https?:\/\//.test(val) || /^data:image\//.test(val),
+    "Invalid logo URL format"
+  ),
+  website: z.string().optional().or(z.literal("")).refine(
+    (val) => !val || val === "" || /^https?:\/\//.test(val),
+    "Invalid website URL format"
+  ),
+  bookingWebsite: z.string().optional().or(z.literal("")).refine(
+    (val) => !val || val === "" || /^https?:\/\//.test(val),
+    "Invalid booking website URL format"
+  ),
+});
+
+type AddAgencyData = z.infer<typeof addAgencySchema>;
+
+const indianStates = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", 
+  "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", 
+  "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", 
+  "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", 
+  "Uttarakhand", "West Bengal", "Delhi", "Jammu and Kashmir", "Ladakh"
+];
 
 export default function ManageAgencies() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Redirect to home if not authenticated
@@ -166,6 +206,295 @@ export default function ManageAgencies() {
     return actualAgencies?.filter((agency: any) => agency.status === status).length || 0;
   };
 
+  const form = useForm<AddAgencyData>({
+    resolver: zodResolver(addAgencySchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      agencyName: "",
+      email: "",
+      phone: "",
+      city: "",
+      state: "",
+      logoUrl: "",
+      website: "",
+      bookingWebsite: "",
+    },
+  });
+
+  const addAgencyMutation = useMutation({
+    mutationFn: async (data: AddAgencyData) => {
+      return await apiRequest("/api/admin/agencies", {
+        method: "POST",
+        body: data,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/agencies"] });
+      toast({
+        title: "Success",
+        description: "Agency created successfully and approved",
+      });
+      setIsAddDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create agency",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const AddAgencyDialog = ({ onClose }: { onClose: () => void }) => (
+    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="text-[var(--airbnb-dark)]">Add New Travel Agency</DialogTitle>
+        <DialogDescription>
+          Create a new travel agency. The agency will be automatically approved.
+        </DialogDescription>
+      </DialogHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit((data) => addAgencyMutation.mutate(data))} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="firstName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[var(--airbnb-dark)]">First Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter first name"
+                      {...field}
+                      className="border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)]"
+                      data-testid="input-first-name"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="lastName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[var(--airbnb-dark)]">Last Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter last name"
+                      {...field}
+                      className="border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)]"
+                      data-testid="input-last-name"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="agencyName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-[var(--airbnb-dark)]">Agency Name</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Enter agency name"
+                    {...field}
+                    className="border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)]"
+                    data-testid="input-agency-name"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[var(--airbnb-dark)]">Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="Enter email"
+                      {...field}
+                      className="border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)]"
+                      data-testid="input-email"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[var(--airbnb-dark)]">Phone</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter phone number"
+                      {...field}
+                      className="border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)]"
+                      data-testid="input-phone"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[var(--airbnb-dark)]">City</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter city"
+                      {...field}
+                      className="border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)]"
+                      data-testid="input-city"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[var(--airbnb-dark)]">State</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)]" data-testid="select-state">
+                        <SelectValue placeholder="Select state" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {indianStates.map((state) => (
+                        <SelectItem key={state} value={state}>
+                          {state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-[var(--airbnb-dark)]">Optional Information</h3>
+            <div className="grid grid-cols-1 gap-4">
+              <FormField
+                control={form.control}
+                name="website"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[var(--airbnb-dark)]">Website URL</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://yourwebsite.com"
+                        {...field}
+                        className="border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)]"
+                        data-testid="input-website"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="bookingWebsite"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[var(--airbnb-dark)]">Booking Website URL</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://booking.yourwebsite.com"
+                        {...field}
+                        className="border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)]"
+                        data-testid="input-booking-website"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="logoUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[var(--airbnb-dark)]">Logo URL</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://yourwebsite.com/logo.png"
+                        {...field}
+                        className="border-[var(--airbnb-border)] focus:border-[var(--airbnb-primary)]"
+                        data-testid="input-logo-url"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="flex-1"
+              data-testid="button-cancel"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              className="flex-1 bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90"
+              disabled={addAgencyMutation.isPending}
+              data-testid="button-create-agency"
+            >
+              {addAgencyMutation.isPending ? "Creating..." : "Create Agency"}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </DialogContent>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -186,6 +515,15 @@ export default function ManageAgencies() {
               className="pl-10 w-64"
             />
           </div>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink)]/90 text-white" data-testid="button-add-agency">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Agency
+              </Button>
+            </DialogTrigger>
+            <AddAgencyDialog onClose={() => setIsAddDialogOpen(false)} />
+          </Dialog>
         </div>
       </div>
 
