@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useLocation, useRoute } from "wouter";
+import { insertApiConfigurationSchema, type ApiConfiguration } from "@shared/schema";
 
 interface AgencyDetails {
   id: number;
@@ -88,6 +89,17 @@ export default function AgencyDetails() {
   const [addBusDialogOpen, setAddBusDialogOpen] = useState(false);
   const [editBusDialogOpen, setEditBusDialogOpen] = useState(false);
   const [selectedBus, setSelectedBus] = useState<any>(null);
+  
+  // API Configuration states
+  const [apiConfigDialogOpen, setApiConfigDialogOpen] = useState(false);
+  const [editingApiConfig, setEditingApiConfig] = useState<ApiConfiguration | null>(null);
+
+  // API Configuration form schema
+  const apiConfigFormSchema = insertApiConfigurationSchema.extend({
+    headers: z.string().optional(),
+    payloadTemplate: z.string().optional(),
+    responseStructure: z.string().optional(),
+  }).omit({ agencyId: true });
 
   // Bus form schema
   const busFormSchema = z.object({
@@ -405,6 +417,160 @@ export default function AgencyDetails() {
       toast({
         title: "Error",
         description: "Failed to update bus",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // API Configuration queries and mutations
+  const apiConfigsQuery = useQuery({
+    queryKey: [`/api/admin/agencies/${agencyId}/api-configs`],
+    enabled: !!agencyId,
+  });
+
+  const apiConfigForm = useForm<z.infer<typeof apiConfigFormSchema>>({
+    resolver: zodResolver(apiConfigFormSchema),
+    defaultValues: {
+      apiType: "",
+      name: "",
+      baseUrl: "",
+      headers: "",
+      payloadTemplate: "",
+      responseStructure: "",
+      dataExtractionPath: "",
+      isActive: true,
+    },
+  });
+
+  const createApiConfigMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof apiConfigFormSchema>) => {
+      // Safely parse JSON fields with proper error handling
+      let headers = null;
+      let payloadTemplate = null;
+      let responseStructure = null;
+      
+      try {
+        headers = data.headers ? JSON.parse(data.headers) : null;
+      } catch (e) {
+        throw new Error("Invalid JSON in Headers Configuration");
+      }
+      
+      try {
+        payloadTemplate = data.payloadTemplate ? JSON.parse(data.payloadTemplate) : null;
+      } catch (e) {
+        throw new Error("Invalid JSON in Payload Template");
+      }
+      
+      try {
+        responseStructure = data.responseStructure ? JSON.parse(data.responseStructure) : null;
+      } catch (e) {
+        throw new Error("Invalid JSON in Response Structure");
+      }
+
+      const payload = {
+        ...data,
+        headers,
+        payloadTemplate,
+        responseStructure,
+      };
+      
+      return await apiRequest(`/api/admin/agencies/${agencyId}/api-configs`, {
+        method: "POST",
+        body: payload,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/agencies/${agencyId}/api-configs`] });
+      setApiConfigDialogOpen(false);
+      setEditingApiConfig(null);
+      apiConfigForm.reset();
+      toast({
+        title: "Success",
+        description: "API configuration created successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create API configuration",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateApiConfigMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number, data: z.infer<typeof apiConfigFormSchema> }) => {
+      // Safely parse JSON fields with proper error handling
+      let headers = null;
+      let payloadTemplate = null;
+      let responseStructure = null;
+      
+      try {
+        headers = data.headers ? JSON.parse(data.headers) : null;
+      } catch (e) {
+        throw new Error("Invalid JSON in Headers Configuration");
+      }
+      
+      try {
+        payloadTemplate = data.payloadTemplate ? JSON.parse(data.payloadTemplate) : null;
+      } catch (e) {
+        throw new Error("Invalid JSON in Payload Template");
+      }
+      
+      try {
+        responseStructure = data.responseStructure ? JSON.parse(data.responseStructure) : null;
+      } catch (e) {
+        throw new Error("Invalid JSON in Response Structure");
+      }
+
+      const payload = {
+        ...data,
+        headers,
+        payloadTemplate,
+        responseStructure,
+      };
+      
+      return await apiRequest(`/api/admin/agencies/${agencyId}/api-configs/${id}`, {
+        method: "PATCH",
+        body: payload,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/agencies/${agencyId}/api-configs`] });
+      setApiConfigDialogOpen(false);
+      setEditingApiConfig(null);
+      apiConfigForm.reset();
+      toast({
+        title: "Success",
+        description: "API configuration updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update API configuration",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteApiConfigMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/admin/agencies/${agencyId}/api-configs/${id}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/agencies/${agencyId}/api-configs`] });
+      toast({
+        title: "Success",
+        description: "API configuration deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete API configuration",
         variant: "destructive",
       });
     },
@@ -1330,75 +1496,150 @@ export default function AgencyDetails() {
               <h2 className="text-xl font-semibold text-[var(--airbnb-dark)]">API Configuration</h2>
               <p className="text-[var(--airbnb-gray)]">Configure booking software API integrations for this agency</p>
             </div>
-            <Dialog>
+            <Dialog open={apiConfigDialogOpen} onOpenChange={setApiConfigDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white">
+                <Button 
+                  className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white"
+                  data-testid="button-add-api-config"
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Add API Configuration
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Add New API Configuration</DialogTitle>
+                  <DialogTitle>{editingApiConfig ? "Edit API Configuration" : "Add New API Configuration"}</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-600">Configure API endpoints for booking software integration</p>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>API Type</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select API type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="get_routes">Get Available Routes</SelectItem>
-                          <SelectItem value="book_seat">Book Seat API</SelectItem>
-                          <SelectItem value="routes_with_coupon">Routes with Coupon</SelectItem>
-                          <SelectItem value="daily_booking_summary">Daily Booking Summary</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                <Form {...apiConfigForm}>
+                  <form 
+                    onSubmit={apiConfigForm.handleSubmit((data) => {
+                      if (editingApiConfig) {
+                        updateApiConfigMutation.mutate({ id: editingApiConfig.id, data });
+                      } else {
+                        createApiConfigMutation.mutate(data);
+                      }
+                    })}
+                    className="space-y-4"
+                  >
+                    <p className="text-sm text-gray-600">Configure API endpoints for booking software integration</p>
                     
-                    <div>
-                      <Label>API Name</Label>
-                      <Input placeholder="Enter API name" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={apiConfigForm.control}
+                        name="apiType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>API Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-api-type">
+                                  <SelectValue placeholder="Select API type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="get_routes">Get Available Routes</SelectItem>
+                                <SelectItem value="book_seat">Book Seat API</SelectItem>
+                                <SelectItem value="routes_with_coupon">Routes with Coupon</SelectItem>
+                                <SelectItem value="daily_booking_summary">Daily Booking Summary</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={apiConfigForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>API Name</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Enter API name" 
+                                {...field} 
+                                data-testid="input-api-name"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
-                  </div>
 
-                  <div>
-                    <Label>Base URL</Label>
-                    <Input placeholder="https://api.example.com" />
-                  </div>
+                    <FormField
+                      control={apiConfigForm.control}
+                      name="baseUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Base URL</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="https://api.example.com" 
+                              {...field} 
+                              data-testid="input-base-url"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <div>
-                    <Label>Headers Configuration (JSON)</Label>
-                    <Textarea 
-                      placeholder={`{
+                    <FormField
+                      control={apiConfigForm.control}
+                      name="headers"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Headers Configuration (JSON)</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder={`{
   "Content-Type": "application/json",
   "Authorization": "Bearer YOUR_TOKEN",
   "X-API-Key": "your-api-key"
 }`}
-                      rows={4}
+                              rows={4}
+                              {...field}
+                              data-testid="textarea-headers"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
 
-                  <div>
-                    <Label>Payload Template (JSON)</Label>
-                    <Textarea 
-                      placeholder={`{
+                    <FormField
+                      control={apiConfigForm.control}
+                      name="payloadTemplate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payload Template (JSON)</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder={`{
   "source": "{{source}}",
   "destination": "{{destination}}",
   "date": "{{date}}"
 }`}
-                      rows={4}
+                              rows={4}
+                              {...field}
+                              data-testid="textarea-payload"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
 
-                  <div>
-                    <Label>Response Structure (JSON)</Label>
-                    <Textarea 
-                      placeholder={`{
+                    <FormField
+                      control={apiConfigForm.control}
+                      name="responseStructure"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Response Structure (JSON)</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder={`{
   "success": true,
   "data": [
     {
@@ -1408,27 +1649,75 @@ export default function AgencyDetails() {
     }
   ]
 }`}
-                      rows={4}
+                              rows={4}
+                              {...field}
+                              data-testid="textarea-response"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
 
-                  <div>
-                    <Label>Data Extraction Path</Label>
-                    <Input placeholder="data.routes (JSONPath to extract data from response)" />
-                  </div>
+                    <FormField
+                      control={apiConfigForm.control}
+                      name="dataExtractionPath"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Data Extraction Path</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="data.routes (JSONPath to extract data from response)" 
+                              {...field} 
+                              data-testid="input-extraction-path"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox />
-                    <Label className="text-sm">Active</Label>
-                  </div>
+                    <FormField
+                      control={apiConfigForm.control}
+                      name="isActive"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-active"
+                            />
+                          </FormControl>
+                          <FormLabel>Active</FormLabel>
+                        </FormItem>
+                      )}
+                    />
 
-                  <div className="flex justify-end space-x-2 pt-4">
-                    <Button variant="outline">Cancel</Button>
-                    <Button className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white">
-                      Save Configuration
-                    </Button>
-                  </div>
-                </div>
+                    <div className="flex justify-end space-x-2 pt-4">
+                      <Button 
+                        variant="outline" 
+                        type="button"
+                        onClick={() => {
+                          setApiConfigDialogOpen(false);
+                          setEditingApiConfig(null);
+                          apiConfigForm.reset();
+                        }}
+                        data-testid="button-cancel-api-config"
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        type="submit"
+                        className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white"
+                        disabled={createApiConfigMutation.isPending || updateApiConfigMutation.isPending}
+                        data-testid="button-save-api-config"
+                      >
+                        {createApiConfigMutation.isPending || updateApiConfigMutation.isPending ? "Saving..." : "Save Configuration"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
               </DialogContent>
             </Dialog>
           </div>
@@ -1441,13 +1730,95 @@ export default function AgencyDetails() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              {apiConfigsQuery.isLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--airbnb-pink)] mx-auto"></div>
+                  <p className="mt-4 text-gray-500">Loading API configurations...</p>
+                </div>
+              ) : apiConfigsQuery.data && apiConfigsQuery.data.length > 0 ? (
+                <div className="space-y-4">
+                  {apiConfigsQuery.data.map((config: ApiConfiguration) => (
+                    <div 
+                      key={config.id} 
+                      className="border rounded-lg p-4 space-y-3"
+                      data-testid={`card-api-config-${config.id}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <h3 className="font-semibold text-[var(--airbnb-dark)]" data-testid={`text-api-name-${config.id}`}>
+                              {config.name}
+                            </h3>
+                            <p className="text-sm text-gray-600 capitalize" data-testid={`text-api-type-${config.id}`}>
+                              {config.apiType.replace('_', ' ')}
+                            </p>
+                          </div>
+                          <Badge 
+                            className={config.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}
+                            data-testid={`badge-status-${config.id}`}
+                          >
+                            {config.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingApiConfig(config);
+                              apiConfigForm.reset({
+                                apiType: config.apiType,
+                                name: config.name,
+                                baseUrl: config.baseUrl,
+                                headers: config.headers ? JSON.stringify(config.headers, null, 2) : "",
+                                payloadTemplate: config.payloadTemplate ? JSON.stringify(config.payloadTemplate, null, 2) : "",
+                                responseStructure: config.responseStructure ? JSON.stringify(config.responseStructure, null, 2) : "",
+                                dataExtractionPath: config.dataExtractionPath || "",
+                                isActive: config.isActive,
+                              });
+                              setApiConfigDialogOpen(true);
+                            }}
+                            data-testid={`button-edit-${config.id}`}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to delete the API configuration "${config.name}"?`)) {
+                                deleteApiConfigMutation.mutate(config.id);
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                            data-testid={`button-delete-${config.id}`}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="text-sm space-y-1">
+                        <p><span className="font-medium">Base URL:</span> <span data-testid={`text-base-url-${config.id}`}>{config.baseUrl}</span></p>
+                        {config.dataExtractionPath && (
+                          <p><span className="font-medium">Data Extraction:</span> <span data-testid={`text-extraction-${config.id}`}>{config.dataExtractionPath}</span></p>
+                        )}
+                        <p className="text-xs text-gray-500">
+                          Created: {new Date(config.createdAt).toLocaleDateString()}
+                          {config.updatedAt !== config.createdAt && 
+                            ` • Updated: ${new Date(config.updatedAt).toLocaleDateString()}`
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
                 <div className="text-center py-8 text-gray-500">
                   <Settings className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No API configurations found</p>
                   <p className="text-sm">Add your first API configuration to get started</p>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -1873,40 +1873,42 @@ export function registerRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid agency ID" });
       }
 
-      const { apiType, name, baseUrl, headers, payloadTemplate, responseStructure, dataExtractionPath, isActive } = req.body;
-
-      // Validate required fields
-      if (!apiType || !name || !baseUrl) {
-        return res.status(400).json({ message: "API type, name, and base URL are required" });
+      // Validate request body using shared Zod schema
+      const validationResult = insertApiConfigurationSchema.omit({ agencyId: true }).safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: validationResult.error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
       }
 
-      // Validate API type
-      const validApiTypes = ["get_routes", "book_seat", "routes_with_coupon", "daily_booking_summary"];
-      if (!validApiTypes.includes(apiType)) {
-        return res.status(400).json({ message: "Invalid API type" });
-      }
+      const validatedData = validationResult.data;
 
       // Check if API configuration for this type already exists
-      const existingConfig = await storage.getApiConfigurationByType(agencyId, apiType);
+      const existingConfig = await storage.getApiConfigurationByType(agencyId, validatedData.apiType);
       if (existingConfig) {
-        return res.status(409).json({ message: `API configuration for ${apiType} already exists` });
+        return res.status(409).json({ 
+          message: `Configuration for ${validatedData.apiType.replace('_', ' ')} already exists for this agency` 
+        });
       }
 
       const config = await storage.createApiConfiguration({
+        ...validatedData,
         agencyId,
-        apiType,
-        name,
-        baseUrl,
-        headers: headers || null,
-        payloadTemplate: payloadTemplate || null,
-        responseStructure: responseStructure || null,
-        dataExtractionPath: dataExtractionPath || null,
-        isActive: isActive !== undefined ? isActive : true,
       });
 
       res.status(201).json(config);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Create API configuration error:", error);
+      // Handle unique constraint violation
+      if (error.code === '23505' && error.constraint?.includes('api_configurations_agency_id_api_type_unique')) {
+        return res.status(409).json({ 
+          message: "Configuration for this API type already exists for this agency" 
+        });
+      }
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -1931,21 +1933,40 @@ export function registerRoutes(app: Express) {
         return res.status(404).json({ message: "API configuration not found" });
       }
 
-      const updates: Partial<any> = {};
-      const { name, baseUrl, headers, payloadTemplate, responseStructure, dataExtractionPath, isActive } = req.body;
+      // Validate request body using shared Zod schema (partial for PATCH)
+      const validationResult = insertApiConfigurationSchema.omit({ agencyId: true }).partial().safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: validationResult.error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
 
-      if (name !== undefined) updates.name = name;
-      if (baseUrl !== undefined) updates.baseUrl = baseUrl;
-      if (headers !== undefined) updates.headers = headers;
-      if (payloadTemplate !== undefined) updates.payloadTemplate = payloadTemplate;
-      if (responseStructure !== undefined) updates.responseStructure = responseStructure;
-      if (dataExtractionPath !== undefined) updates.dataExtractionPath = dataExtractionPath;
-      if (isActive !== undefined) updates.isActive = isActive;
+      const validatedData = validationResult.data;
 
-      const updatedConfig = await storage.updateApiConfiguration(configId, updates);
+      // Check for apiType change conflicts (if apiType is being updated)
+      if (validatedData.apiType && validatedData.apiType !== existingConfig.apiType) {
+        const conflictingConfig = await storage.getApiConfigurationByType(agencyId, validatedData.apiType);
+        if (conflictingConfig && conflictingConfig.id !== configId) {
+          return res.status(409).json({ 
+            message: `Configuration for ${validatedData.apiType.replace('_', ' ')} already exists for this agency` 
+          });
+        }
+      }
+
+      const updatedConfig = await storage.updateApiConfiguration(configId, validatedData);
       res.json(updatedConfig);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Update API configuration error:", error);
+      // Handle unique constraint violation
+      if (error.code === '23505' && error.constraint?.includes('api_configurations_agency_id_api_type_unique')) {
+        return res.status(409).json({ 
+          message: "Configuration for this API type already exists for this agency" 
+        });
+      }
       res.status(500).json({ message: "Internal server error" });
     }
   });
