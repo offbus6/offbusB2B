@@ -1,5 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -12,6 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -78,6 +83,71 @@ export default function AgencyDetails() {
   const [newBillPeriod, setNewBillPeriod] = useState("");
   const [taxPercentage, setTaxPercentage] = useState(18);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  // Bus management states
+  const [addBusDialogOpen, setAddBusDialogOpen] = useState(false);
+  const [editBusDialogOpen, setEditBusDialogOpen] = useState(false);
+  const [selectedBus, setSelectedBus] = useState<any>(null);
+
+  // Bus form schema
+  const busFormSchema = z.object({
+    number: z.string().min(1, "Bus number is required"),
+    name: z.string().min(1, "Bus name is required"),
+    fromLocation: z.string().min(1, "From location is required"),
+    toLocation: z.string().min(1, "To location is required"),
+    departureTime: z.string().min(1, "Departure time is required"),
+    arrivalTime: z.string().min(1, "Arrival time is required"),
+    busType: z.enum(["Seater", "Sleeper", "AC Seater", "AC Sleeper", "Seater and Sleeper"]),
+    capacity: z.coerce.number().min(1, "Capacity must be at least 1"),
+    fare: z.string().min(1, "Fare is required"),
+    amenities: z.string().optional(),
+    imageUrl: z.string().url("Please enter a valid image URL").optional().or(z.literal("")),
+    isActive: z.boolean().default(true),
+    availabilityStatus: z.enum(["available", "not_available"]).default("available"),
+    unavailableUntil: z.string().optional(),
+  });
+
+  type BusFormValues = z.infer<typeof busFormSchema>;
+
+  const addBusForm = useForm<BusFormValues>({
+    resolver: zodResolver(busFormSchema),
+    defaultValues: {
+      number: "",
+      name: "",
+      fromLocation: "",
+      toLocation: "",
+      departureTime: "",
+      arrivalTime: "",
+      busType: "Seater",
+      capacity: 1,
+      fare: "",
+      amenities: "",
+      imageUrl: "",
+      isActive: true,
+      availabilityStatus: "available",
+      unavailableUntil: "",
+    },
+  });
+
+  const editBusForm = useForm<BusFormValues>({
+    resolver: zodResolver(busFormSchema),
+    defaultValues: {
+      number: "",
+      name: "",
+      fromLocation: "",
+      toLocation: "",
+      departureTime: "",
+      arrivalTime: "",
+      busType: "Seater",
+      capacity: 1,
+      fare: "",
+      amenities: "",
+      imageUrl: "",
+      isActive: true,
+      availabilityStatus: "available",
+      unavailableUntil: "",
+    },
+  });
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -276,6 +346,70 @@ export default function AgencyDetails() {
     },
   });
 
+  const addBusMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof busFormSchema>) => {
+      const payload = {
+        ...data,
+        agencyId: parseInt(agencyId!.toString()),
+        amenities: data.amenities ? data.amenities.split(",").map(item => item.trim()).filter(Boolean) : [],
+        unavailableUntil: data.unavailableUntil && data.unavailableUntil.trim() ? new Date(data.unavailableUntil).toISOString() : null,
+      };
+      return await apiRequest(`/api/admin/agencies/${agencyId}/buses`, {
+        method: "POST",
+        body: payload,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/agencies/${agencyId}/buses`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/agencies/${agencyId}`] });
+      setAddBusDialogOpen(false);
+      addBusForm.reset();
+      toast({
+        title: "Success",
+        description: "Bus added successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add bus",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateBusMutation = useMutation({
+    mutationFn: async ({ busId, data }: { busId: number; data: z.infer<typeof busFormSchema> }) => {
+      const payload = {
+        ...data,
+        amenities: data.amenities ? data.amenities.split(",").map(item => item.trim()).filter(Boolean) : [],
+        unavailableUntil: data.unavailableUntil && data.unavailableUntil.trim() ? new Date(data.unavailableUntil).toISOString() : null,
+      };
+      return await apiRequest(`/api/admin/agencies/${agencyId}/buses/${busId}`, {
+        method: "PATCH",
+        body: payload,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/agencies/${agencyId}/buses`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/agencies/${agencyId}`] });
+      setEditBusDialogOpen(false);
+      setSelectedBus(null);
+      editBusForm.reset();
+      toast({
+        title: "Success",
+        description: "Bus updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update bus",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleInputChange = useCallback((field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setHasUnsavedChanges(true);
@@ -402,6 +536,38 @@ export default function AgencyDetails() {
 
   const calculateTaxAmount = (subtotal: number, taxPercentage: number) => {
     return Math.round((subtotal * taxPercentage) / 100);
+  };
+
+  // Bus form handlers
+  const handleAddBus: SubmitHandler<BusFormValues> = (data) => {
+    addBusMutation.mutate(data);
+  };
+
+  const handleEditBus: SubmitHandler<BusFormValues> = (data) => {
+    if (selectedBus) {
+      updateBusMutation.mutate({ busId: selectedBus.id, data });
+    }
+  };
+
+  const handleEditBusClick = (bus: any) => {
+    setSelectedBus(bus);
+    editBusForm.reset({
+      number: bus.number || "",
+      name: bus.name || "",
+      fromLocation: bus.fromLocation || "",
+      toLocation: bus.toLocation || "",
+      departureTime: bus.departureTime || "",
+      arrivalTime: bus.arrivalTime || "",
+      busType: bus.busType || "Seater",
+      capacity: Number(bus.capacity) || 1,
+      fare: bus.fare || "",
+      amenities: bus.amenities ? bus.amenities.join(", ") : "",
+      imageUrl: bus.imageUrl || "",
+      isActive: bus.isActive ?? true,
+      availabilityStatus: bus.availabilityStatus || "available",
+      unavailableUntil: bus.unavailableUntil ? new Date(bus.unavailableUntil).toISOString().slice(0, 16) : "",
+    });
+    setEditBusDialogOpen(true);
   };
 
   // Memoize calculation-heavy operations
@@ -848,7 +1014,20 @@ export default function AgencyDetails() {
 
         <TabsContent value="buses" className="space-y-6">
           <div>
-            <h2 className="text-xl font-semibold text-[var(--airbnb-dark)] mb-4">Bus Details</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-[var(--airbnb-dark)]">Bus Details</h2>
+              <Dialog open={addBusDialogOpen} onOpenChange={setAddBusDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white"
+                    data-testid="button-add-bus"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add New Bus
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
+            </div>
             <Card>
               <CardContent className="p-0">
                 {busesLoading ? (
@@ -874,6 +1053,7 @@ export default function AgencyDetails() {
                         <TableHead>Fare</TableHead>
                         <TableHead>Amenities</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -908,9 +1088,36 @@ export default function AgencyDetails() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge className={bus.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                              {bus.isActive ? "Active" : "Inactive"}
-                            </Badge>
+                            <div className="space-y-1">
+                              <Badge className={bus.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                                {bus.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                              <div>
+                                <Badge 
+                                  className={
+                                    bus.availabilityStatus === "available" || !bus.availabilityStatus 
+                                      ? "bg-blue-100 text-blue-800" 
+                                      : "bg-orange-100 text-orange-800"
+                                  }
+                                >
+                                  {bus.availabilityStatus === "not_available" 
+                                    ? `Unavailable${bus.unavailableUntil ? ` until ${new Date(bus.unavailableUntil).toLocaleDateString()}` : ""}`
+                                    : "Available"
+                                  }
+                                </Badge>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditBusClick(bus)}
+                              className="text-xs"
+                              data-testid={`button-edit-bus-${bus.id}`}
+                            >
+                              Edit
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1180,6 +1387,510 @@ export default function AgencyDetails() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Bus Dialog */}
+      <Dialog open={addBusDialogOpen} onOpenChange={setAddBusDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Bus</DialogTitle>
+          </DialogHeader>
+          <Form {...addBusForm}>
+            <form onSubmit={addBusForm.handleSubmit(handleAddBus)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={addBusForm.control}
+                  name="number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bus Number *</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-bus-number" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={addBusForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bus Name *</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-bus-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={addBusForm.control}
+                  name="fromLocation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>From Location *</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-from-location" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={addBusForm.control}
+                  name="toLocation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>To Location *</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-to-location" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={addBusForm.control}
+                  name="departureTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Departure Time *</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="time" data-testid="input-departure-time" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={addBusForm.control}
+                  name="arrivalTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Arrival Time *</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="time" data-testid="input-arrival-time" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={addBusForm.control}
+                  name="busType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bus Type *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-bus-type">
+                            <SelectValue placeholder="Select bus type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Seater">Seater</SelectItem>
+                          <SelectItem value="Sleeper">Sleeper</SelectItem>
+                          <SelectItem value="AC Seater">AC Seater</SelectItem>
+                          <SelectItem value="AC Sleeper">AC Sleeper</SelectItem>
+                          <SelectItem value="Seater and Sleeper">Seater and Sleeper</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={addBusForm.control}
+                  name="capacity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Capacity (seats) *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="number" 
+                          min="1"
+                          data-testid="input-capacity" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={addBusForm.control}
+                  name="fare"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fare *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g., 500" data-testid="input-fare" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={addBusForm.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image URL</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="https://..." data-testid="input-image-url" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={addBusForm.control}
+                name="amenities"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amenities</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} placeholder="WiFi, AC, TV, Water (comma separated)" data-testid="input-amenities" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={addBusForm.control}
+                  name="availabilityStatus"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Availability Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-availability-status">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="available">Available</SelectItem>
+                          <SelectItem value="not_available">Not Available</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={addBusForm.control}
+                  name="unavailableUntil"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unavailable Until (if applicable)</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="date" data-testid="input-unavailable-until" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <FormField
+                  control={addBusForm.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-is-active"
+                        />
+                      </FormControl>
+                      <FormLabel className="font-normal">
+                        Bus is active
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setAddBusDialogOpen(false)}
+                  data-testid="button-cancel-add-bus"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={addBusMutation.isPending}
+                  className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white"
+                  data-testid="button-submit-add-bus"
+                >
+                  {addBusMutation.isPending ? "Adding..." : "Add Bus"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Bus Dialog */}
+      <Dialog open={editBusDialogOpen} onOpenChange={setEditBusDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Bus</DialogTitle>
+          </DialogHeader>
+          <Form {...editBusForm}>
+            <form onSubmit={editBusForm.handleSubmit(handleEditBus)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={editBusForm.control}
+                  name="number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bus Number *</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-edit-bus-number" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editBusForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bus Name *</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-edit-bus-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editBusForm.control}
+                  name="fromLocation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>From Location *</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-edit-from-location" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editBusForm.control}
+                  name="toLocation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>To Location *</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-edit-to-location" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editBusForm.control}
+                  name="departureTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Departure Time *</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="time" data-testid="input-edit-departure-time" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editBusForm.control}
+                  name="arrivalTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Arrival Time *</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="time" data-testid="input-edit-arrival-time" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editBusForm.control}
+                  name="busType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bus Type *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-bus-type">
+                            <SelectValue placeholder="Select bus type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Seater">Seater</SelectItem>
+                          <SelectItem value="Sleeper">Sleeper</SelectItem>
+                          <SelectItem value="AC Seater">AC Seater</SelectItem>
+                          <SelectItem value="AC Sleeper">AC Sleeper</SelectItem>
+                          <SelectItem value="Seater and Sleeper">Seater and Sleeper</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editBusForm.control}
+                  name="capacity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Capacity (seats) *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="number" 
+                          min="1"
+                          data-testid="input-edit-capacity" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editBusForm.control}
+                  name="fare"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fare *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g., 500" data-testid="input-edit-fare" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editBusForm.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image URL</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="https://..." data-testid="input-edit-image-url" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={editBusForm.control}
+                name="amenities"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amenities</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} placeholder="WiFi, AC, TV, Water (comma separated)" data-testid="input-edit-amenities" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={editBusForm.control}
+                  name="availabilityStatus"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Availability Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-availability-status">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="available">Available</SelectItem>
+                          <SelectItem value="not_available">Not Available</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editBusForm.control}
+                  name="unavailableUntil"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unavailable Until (if applicable)</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="date" data-testid="input-edit-unavailable-until" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <FormField
+                  control={editBusForm.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-edit-is-active"
+                        />
+                      </FormControl>
+                      <FormLabel className="font-normal">
+                        Bus is active
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setEditBusDialogOpen(false)}
+                  data-testid="button-cancel-edit-bus"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={updateBusMutation.isPending}
+                  className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white"
+                  data-testid="button-submit-edit-bus"
+                >
+                  {updateBusMutation.isPending ? "Updating..." : "Update Bus"}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>

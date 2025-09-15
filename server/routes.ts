@@ -1565,6 +1565,244 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  app.post("/api/admin/agencies/:id/buses", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { id } = req.params;
+      const agencyId = parseInt(id);
+      
+      // Verify agency exists
+      const agency = await storage.getAgency(agencyId);
+      if (!agency) {
+        return res.status(404).json({ message: "Agency not found" });
+      }
+
+      const { 
+        number, name, fromLocation, toLocation, departureTime, arrivalTime,
+        busType, capacity, fare, amenities, imageUrl, isActive, 
+        availabilityStatus, unavailableUntil
+      } = req.body;
+
+      // Validate required fields
+      if (!number || !name || !fromLocation || !toLocation || !departureTime || !arrivalTime || !busType || !capacity || !fare) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Validate bus type
+      const validBusTypes = ["Seater", "Sleeper", "AC Seater", "AC Sleeper", "Seater and Sleeper"];
+      if (!validBusTypes.includes(busType)) {
+        return res.status(400).json({ message: "Invalid bus type" });
+      }
+
+      // Validate availability status
+      const validAvailabilityStatuses = ["available", "not_available"];
+      if (availabilityStatus && !validAvailabilityStatuses.includes(availabilityStatus)) {
+        return res.status(400).json({ message: "Invalid availability status" });
+      }
+
+      // Validate capacity is a positive number
+      const capacityNum = parseInt(capacity);
+      if (isNaN(capacityNum) || capacityNum < 1) {
+        return res.status(400).json({ message: "Capacity must be a positive number" });
+      }
+
+      // Validate image URL if provided
+      if (imageUrl && imageUrl.trim()) {
+        const trimmedImageUrl = imageUrl.trim();
+        if (!validator.isURL(trimmedImageUrl, { protocols: ['http', 'https'] })) {
+          return res.status(400).json({ message: "Invalid image URL format" });
+        }
+      }
+
+      // Parse unavailableUntil if provided (string → Date coercion for insertBusSchema)
+      let parsedUnavailableUntil = null;
+      if (unavailableUntil && unavailableUntil.trim()) {
+        parsedUnavailableUntil = new Date(unavailableUntil);
+        if (isNaN(parsedUnavailableUntil.getTime())) {
+          return res.status(400).json({ message: "Invalid unavailable until date" });
+        }
+      }
+
+      // Enforce agencyId from URL params only - ignore any agencyId from body for security
+      const busData = {
+        agencyId, // From URL params only
+        number: number.trim(),
+        name: name.trim(),
+        fromLocation: fromLocation.trim(),
+        toLocation: toLocation.trim(),
+        departureTime: departureTime.trim(),
+        arrivalTime: arrivalTime.trim(),
+        busType,
+        capacity: capacityNum,
+        fare: fare.trim(),
+        amenities: amenities || [],
+        imageUrl: (imageUrl && imageUrl.trim()) ? imageUrl.trim() : null,
+        isActive: isActive !== undefined ? isActive : true,
+        availabilityStatus: availabilityStatus || "available",
+        unavailableUntil: parsedUnavailableUntil,
+      };
+
+      const newBus = await storage.createBus(busData);
+      res.status(201).json(newBus);
+    } catch (error) {
+      console.error("Create bus error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/admin/agencies/:id/buses/:busId", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { id, busId } = req.params;
+      const agencyId = parseInt(id);
+      const busIdNum = parseInt(busId);
+      
+      // Verify agency exists
+      const agency = await storage.getAgency(agencyId);
+      if (!agency) {
+        return res.status(404).json({ message: "Agency not found" });
+      }
+
+      // Verify bus exists and belongs to agency
+      const existingBus = await storage.getBus(busIdNum);
+      if (!existingBus) {
+        return res.status(404).json({ message: "Bus not found" });
+      }
+      if (existingBus.agencyId !== agencyId) {
+        return res.status(403).json({ message: "Bus does not belong to this agency" });
+      }
+
+      const { 
+        number, name, fromLocation, toLocation, departureTime, arrivalTime,
+        busType, capacity, fare, amenities, imageUrl, isActive, 
+        availabilityStatus, unavailableUntil
+      } = req.body;
+
+      const updates: any = {};
+
+      // Only update provided fields
+      if (number !== undefined) {
+        if (!number.trim()) {
+          return res.status(400).json({ message: "Bus number cannot be empty" });
+        }
+        updates.number = number.trim();
+      }
+
+      if (name !== undefined) {
+        if (!name.trim()) {
+          return res.status(400).json({ message: "Bus name cannot be empty" });
+        }
+        updates.name = name.trim();
+      }
+
+      if (fromLocation !== undefined) {
+        if (!fromLocation.trim()) {
+          return res.status(400).json({ message: "From location cannot be empty" });
+        }
+        updates.fromLocation = fromLocation.trim();
+      }
+
+      if (toLocation !== undefined) {
+        if (!toLocation.trim()) {
+          return res.status(400).json({ message: "To location cannot be empty" });
+        }
+        updates.toLocation = toLocation.trim();
+      }
+
+      if (departureTime !== undefined) {
+        if (!departureTime.trim()) {
+          return res.status(400).json({ message: "Departure time cannot be empty" });
+        }
+        updates.departureTime = departureTime.trim();
+      }
+
+      if (arrivalTime !== undefined) {
+        if (!arrivalTime.trim()) {
+          return res.status(400).json({ message: "Arrival time cannot be empty" });
+        }
+        updates.arrivalTime = arrivalTime.trim();
+      }
+
+      if (busType !== undefined) {
+        const validBusTypes = ["Seater", "Sleeper", "AC Seater", "AC Sleeper", "Seater and Sleeper"];
+        if (!validBusTypes.includes(busType)) {
+          return res.status(400).json({ message: "Invalid bus type" });
+        }
+        updates.busType = busType;
+      }
+
+      if (capacity !== undefined) {
+        const capacityNum = parseInt(capacity);
+        if (isNaN(capacityNum) || capacityNum < 1) {
+          return res.status(400).json({ message: "Capacity must be a positive number" });
+        }
+        updates.capacity = capacityNum;
+      }
+
+      if (fare !== undefined) {
+        if (!fare.trim()) {
+          return res.status(400).json({ message: "Fare cannot be empty" });
+        }
+        updates.fare = fare.trim();
+      }
+
+      if (amenities !== undefined) {
+        updates.amenities = amenities;
+      }
+
+      if (imageUrl !== undefined) {
+        if (imageUrl && imageUrl.trim()) {
+          const trimmedImageUrl = imageUrl.trim();
+          if (!validator.isURL(trimmedImageUrl, { protocols: ['http', 'https'] })) {
+            return res.status(400).json({ message: "Invalid image URL format" });
+          }
+          updates.imageUrl = trimmedImageUrl;
+        } else {
+          updates.imageUrl = null;
+        }
+      }
+
+      if (isActive !== undefined) {
+        updates.isActive = isActive;
+      }
+
+      if (availabilityStatus !== undefined) {
+        const validAvailabilityStatuses = ["available", "not_available"];
+        if (!validAvailabilityStatuses.includes(availabilityStatus)) {
+          return res.status(400).json({ message: "Invalid availability status" });
+        }
+        updates.availabilityStatus = availabilityStatus;
+      }
+
+      if (unavailableUntil !== undefined) {
+        if (unavailableUntil && unavailableUntil.trim()) {
+          // String → Date coercion for insertBusSchema compatibility  
+          const parsedUnavailableUntil = new Date(unavailableUntil);
+          if (isNaN(parsedUnavailableUntil.getTime())) {
+            return res.status(400).json({ message: "Invalid unavailable until date" });
+          }
+          updates.unavailableUntil = parsedUnavailableUntil;
+        } else {
+          updates.unavailableUntil = null;
+        }
+      }
+
+      const updatedBus = await storage.updateBus(busIdNum, updates);
+      res.json(updatedBus);
+    } catch (error) {
+      console.error("Update bus error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/admin/agencies/:id/users", async (req: Request, res: Response) => {
     try {
       const user = (req.session as any)?.user;

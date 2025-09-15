@@ -78,6 +78,8 @@ export const buses = pgTable("buses", {
   amenities: text("amenities").array().default([]),
   imageUrl: varchar("image_url"),
   isActive: boolean("is_active").default(true),
+  availabilityStatus: varchar("availability_status", { enum: ["available", "not_available"] }).notNull().default("available"),
+  unavailableUntil: timestamp("unavailable_until"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
