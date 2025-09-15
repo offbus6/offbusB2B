@@ -703,11 +703,12 @@ export default function AgencyDetails() {
       </div>
 
       <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="details">Agency Details</TabsTrigger>
           <TabsTrigger value="buses">Bus Details</TabsTrigger>
           <TabsTrigger value="users">User Details</TabsTrigger>
           <TabsTrigger value="payments">Payment History</TabsTrigger>
+          <TabsTrigger value="api-config">API Configuration</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="space-y-6">
@@ -1319,6 +1320,134 @@ export default function AgencyDetails() {
                     </TableBody>
                   </Table>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="api-config" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-semibold text-[var(--airbnb-dark)]">API Configuration</h2>
+              <p className="text-[var(--airbnb-gray)]">Configure booking software API integrations for this agency</p>
+            </div>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add API Configuration
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add New API Configuration</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">Configure API endpoints for booking software integration</p>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>API Type</Label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select API type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="get_routes">Get Available Routes</SelectItem>
+                          <SelectItem value="book_seat">Book Seat API</SelectItem>
+                          <SelectItem value="routes_with_coupon">Routes with Coupon</SelectItem>
+                          <SelectItem value="daily_booking_summary">Daily Booking Summary</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label>API Name</Label>
+                      <Input placeholder="Enter API name" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Base URL</Label>
+                    <Input placeholder="https://api.example.com" />
+                  </div>
+
+                  <div>
+                    <Label>Headers Configuration (JSON)</Label>
+                    <Textarea 
+                      placeholder={`{
+  "Content-Type": "application/json",
+  "Authorization": "Bearer YOUR_TOKEN",
+  "X-API-Key": "your-api-key"
+}`}
+                      rows={4}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Payload Template (JSON)</Label>
+                    <Textarea 
+                      placeholder={`{
+  "source": "{{source}}",
+  "destination": "{{destination}}",
+  "date": "{{date}}"
+}`}
+                      rows={4}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Response Structure (JSON)</Label>
+                    <Textarea 
+                      placeholder={`{
+  "success": true,
+  "data": [
+    {
+      "routeId": "string",
+      "departure": "string",
+      "arrival": "string"
+    }
+  ]
+}`}
+                      rows={4}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Data Extraction Path</Label>
+                    <Input placeholder="data.routes (JSONPath to extract data from response)" />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox />
+                    <Label className="text-sm">Active</Label>
+                  </div>
+
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button variant="outline">Cancel</Button>
+                    <Button className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white">
+                      Save Configuration
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                API Configurations
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="text-center py-8 text-gray-500">
+                  <Settings className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No API configurations found</p>
+                  <p className="text-sm">Add your first API configuration to get started</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

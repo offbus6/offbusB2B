@@ -1840,6 +1840,144 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // API Configuration Routes
+  app.get("/api/admin/agencies/:id/api-configs", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const agencyId = parseInt(req.params.id);
+      if (isNaN(agencyId)) {
+        return res.status(400).json({ message: "Invalid agency ID" });
+      }
+
+      const configs = await storage.getApiConfigurationsByAgency(agencyId);
+      res.json(configs);
+    } catch (error) {
+      console.error("Get API configurations error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/admin/agencies/:id/api-configs", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const agencyId = parseInt(req.params.id);
+      if (isNaN(agencyId)) {
+        return res.status(400).json({ message: "Invalid agency ID" });
+      }
+
+      const { apiType, name, baseUrl, headers, payloadTemplate, responseStructure, dataExtractionPath, isActive } = req.body;
+
+      // Validate required fields
+      if (!apiType || !name || !baseUrl) {
+        return res.status(400).json({ message: "API type, name, and base URL are required" });
+      }
+
+      // Validate API type
+      const validApiTypes = ["get_routes", "book_seat", "routes_with_coupon", "daily_booking_summary"];
+      if (!validApiTypes.includes(apiType)) {
+        return res.status(400).json({ message: "Invalid API type" });
+      }
+
+      // Check if API configuration for this type already exists
+      const existingConfig = await storage.getApiConfigurationByType(agencyId, apiType);
+      if (existingConfig) {
+        return res.status(409).json({ message: `API configuration for ${apiType} already exists` });
+      }
+
+      const config = await storage.createApiConfiguration({
+        agencyId,
+        apiType,
+        name,
+        baseUrl,
+        headers: headers || null,
+        payloadTemplate: payloadTemplate || null,
+        responseStructure: responseStructure || null,
+        dataExtractionPath: dataExtractionPath || null,
+        isActive: isActive !== undefined ? isActive : true,
+      });
+
+      res.status(201).json(config);
+    } catch (error) {
+      console.error("Create API configuration error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/admin/agencies/:id/api-configs/:configId", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const agencyId = parseInt(req.params.id);
+      const configId = parseInt(req.params.configId);
+      
+      if (isNaN(agencyId) || isNaN(configId)) {
+        return res.status(400).json({ message: "Invalid agency ID or config ID" });
+      }
+
+      // Verify the configuration belongs to this agency
+      const existingConfig = await storage.getApiConfiguration(configId);
+      if (!existingConfig || existingConfig.agencyId !== agencyId) {
+        return res.status(404).json({ message: "API configuration not found" });
+      }
+
+      const updates: Partial<any> = {};
+      const { name, baseUrl, headers, payloadTemplate, responseStructure, dataExtractionPath, isActive } = req.body;
+
+      if (name !== undefined) updates.name = name;
+      if (baseUrl !== undefined) updates.baseUrl = baseUrl;
+      if (headers !== undefined) updates.headers = headers;
+      if (payloadTemplate !== undefined) updates.payloadTemplate = payloadTemplate;
+      if (responseStructure !== undefined) updates.responseStructure = responseStructure;
+      if (dataExtractionPath !== undefined) updates.dataExtractionPath = dataExtractionPath;
+      if (isActive !== undefined) updates.isActive = isActive;
+
+      const updatedConfig = await storage.updateApiConfiguration(configId, updates);
+      res.json(updatedConfig);
+    } catch (error) {
+      console.error("Update API configuration error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/admin/agencies/:id/api-configs/:configId", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const agencyId = parseInt(req.params.id);
+      const configId = parseInt(req.params.configId);
+      
+      if (isNaN(agencyId) || isNaN(configId)) {
+        return res.status(400).json({ message: "Invalid agency ID or config ID" });
+      }
+
+      // Verify the configuration belongs to this agency
+      const existingConfig = await storage.getApiConfiguration(configId);
+      if (!existingConfig || existingConfig.agencyId !== agencyId) {
+        return res.status(404).json({ message: "API configuration not found" });
+      }
+
+      await storage.deleteApiConfiguration(configId);
+      res.json({ message: "API configuration deleted successfully" });
+    } catch (error) {
+      console.error("Delete API configuration error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/admin/tax-config", async (req: Request, res: Response) => {
     try {
       const user = (req.session as any)?.user;
