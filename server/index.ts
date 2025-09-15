@@ -96,6 +96,11 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Add health endpoint for startup checks
+  app.get('/health', (req: Request, res: Response) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   // Register routes first (this mutates the app and returns it)
   await registerRoutes(app);
 
@@ -116,25 +121,59 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
-  // Create HTTP server from Express app with error handling
+  // Create HTTP server from Express app with error handling and retry logic
   const PORT = parseInt(process.env.PORT!, 10);
-  const server = app.listen({
-    port: PORT,
-    host: "0.0.0.0",
-  }, () => {
-    log(`serving on port ${PORT}`);
-  });
+  let retryCount = 0;
+  const maxRetries = 5;
+  const retryDelay = 1000; // 1 second
 
-  // Handle server errors to prevent hanging processes
-  server.on('error', (error: any) => {
-    if (error.code === 'EADDRINUSE') {
-      console.error(`${new Date().toLocaleTimeString()} [express] Port ${PORT} is already in use. Process will exit for clean restart.`);
-      process.exit(1);
-    } else {
-      console.error(`${new Date().toLocaleTimeString()} [express] Server error:`, error);
-      process.exit(1);
-    }
-  });
+  const startServer = () => {
+    const server = app.listen({
+      port: PORT,
+      host: "0.0.0.0",
+    }, () => {
+      log(`serving on port ${PORT}`);
+    });
+
+    // Handle server errors with retry logic
+    server.on('error', async (error: any) => {
+      if (error.code === 'EADDRINUSE') {
+        retryCount++;
+        console.log(`${new Date().toLocaleTimeString()} [express] Port ${PORT} is in use (attempt ${retryCount}/${maxRetries})`);
+        
+        if (retryCount >= maxRetries) {
+          console.error(`${new Date().toLocaleTimeString()} [express] Port ${PORT} still in use after ${maxRetries} attempts. Exiting.`);
+          process.exit(1);
+          return;
+        }
+
+        // Check if existing server is responding
+        try {
+          const response = await fetch(`http://localhost:${PORT}/health`);
+          if (response.ok) {
+            console.log(`${new Date().toLocaleTimeString()} [express] Existing server is healthy. Exiting gracefully.`);
+            process.exit(0);
+            return;
+          }
+        } catch (e) {
+          // Server not responding, continue with retry
+          console.log(`${new Date().toLocaleTimeString()} [express] Port seems stuck, will retry...`);
+        }
+
+        console.log(`${new Date().toLocaleTimeString()} [express] Retrying in ${retryDelay}ms...`);
+        setTimeout(() => {
+          startServer();
+        }, retryDelay);
+      } else {
+        console.error(`${new Date().toLocaleTimeString()} [express] Server error:`, error);
+        process.exit(1);
+      }
+    });
+
+    return server;
+  };
+
+  const server = startServer();
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

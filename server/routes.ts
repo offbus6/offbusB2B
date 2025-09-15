@@ -713,6 +713,117 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Admin creates new agency (auto-approved)
+  app.post("/api/admin/agencies", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { firstName, lastName, agencyName, email, phone, city, state, logoUrl, website, bookingWebsite } = req.body;
+
+      // Map frontend fields to backend expected fields  
+      const mappedData = {
+        name: agencyName,
+        email,
+        contactPerson: `${firstName} ${lastName}`,
+        phone,
+        city,
+        state,
+        website,
+        bookingWebsite,
+        logoUrl
+      };
+
+      // Enhanced email validation
+      const emailValidation = validateEmail(mappedData.email);
+      if (!emailValidation.isValid) {
+        return res.status(400).json({ message: emailValidation.error });
+      }
+      const sanitizedEmail = emailValidation.sanitized!;
+
+      // Check if email already exists
+      const existingAgency = await storage.getAgencyByEmail(sanitizedEmail);
+      if (existingAgency) {
+        return res.status(409).json({ message: "Email already registered" });
+      }
+
+      // Enhanced phone validation
+      if (mappedData.phone) {
+        const phoneValidation = validatePhoneNumber(mappedData.phone);
+        if (!phoneValidation.isValid) {
+          return res.status(400).json({ message: phoneValidation.error });
+        }
+      }
+
+      // URL validation for booking website and logo URL
+      let validatedBookingWebsite = undefined;
+      let validatedLogoUrl = undefined;
+
+      if (mappedData.bookingWebsite) {
+        const bookingWebsite = mappedData.bookingWebsite.trim();
+        if (validator.isURL(bookingWebsite, { protocols: ['http', 'https'] })) {
+          validatedBookingWebsite = bookingWebsite;
+        } else {
+          return res.status(400).json({ message: "Invalid booking website URL format" });
+        }
+      }
+
+      if (mappedData.logoUrl) {
+        const logoUrl = mappedData.logoUrl.trim();
+        // Accept both HTTP/HTTPS URLs and base64 data URLs
+        if (validator.isURL(logoUrl, { protocols: ['http', 'https'] }) || logoUrl.startsWith('data:image/')) {
+          validatedLogoUrl = logoUrl;
+        } else {
+          return res.status(400).json({ message: "Invalid logo URL format" });
+        }
+      }
+
+      if (mappedData.website) {
+        const website = mappedData.website.trim();
+        if (!validator.isURL(website, { protocols: ['http', 'https'] })) {
+          return res.status(400).json({ message: "Invalid website URL format" });
+        }
+      }
+
+      // Create agency with admin-set data (no password, auto-approved)
+      const agencyData = {
+        userId: `admin_agency_${Date.now()}`, // Generate a temporary userId for admin-created agency
+        name: sanitizeInput(mappedData.name),
+        email: sanitizedEmail,
+        contactPerson: sanitizeInput(mappedData.contactPerson),
+        phone: sanitizeInput(mappedData.phone),
+        city: sanitizeInput(mappedData.city),
+        state: mappedData.state ? sanitizeInput(mappedData.state) : undefined,
+        website: mappedData.website ? sanitizeInput(mappedData.website) : undefined,
+        bookingWebsite: validatedBookingWebsite,
+        logoUrl: validatedLogoUrl,
+        password: null, // Admin created agencies don't need passwords
+        status: "approved" as const // Auto-approved by admin
+      };
+
+      console.log(`Admin ${user.email} creating agency: ${agencyData.name}`);
+      const newAgency = await storage.createAgency(agencyData);
+      
+      res.status(201).json({ 
+        message: "Agency created successfully",
+        agency: {
+          id: newAgency.id,
+          name: newAgency.name,
+          email: newAgency.email,
+          status: newAgency.status
+        }
+      });
+    } catch (error) {
+      console.error("Admin create agency error:", error);
+      if (error instanceof Error && error.message.includes("Email already registered")) {
+        return res.status(409).json({ message: "Email already registered" });
+      }
+      res.status(500).json({ message: "Failed to create agency" });
+    }
+  });
+
   app.get("/api/admin/agencies/pending", async (req: Request, res: Response) => {
     try {
       const user = (req.session as any)?.user;
