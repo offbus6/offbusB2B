@@ -47,6 +47,8 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - **WhatsApp Config**: API configuration for providers.
 - **WhatsApp Templates**: Message templates with dynamic variables.
 - **WhatsApp Queue**: Scheduled and sent message tracking.
+- **Agency API Providers**: SAAS provider credentials (ITS, Bitla, etc.) with agency-specific SWDL URLs, Company IDs, and VerifyCall tokens stored per agency.
+- **Agency API Endpoints**: Individual SOAP/XML API configurations per provider with request/response templates and extraction rules.
 
 ## External Dependencies
 
@@ -104,3 +106,14 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - **Smart Cleanup**: Only resets stuck 'processing' records older than 5 minutes to prevent interference with active batches
 - **Bulletproof Retry Safety**: System now handles server restarts, network timeouts, and manual stops without duplicate API charges
 - **Cost Protection**: Prevents scenarios like phone number 8680081833 being called 3 times due to retry attempts
+
+### SAAS Provider Integration System (October 2025)
+- **Two-Tier Architecture**: Separated provider credentials from API endpoint configurations for maximum flexibility
+- **Agency-Specific Credentials**: Each agency stores unique SWDL URL, Company ID, and VerifyCall token - all configurable via UI
+- **Multi-Provider Support**: Agencies can configure multiple providers (ITS, Bitla, custom providers) simultaneously
+- **Direct Storage**: VerifyCall tokens stored directly in database per agency (no global encryption key required)
+- **SOAP/XML Configuration**: Individual API endpoint management with request templates, response templates, and extraction rules
+- **Super Admin Only**: Provider configuration restricted to super_admin role for security
+- **Complete REST API**: Full CRUD operations for providers and endpoints with Zod validation
+- **UI Integration**: New "SAAS Providers" tab in agency details page with provider and endpoint management dialogs
+- **Database Tables**: `agency_api_providers` for credentials, `agency_api_endpoints` for SOAP/XML configurations

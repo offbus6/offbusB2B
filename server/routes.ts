@@ -2054,13 +2054,7 @@ export function registerRoutes(app: Express) {
         });
       }
 
-      const { verifyCall, ...providerData } = validationResult.data;
-      
-      if (!verifyCall) {
-        return res.status(400).json({ message: "VerifyCall token is required" });
-      }
-
-      const provider = await storage.createAgencyApiProvider(providerData, verifyCall);
+      const provider = await storage.createAgencyApiProvider(validationResult.data);
       res.status(201).json(provider);
     } catch (error: any) {
       console.error("Create API provider error:", error);
@@ -2101,9 +2095,7 @@ export function registerRoutes(app: Express) {
         });
       }
 
-      const { verifyCall, ...updates } = validationResult.data;
-
-      const updatedProvider = await storage.updateAgencyApiProvider(providerId, updates, verifyCall);
+      const updatedProvider = await storage.updateAgencyApiProvider(providerId, validationResult.data);
       res.json(updatedProvider);
     } catch (error: any) {
       console.error("Update API provider error:", error);

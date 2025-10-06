@@ -48,7 +48,6 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import validator from "validator";
 import rateLimit from "express-rate-limit";
-import { encryptToken, decryptToken } from "./crypto";
 
 // Input sanitization helper
 function sanitizeInput(input: string): string {
@@ -132,12 +131,11 @@ export interface IStorage {
   deleteApiConfiguration(id: number): Promise<void>;
 
   // Agency API Provider operations
-  createAgencyApiProvider(provider: InsertAgencyApiProvider, verifyCall: string): Promise<AgencyApiProvider>;
+  createAgencyApiProvider(provider: InsertAgencyApiProvider): Promise<AgencyApiProvider>;
   getAgencyApiProvider(id: number): Promise<AgencyApiProvider | undefined>;
   getAgencyApiProvidersByAgency(agencyId: number): Promise<AgencyApiProvider[]>;
-  updateAgencyApiProvider(id: number, updates: Partial<InsertAgencyApiProvider>, verifyCall?: string): Promise<AgencyApiProvider>;
+  updateAgencyApiProvider(id: number, updates: Partial<InsertAgencyApiProvider>): Promise<AgencyApiProvider>;
   deleteAgencyApiProvider(id: number): Promise<void>;
-  decryptVerifyCall(id: number): Promise<string>;
 
   // Agency API Endpoint operations
   createAgencyApiEndpoint(endpoint: InsertAgencyApiEndpoint): Promise<AgencyApiEndpoint>;
@@ -693,9 +691,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Agency API Provider operations
-  async createAgencyApiProvider(provider: InsertAgencyApiProvider, verifyCall: string): Promise<AgencyApiProvider> {
-    const { encrypted, salt } = encryptToken(verifyCall);
-    
+  async createAgencyApiProvider(provider: InsertAgencyApiProvider): Promise<AgencyApiProvider> {
     const [newProvider] = await this.db
       .insert(agencyApiProviders)
       .values({
@@ -704,8 +700,7 @@ export class DatabaseStorage implements IStorage {
         providerName: provider.providerName,
         baseUrl: provider.baseUrl,
         companyId: provider.companyId,
-        verifyCallEncrypted: encrypted,
-        encryptionSalt: salt,
+        verifyCall: provider.verifyCall,
         isActive: provider.isActive !== undefined ? provider.isActive : true,
         metadata: provider.metadata || null,
         createdAt: new Date(),
@@ -732,17 +727,11 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(agencyApiProviders.createdAt));
   }
 
-  async updateAgencyApiProvider(id: number, updates: Partial<InsertAgencyApiProvider>, verifyCall?: string): Promise<AgencyApiProvider> {
+  async updateAgencyApiProvider(id: number, updates: Partial<InsertAgencyApiProvider>): Promise<AgencyApiProvider> {
     const updateData: any = {
       ...updates,
       updatedAt: new Date(),
     };
-
-    if (verifyCall) {
-      const { encrypted, salt } = encryptToken(verifyCall);
-      updateData.verifyCallEncrypted = encrypted;
-      updateData.encryptionSalt = salt;
-    }
 
     const [provider] = await this.db
       .update(agencyApiProviders)
@@ -755,14 +744,6 @@ export class DatabaseStorage implements IStorage {
   async deleteAgencyApiProvider(id: number): Promise<void> {
     await this.db.delete(agencyApiEndpoints).where(eq(agencyApiEndpoints.providerConfigId, id));
     await this.db.delete(agencyApiProviders).where(eq(agencyApiProviders.id, id));
-  }
-
-  async decryptVerifyCall(id: number): Promise<string> {
-    const provider = await this.getAgencyApiProvider(id);
-    if (!provider) {
-      throw new Error("Provider not found");
-    }
-    return decryptToken(provider.verifyCallEncrypted, provider.encryptionSalt);
   }
 
   // Agency API Endpoint operations

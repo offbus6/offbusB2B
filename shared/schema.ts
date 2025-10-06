@@ -311,8 +311,7 @@ export const agencyApiProviders = pgTable("agency_api_providers", {
   providerName: varchar("provider_name").notNull(),
   baseUrl: varchar("base_url").notNull(),
   companyId: varchar("company_id").notNull(),
-  verifyCallEncrypted: text("verify_call_encrypted").notNull(),
-  encryptionSalt: varchar("encryption_salt").notNull(),
+  verifyCall: text("verify_call").notNull(),
   isActive: boolean("is_active").default(true),
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -377,10 +376,6 @@ export const insertAgencyApiProviderSchema = createInsertSchema(agencyApiProvide
   id: true,
   createdAt: true,
   updatedAt: true,
-  verifyCallEncrypted: true,
-  encryptionSalt: true,
-}).extend({
-  verifyCall: z.string().min(1, "VerifyCall token is required"),
 });
 
 export type AgencyApiProvider = typeof agencyApiProviders.$inferSelect;
