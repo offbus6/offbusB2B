@@ -869,12 +869,13 @@ export default function AgencyDetails() {
       </div>
 
       <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="details">Agency Details</TabsTrigger>
           <TabsTrigger value="buses">Bus Details</TabsTrigger>
           <TabsTrigger value="users">User Details</TabsTrigger>
           <TabsTrigger value="payments">Payment History</TabsTrigger>
           <TabsTrigger value="api-config">API Configuration</TabsTrigger>
+          <TabsTrigger value="saas-providers">SAAS Providers</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="space-y-6">
@@ -1819,6 +1820,44 @@ export default function AgencyDetails() {
                   <p className="text-sm">Add your first API configuration to get started</p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="saas-providers" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">SAAS Provider Integration</CardTitle>
+              <p className="text-sm text-gray-600">Configure ITS, Bitla, and other SAAS provider integrations for booking and route management</p>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-lg p-6 bg-blue-50">
+                <div className="flex items-start gap-4">
+                  <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-blue-900">SAAS Provider Setup</h3>
+                    <p className="text-sm text-blue-800">
+                      Add your provider credentials (SWDL URL, Company ID, VerifyCall token) below. Then configure individual API endpoints for each provider.
+                    </p>
+                    <ul className="text-sm text-blue-700 list-disc list-inside space-y-1 mt-2">
+                      <li>ITS: Internet Ticketing System integration</li>
+                      <li>Bitla: Bus ticketing and route management</li>
+                      <li>Custom providers: Add other SAAS providers as needed</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 text-center py-12 text-gray-500">
+                <Settings className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                <p className="text-lg font-medium">SAAS Provider Management Coming Soon</p>
+                <p className="text-sm mt-2">
+                  Add and manage your ITS, Bitla, and other SAAS provider integrations
+                </p>
+                <p className="text-xs mt-4 text-gray-400">
+                  This feature includes secure token storage, SOAP/XML API configuration, and endpoint management
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
