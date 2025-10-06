@@ -94,6 +94,36 @@ export default function AgencyDetails() {
   const [apiConfigDialogOpen, setApiConfigDialogOpen] = useState(false);
   const [editingApiConfig, setEditingApiConfig] = useState<ApiConfiguration | null>(null);
 
+  // SAAS Provider states
+  const [providerDialogOpen, setProviderDialogOpen] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<any>(null);
+  const [selectedProvider, setSelectedProvider] = useState<any>(null);
+  const [endpointDialogOpen, setEndpointDialogOpen] = useState(false);
+  const [editingEndpoint, setEditingEndpoint] = useState<any>(null);
+
+  // SAAS Provider form schema
+  const providerFormSchema = z.object({
+    providerType: z.enum(["ITS", "Bitla", "Other"]),
+    providerName: z.string().min(1, "Provider name is required"),
+    baseUrl: z.string().url("Please enter a valid SWDL URL"),
+    companyId: z.string().min(1, "Company ID is required"),
+    verifyCall: z.string().min(1, "VerifyCall token is required"),
+    isActive: z.boolean().default(true),
+  });
+
+  // API Endpoint form schema
+  const endpointFormSchema = z.object({
+    apiName: z.string().min(1, "API name is required"),
+    method: z.enum(["SOAP", "REST"]).default("SOAP"),
+    path: z.string().optional(),
+    requestTemplate: z.string().min(1, "Request template is required"),
+    responseTemplate: z.string().optional(),
+    extractionRules: z.string().optional(),
+    headers: z.string().optional(),
+    isActive: z.boolean().default(true),
+    version: z.string().optional(),
+  });
+
   // API Configuration form schema
   const apiConfigFormSchema = insertApiConfigurationSchema.extend({
     headers: z.string().optional(),
@@ -571,6 +601,204 @@ export default function AgencyDetails() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete API configuration",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // SAAS Provider queries and mutations
+  const providersQuery = useQuery({
+    queryKey: [`/api/admin/agencies/${agencyId}/providers`],
+    enabled: !!agencyId,
+  });
+
+  const providerForm = useForm<z.infer<typeof providerFormSchema>>({
+    resolver: zodResolver(providerFormSchema),
+    defaultValues: {
+      providerType: "ITS",
+      providerName: "",
+      baseUrl: "",
+      companyId: "",
+      verifyCall: "",
+      isActive: true,
+    },
+  });
+
+  const createProviderMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof providerFormSchema>) => {
+      return await apiRequest(`/api/admin/agencies/${agencyId}/providers`, {
+        method: "POST",
+        body: data,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/agencies/${agencyId}/providers`] });
+      setProviderDialogOpen(false);
+      setEditingProvider(null);
+      providerForm.reset();
+      toast({
+        title: "Success",
+        description: "Provider added successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add provider",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateProviderMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number, data: z.infer<typeof providerFormSchema> }) => {
+      return await apiRequest(`/api/admin/agencies/${agencyId}/providers/${id}`, {
+        method: "PATCH",
+        body: data,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/agencies/${agencyId}/providers`] });
+      setProviderDialogOpen(false);
+      setEditingProvider(null);
+      providerForm.reset();
+      toast({
+        title: "Success",
+        description: "Provider updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update provider",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteProviderMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/admin/agencies/${agencyId}/providers/${id}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/agencies/${agencyId}/providers`] });
+      setSelectedProvider(null);
+      toast({
+        title: "Success",
+        description: "Provider deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete provider",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // API Endpoint queries and mutations
+  const endpointsQuery = useQuery({
+    queryKey: [`/api/admin/providers/${selectedProvider?.id}/endpoints`],
+    enabled: !!selectedProvider?.id,
+  });
+
+  const endpointForm = useForm<z.infer<typeof endpointFormSchema>>({
+    resolver: zodResolver(endpointFormSchema),
+    defaultValues: {
+      apiName: "",
+      method: "SOAP",
+      path: "",
+      requestTemplate: "",
+      responseTemplate: "",
+      extractionRules: "",
+      headers: "",
+      isActive: true,
+      version: "",
+    },
+  });
+
+  const createEndpointMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof endpointFormSchema>) => {
+      const payload = {
+        ...data,
+        extractionRules: data.extractionRules ? JSON.parse(data.extractionRules) : null,
+        headers: data.headers ? JSON.parse(data.headers) : null,
+      };
+      return await apiRequest(`/api/admin/providers/${selectedProvider?.id}/endpoints`, {
+        method: "POST",
+        body: payload,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/providers/${selectedProvider?.id}/endpoints`] });
+      setEndpointDialogOpen(false);
+      setEditingEndpoint(null);
+      endpointForm.reset();
+      toast({
+        title: "Success",
+        description: "API endpoint added successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add API endpoint",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateEndpointMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number, data: z.infer<typeof endpointFormSchema> }) => {
+      const payload = {
+        ...data,
+        extractionRules: data.extractionRules ? JSON.parse(data.extractionRules) : null,
+        headers: data.headers ? JSON.parse(data.headers) : null,
+      };
+      return await apiRequest(`/api/admin/providers/${selectedProvider?.id}/endpoints/${id}`, {
+        method: "PATCH",
+        body: payload,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/providers/${selectedProvider?.id}/endpoints`] });
+      setEndpointDialogOpen(false);
+      setEditingEndpoint(null);
+      endpointForm.reset();
+      toast({
+        title: "Success",
+        description: "API endpoint updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update API endpoint",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteEndpointMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest(`/api/admin/providers/${selectedProvider?.id}/endpoints/${id}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/providers/${selectedProvider?.id}/endpoints`] });
+      toast({
+        title: "Success",
+        description: "API endpoint deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete API endpoint",
         variant: "destructive",
       });
     },
@@ -1831,7 +2059,7 @@ export default function AgencyDetails() {
               <p className="text-sm text-gray-600">Configure ITS, Bitla, and other SAAS provider integrations for booking and route management</p>
             </CardHeader>
             <CardContent>
-              <div className="border rounded-lg p-6 bg-blue-50">
+              <div className="border rounded-lg p-6 bg-blue-50 mb-6">
                 <div className="flex items-start gap-4">
                   <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
                   <div className="space-y-2">
@@ -1847,17 +2075,255 @@ export default function AgencyDetails() {
                   </div>
                 </div>
               </div>
-              
-              <div className="mt-6 text-center py-12 text-gray-500">
-                <Settings className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                <p className="text-lg font-medium">SAAS Provider Management Coming Soon</p>
-                <p className="text-sm mt-2">
-                  Add and manage your ITS, Bitla, and other SAAS provider integrations
-                </p>
-                <p className="text-xs mt-4 text-gray-400">
-                  This feature includes secure token storage, SOAP/XML API configuration, and endpoint management
-                </p>
+
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-lg">Configured Providers</h3>
+                <Dialog open={providerDialogOpen} onOpenChange={setProviderDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white"
+                      data-testid="button-add-provider"
+                      onClick={() => {
+                        setEditingProvider(null);
+                        providerForm.reset();
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Provider
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>{editingProvider ? "Edit Provider" : "Add New Provider"}</DialogTitle>
+                    </DialogHeader>
+                    <Form {...providerForm}>
+                      <form 
+                        onSubmit={providerForm.handleSubmit((data) => {
+                          if (editingProvider) {
+                            updateProviderMutation.mutate({ id: editingProvider.id, data });
+                          } else {
+                            createProviderMutation.mutate(data);
+                          }
+                        })}
+                        className="space-y-4"
+                      >
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={providerForm.control}
+                            name="providerType"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Provider Type</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-provider-type">
+                                      <SelectValue placeholder="Select provider type" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="ITS">ITS (Internet Ticketing System)</SelectItem>
+                                    <SelectItem value="Bitla">Bitla</SelectItem>
+                                    <SelectItem value="Other">Other</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={providerForm.control}
+                            name="providerName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Provider Name</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="e.g., ITS Production" 
+                                    {...field} 
+                                    data-testid="input-provider-name"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <FormField
+                          control={providerForm.control}
+                          name="baseUrl"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>SWDL URL (Base URL)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="http://apiownb2c.itspl.net/" 
+                                  {...field} 
+                                  data-testid="input-base-url"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={providerForm.control}
+                            name="companyId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Company ID</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="1" 
+                                    {...field} 
+                                    data-testid="input-company-id"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={providerForm.control}
+                            name="verifyCall"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>VerifyCall Token</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="password"
+                                    placeholder="Enter VerifyCall token" 
+                                    {...field} 
+                                    data-testid="input-verify-call"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <FormField
+                          control={providerForm.control}
+                          name="isActive"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center space-x-2">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  data-testid="checkbox-provider-active"
+                                />
+                              </FormControl>
+                              <FormLabel className="!mt-0">Active</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                        <div className="flex justify-end space-x-4 pt-4">
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={() => setProviderDialogOpen(false)}
+                            data-testid="button-cancel-provider"
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            type="submit"
+                            disabled={createProviderMutation.isPending || updateProviderMutation.isPending}
+                            data-testid="button-save-provider"
+                          >
+                            {createProviderMutation.isPending || updateProviderMutation.isPending ? "Saving..." : (editingProvider ? "Update" : "Add")} Provider
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
               </div>
+
+              {providersQuery.isLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--airbnb-pink)] mx-auto"></div>
+                  <p className="mt-4 text-gray-500">Loading providers...</p>
+                </div>
+              ) : providersQuery.data && providersQuery.data.length > 0 ? (
+                <div className="space-y-4">
+                  {providersQuery.data.map((provider: any) => (
+                    <Card key={provider.id} className="border-l-4 border-l-blue-500">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-semibold text-lg">{provider.providerName}</h4>
+                              <Badge className={`${provider.providerType === 'ITS' ? 'bg-purple-100 text-purple-800' : provider.providerType === 'Bitla' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'}`}>
+                                {provider.providerType}
+                              </Badge>
+                              <Badge className={provider.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                                {provider.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </div>
+                            <div className="space-y-1 text-sm text-gray-600">
+                              <p><span className="font-medium">Base URL:</span> {provider.baseUrl}</p>
+                              <p><span className="font-medium">Company ID:</span> {provider.companyId}</p>
+                              <p className="text-xs text-gray-400">
+                                Created: {new Date(provider.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedProvider(provider);
+                              }}
+                            >
+                              <Route className="w-4 h-4 mr-1" />
+                              API Endpoints
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingProvider(provider);
+                                providerForm.reset({
+                                  providerType: provider.providerType,
+                                  providerName: provider.providerName,
+                                  baseUrl: provider.baseUrl,
+                                  companyId: provider.companyId,
+                                  verifyCall: "", // Don't pre-fill encrypted token
+                                  isActive: provider.isActive,
+                                });
+                                setProviderDialogOpen(true);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (window.confirm(`Are you sure you want to delete provider "${provider.providerName}"? This will also delete all associated API endpoints.`)) {
+                                  deleteProviderMutation.mutate(provider.id);
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Settings className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No SAAS providers configured</p>
+                  <p className="text-sm">Add your first provider to get started</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
