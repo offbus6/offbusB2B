@@ -15,6 +15,10 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
+localPort = 35325
+externalPort = 3001
+
+[[ports]]
 localPort = 39337
 externalPort = 3000
 
@@ -74,3 +78,6 @@ args = "sleep 2"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
+
+[agent]
+integrations = ["javascript_log_in_with_replit:1.0.0"]

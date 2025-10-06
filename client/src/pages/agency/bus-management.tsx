@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -27,6 +28,8 @@ const busFormSchema = z.object({
   fare: z.string().min(1, "Fare is required"),
   amenities: z.string().optional(),
   imageUrl: z.string().optional(),
+  availabilityStatus: z.enum(["available", "not_available"]).default("available"),
+  unavailableUntil: z.string().optional(),
 });
 
 type BusFormData = z.infer<typeof busFormSchema>;
@@ -51,6 +54,8 @@ export default function BusManagement() {
       fare: "",
       amenities: "",
       imageUrl: "",
+      availabilityStatus: "available",
+      unavailableUntil: "",
     },
   });
 
@@ -167,6 +172,8 @@ export default function BusManagement() {
       fare: bus.fare || "",
       amenities: Array.isArray(bus.amenities) ? bus.amenities.join(', ') : "",
       imageUrl: bus.imageUrl || "",
+      availabilityStatus: bus.availabilityStatus || "available",
+      unavailableUntil: bus.unavailableUntil ? new Date(bus.unavailableUntil).toISOString().split('T')[0] : "",
     });
     setIsDialogOpen(true);
   };
@@ -256,9 +263,19 @@ export default function BusManagement() {
                   <span className="text-lg font-semibold text-red-500">
                     ₹{bus.fare}
                   </span>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                    Active
-                  </span>
+                  <Badge 
+                    className={
+                      bus.availabilityStatus === "available" || !bus.availabilityStatus 
+                        ? "bg-blue-100 text-blue-800 hover:bg-blue-100" 
+                        : "bg-orange-100 text-orange-800 hover:bg-orange-100"
+                    }
+                    data-testid={`badge-availability-${bus.id}`}
+                  >
+                    {bus.availabilityStatus === "not_available" 
+                      ? `Unavailable${bus.unavailableUntil ? ` until ${new Date(bus.unavailableUntil).toLocaleDateString()}` : ""}`
+                      : "Available"
+                    }
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
@@ -467,6 +484,43 @@ export default function BusManagement() {
                   </FormItem>
                 )}
               />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="availabilityStatus"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Availability Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-availability-status">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="available">Available</SelectItem>
+                          <SelectItem value="not_available">Not Available</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="unavailableUntil"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unavailable Until (if applicable)</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="date" data-testid="input-unavailable-until" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               {/* Action Buttons */}
               <div className="flex justify-end space-x-4 pt-6 border-t">
