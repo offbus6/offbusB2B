@@ -35,6 +35,12 @@ import {
   apiConfigurations,
   type ApiConfiguration,
   type InsertApiConfiguration,
+  agencyApiProviders,
+  agencyApiEndpoints,
+  type AgencyApiProvider,
+  type AgencyApiEndpoint,
+  type InsertAgencyApiProvider,
+  type InsertAgencyApiEndpoint,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql, ne } from "drizzle-orm";
@@ -42,6 +48,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import validator from "validator";
 import rateLimit from "express-rate-limit";
+import { encryptToken, decryptToken } from "./crypto";
 
 // Input sanitization helper
 function sanitizeInput(input: string): string {
@@ -123,6 +130,21 @@ export interface IStorage {
   getApiConfigurationByType(agencyId: number, apiType: string): Promise<ApiConfiguration | undefined>;
   updateApiConfiguration(id: number, updates: Partial<InsertApiConfiguration>): Promise<ApiConfiguration>;
   deleteApiConfiguration(id: number): Promise<void>;
+
+  // Agency API Provider operations
+  createAgencyApiProvider(provider: InsertAgencyApiProvider, verifyCall: string): Promise<AgencyApiProvider>;
+  getAgencyApiProvider(id: number): Promise<AgencyApiProvider | undefined>;
+  getAgencyApiProvidersByAgency(agencyId: number): Promise<AgencyApiProvider[]>;
+  updateAgencyApiProvider(id: number, updates: Partial<InsertAgencyApiProvider>, verifyCall?: string): Promise<AgencyApiProvider>;
+  deleteAgencyApiProvider(id: number): Promise<void>;
+  decryptVerifyCall(id: number): Promise<string>;
+
+  // Agency API Endpoint operations
+  createAgencyApiEndpoint(endpoint: InsertAgencyApiEndpoint): Promise<AgencyApiEndpoint>;
+  getAgencyApiEndpoint(id: number): Promise<AgencyApiEndpoint | undefined>;
+  getAgencyApiEndpointsByProvider(providerConfigId: number): Promise<AgencyApiEndpoint[]>;
+  updateAgencyApiEndpoint(id: number, updates: Partial<InsertAgencyApiEndpoint>): Promise<AgencyApiEndpoint>;
+  deleteAgencyApiEndpoint(id: number): Promise<void>;
 
   // Traveler data operations
   createTravelerData(data: InsertTravelerData[]): Promise<TravelerData[]>;
@@ -668,6 +690,122 @@ export class DatabaseStorage implements IStorage {
 
   async deleteApiConfiguration(id: number): Promise<void> {
     await this.db.delete(apiConfigurations).where(eq(apiConfigurations.id, id));
+  }
+
+  // Agency API Provider operations
+  async createAgencyApiProvider(provider: InsertAgencyApiProvider, verifyCall: string): Promise<AgencyApiProvider> {
+    const { encrypted, salt } = encryptToken(verifyCall);
+    
+    const [newProvider] = await this.db
+      .insert(agencyApiProviders)
+      .values({
+        agencyId: provider.agencyId,
+        providerType: provider.providerType,
+        providerName: provider.providerName,
+        baseUrl: provider.baseUrl,
+        companyId: provider.companyId,
+        verifyCallEncrypted: encrypted,
+        encryptionSalt: salt,
+        isActive: provider.isActive !== undefined ? provider.isActive : true,
+        metadata: provider.metadata || null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newProvider;
+  }
+
+  async getAgencyApiProvider(id: number): Promise<AgencyApiProvider | undefined> {
+    const [provider] = await this.db
+      .select()
+      .from(agencyApiProviders)
+      .where(eq(agencyApiProviders.id, id))
+      .limit(1);
+    return provider;
+  }
+
+  async getAgencyApiProvidersByAgency(agencyId: number): Promise<AgencyApiProvider[]> {
+    return await this.db
+      .select()
+      .from(agencyApiProviders)
+      .where(eq(agencyApiProviders.agencyId, agencyId))
+      .orderBy(desc(agencyApiProviders.createdAt));
+  }
+
+  async updateAgencyApiProvider(id: number, updates: Partial<InsertAgencyApiProvider>, verifyCall?: string): Promise<AgencyApiProvider> {
+    const updateData: any = {
+      ...updates,
+      updatedAt: new Date(),
+    };
+
+    if (verifyCall) {
+      const { encrypted, salt } = encryptToken(verifyCall);
+      updateData.verifyCallEncrypted = encrypted;
+      updateData.encryptionSalt = salt;
+    }
+
+    const [provider] = await this.db
+      .update(agencyApiProviders)
+      .set(updateData)
+      .where(eq(agencyApiProviders.id, id))
+      .returning();
+    return provider;
+  }
+
+  async deleteAgencyApiProvider(id: number): Promise<void> {
+    await this.db.delete(agencyApiEndpoints).where(eq(agencyApiEndpoints.providerConfigId, id));
+    await this.db.delete(agencyApiProviders).where(eq(agencyApiProviders.id, id));
+  }
+
+  async decryptVerifyCall(id: number): Promise<string> {
+    const provider = await this.getAgencyApiProvider(id);
+    if (!provider) {
+      throw new Error("Provider not found");
+    }
+    return decryptToken(provider.verifyCallEncrypted, provider.encryptionSalt);
+  }
+
+  // Agency API Endpoint operations
+  async createAgencyApiEndpoint(endpoint: InsertAgencyApiEndpoint): Promise<AgencyApiEndpoint> {
+    const [newEndpoint] = await this.db
+      .insert(agencyApiEndpoints)
+      .values({
+        ...endpoint,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newEndpoint;
+  }
+
+  async getAgencyApiEndpoint(id: number): Promise<AgencyApiEndpoint | undefined> {
+    const [endpoint] = await this.db
+      .select()
+      .from(agencyApiEndpoints)
+      .where(eq(agencyApiEndpoints.id, id))
+      .limit(1);
+    return endpoint;
+  }
+
+  async getAgencyApiEndpointsByProvider(providerConfigId: number): Promise<AgencyApiEndpoint[]> {
+    return await this.db
+      .select()
+      .from(agencyApiEndpoints)
+      .where(eq(agencyApiEndpoints.providerConfigId, providerConfigId))
+      .orderBy(agencyApiEndpoints.apiName);
+  }
+
+  async updateAgencyApiEndpoint(id: number, updates: Partial<InsertAgencyApiEndpoint>): Promise<AgencyApiEndpoint> {
+    const [endpoint] = await this.db
+      .update(agencyApiEndpoints)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(agencyApiEndpoints.id, id))
+      .returning();
+    return endpoint;
+  }
+
+  async deleteAgencyApiEndpoint(id: number): Promise<void> {
+    await this.db.delete(agencyApiEndpoints).where(eq(agencyApiEndpoints.id, id));
   }
 
   async createTravelerData(data: InsertTravelerData[]): Promise<TravelerData[]> {

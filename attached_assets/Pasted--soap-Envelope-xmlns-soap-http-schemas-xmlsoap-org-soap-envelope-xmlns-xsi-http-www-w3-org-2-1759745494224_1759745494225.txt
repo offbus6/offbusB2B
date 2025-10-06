@@ -1,0 +1,681 @@
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+   <soap:Body>
+      <GetRoutesWithCouponDetailsResponse xmlns="http://apiownb2c.itspl.net/">
+         <GetRoutesWithCouponDetailsResult>
+            <xs:schema id="NewDataSet" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+               <xs:element name="NewDataSet" msdata:IsDataSet="true" msdata:MainDataTable="GetRoutesWithCouponDetails" msdata:UseCurrentLocale="true">
+                  <xs:complexType>
+                     <xs:choice minOccurs="0" maxOccurs="unbounded">
+                        <xs:element name="GetRoutesWithCouponDetails">
+                           <xs:complexType>
+                              <xs:sequence>
+                                 <xs:element name="Name" type="xs:string" minOccurs="0"/>
+                                 <xs:element name="Description" type="xs:string" minOccurs="0"/>
+                                 <xs:element name="Type" type="xs:string" minOccurs="0"/>
+                                 <xs:element name="Rate" type="xs:double" minOccurs="0"/>
+                                 <xs:element name="ExpiryDate" type="xs:string" minOccurs="0"/>
+                                 <xs:element name="CreatedDate" type="xs:string" minOccurs="0"/>
+                                 <xs:element name="ActivatedDate" type="xs:string" minOccurs="0"/>
+                              </xs:sequence>
+                           </xs:complexType>
+                        </xs:element>
+                     </xs:choice>
+                  </xs:complexType>
+               </xs:element>
+            </xs:schema>
+            <diffgr:diffgram xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" xmlns:diffgr="urn:schemas-microsoft-com:xml-diffgram-v1">
+               <DocumentElement xmlns="">
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails1" msdata:rowOrder="0">
+                     <Name>IIPL8Per</Name>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>8</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>26-03-2020 01:28:07 PM</CreatedDate>
+                     <ActivatedDate>26-03-2020 01:28:07 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails2" msdata:rowOrder="1">
+                     <Name>test</Name>
+                     <Description/>
+                     <Type>Fixed</Type>
+                     <Rate>33</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>28-03-2020 10:42:25 AM</CreatedDate>
+                     <ActivatedDate>28-03-2020 10:42:25 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails3" msdata:rowOrder="2">
+                     <Name/>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>20-05-2021 03:54:08 PM</CreatedDate>
+                     <ActivatedDate>20-05-2021 03:54:08 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails4" msdata:rowOrder="3">
+                     <Name/>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>20-05-2021 04:23:37 PM</CreatedDate>
+                     <ActivatedDate>20-05-2021 04:23:37 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails5" msdata:rowOrder="4">
+                     <Name/>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>20-05-2021 04:29:41 PM</CreatedDate>
+                     <ActivatedDate>20-05-2021 04:29:41 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails6" msdata:rowOrder="5">
+                     <Name>Janmashtami2021</Name>
+                     <Description/>
+                     <Type>Fixed</Type>
+                     <Rate>75</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>10-07-2021 10:01:02 AM</CreatedDate>
+                     <ActivatedDate>10-07-2021 10:01:02 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails7" msdata:rowOrder="6">
+                     <Name>ABC Discount</Name>
+                     <Description/>
+                     <Type>Fixed</Type>
+                     <Rate>100</Rate>
+                     <ExpiryDate>31-03-2025</ExpiryDate>
+                     <CreatedDate>06-08-2021 09:48:58 AM</CreatedDate>
+                     <ActivatedDate>06-08-2021 09:48:58 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails8" msdata:rowOrder="7">
+                     <Name>Diwali</Name>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>10</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>13-09-2021 02:13:46 PM</CreatedDate>
+                     <ActivatedDate>13-09-2021 02:13:46 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails9" msdata:rowOrder="8">
+                     <Name>Default</Name>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>10</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>13-09-2021 02:49:00 PM</CreatedDate>
+                     <ActivatedDate>13-09-2021 02:49:00 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails10" msdata:rowOrder="9">
+                     <Name>today sp</Name>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>5</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>15-09-2021 09:36:36 AM</CreatedDate>
+                     <ActivatedDate>15-09-2021 09:36:36 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails11" msdata:rowOrder="10">
+                     <Name>t1</Name>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>10</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>15-09-2021 09:40:06 AM</CreatedDate>
+                     <ActivatedDate>15-09-2021 09:40:06 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails12" msdata:rowOrder="11">
+                     <Name>Flat 10</Name>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>10</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>13-12-2021 02:10:19 PM</CreatedDate>
+                     <ActivatedDate>13-12-2021 02:10:19 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails13" msdata:rowOrder="12">
+                     <Name>rj</Name>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>10</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>14-12-2021 12:13:33 PM</CreatedDate>
+                     <ActivatedDate>14-12-2021 12:13:33 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails14" msdata:rowOrder="13">
+                     <Name>108</Name>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>10</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>14-12-2021 12:21:33 PM</CreatedDate>
+                     <ActivatedDate>14-12-2021 12:21:33 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails15" msdata:rowOrder="14">
+                     <Name>TEST_INFINITY</Name>
+                     <Description/>
+                     <Type>Fixed</Type>
+                     <Rate>50</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>22-01-2022 06:44:33 PM</CreatedDate>
+                     <ActivatedDate>22-01-2022 06:44:33 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails16" msdata:rowOrder="15">
+                     <Name/>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>5</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>22-10-2022 10:48:30 AM</CreatedDate>
+                     <ActivatedDate>22-10-2022 10:48:30 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails17" msdata:rowOrder="16">
+                     <Name>Diwali 2022</Name>
+                     <Description>testing</Description>
+                     <Type>Percentage</Type>
+                     <Rate>56</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>22-10-2022 11:28:24 AM</CreatedDate>
+                     <ActivatedDate>22-10-2022 11:28:24 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails18" msdata:rowOrder="17">
+                     <Name>Dhanteras 2022</Name>
+                     <Description>Testing</Description>
+                     <Type>Percentage</Type>
+                     <Rate>5</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>22-10-2022 11:30:47 AM</CreatedDate>
+                     <ActivatedDate>22-10-2022 11:30:47 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails19" msdata:rowOrder="18">
+                     <Name>abc</Name>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>10</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>21-11-2022 12:59:23 PM</CreatedDate>
+                     <ActivatedDate>21-11-2022 12:59:23 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails20" msdata:rowOrder="19">
+                     <Name>DG001</Name>
+                     <Description>test</Description>
+                     <Type>Fixed</Type>
+                     <Rate>100</Rate>
+                     <ExpiryDate>31-03-2025</ExpiryDate>
+                     <CreatedDate>12-05-2023 04:40:22 PM</CreatedDate>
+                     <ActivatedDate>12-05-2023 04:40:22 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails21" msdata:rowOrder="20">
+                     <Name>20% For New And 15% for Regular Customers</Name>
+                     <Description>20% For New And 15% for Regular Customers</Description>
+                     <Type>Percentage</Type>
+                     <Rate>15</Rate>
+                     <ExpiryDate>31-07-2026</ExpiryDate>
+                     <CreatedDate>12-05-2023 04:55:58 PM</CreatedDate>
+                     <ActivatedDate>12-05-2023 04:55:58 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails22" msdata:rowOrder="21">
+                     <Name>Slab Wise Discount</Name>
+                     <Description>Slab Wise Amount</Description>
+                     <Type>Fixed</Type>
+                     <Rate>50</Rate>
+                     <ExpiryDate>31-08-2025</ExpiryDate>
+                     <CreatedDate>22-05-2023 05:49:03 PM</CreatedDate>
+                     <ActivatedDate>22-05-2023 05:49:03 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails23" msdata:rowOrder="22">
+                     <Name>Default Discount Test</Name>
+                     <Description>Testing of Discount</Description>
+                     <Type>Fixed</Type>
+                     <Rate>120</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>23-05-2023 09:21:19 AM</CreatedDate>
+                     <ActivatedDate>23-05-2023 09:21:19 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails24" msdata:rowOrder="23">
+                     <Name>Test default Discount 2</Name>
+                     <Description>testing</Description>
+                     <Type>Fixed</Type>
+                     <Rate>200</Rate>
+                     <ExpiryDate>31-03-2025</ExpiryDate>
+                     <CreatedDate>23-05-2023 10:00:53 AM</CreatedDate>
+                     <ActivatedDate>23-05-2023 10:00:53 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails25" msdata:rowOrder="24">
+                     <Name>Test May Default 1</Name>
+                     <Description>testing</Description>
+                     <Type>Fixed</Type>
+                     <Rate>250</Rate>
+                     <ExpiryDate>31-03-2025</ExpiryDate>
+                     <CreatedDate>23-05-2023 10:44:39 AM</CreatedDate>
+                     <ActivatedDate>23-05-2023 10:44:39 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails26" msdata:rowOrder="25">
+                     <Name>GCM WEB Same Scheme</Name>
+                     <Description>Testing</Description>
+                     <Type>Fixed</Type>
+                     <Rate>100</Rate>
+                     <ExpiryDate>31-03-2025</ExpiryDate>
+                     <CreatedDate>23-05-2023 11:59:48 AM</CreatedDate>
+                     <ActivatedDate>23-05-2023 11:59:48 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails27" msdata:rowOrder="26">
+                     <Name>GCM WEB Same Scheme  2</Name>
+                     <Description>testing</Description>
+                     <Type>Fixed</Type>
+                     <Rate>80</Rate>
+                     <ExpiryDate>31-03-2025</ExpiryDate>
+                     <CreatedDate>23-05-2023 12:10:27 PM</CreatedDate>
+                     <ActivatedDate>23-05-2023 12:10:27 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails28" msdata:rowOrder="27">
+                     <Name>GCM WEB CouponCode Scheme</Name>
+                     <Description>TEST</Description>
+                     <Type>Fixed</Type>
+                     <Rate>200</Rate>
+                     <ExpiryDate>31-07-2025</ExpiryDate>
+                     <CreatedDate>23-05-2023 12:12:38 PM</CreatedDate>
+                     <ActivatedDate>23-05-2023 12:12:38 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails29" msdata:rowOrder="28">
+                     <Name>test default discount</Name>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>10</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>23-05-2023 02:22:36 PM</CreatedDate>
+                     <ActivatedDate>23-05-2023 02:22:36 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails30" msdata:rowOrder="29">
+                     <Name>Test 2023</Name>
+                     <Description>test</Description>
+                     <Type>Fixed</Type>
+                     <Rate>56</Rate>
+                     <ExpiryDate>31-07-2025</ExpiryDate>
+                     <CreatedDate>26-05-2023 03:58:54 PM</CreatedDate>
+                     <ActivatedDate>26-05-2023 03:58:54 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails31" msdata:rowOrder="30">
+                     <Name>DemoVT Test Booking</Name>
+                     <Description>Return Booking Only</Description>
+                     <Type>Percentage</Type>
+                     <Rate>25</Rate>
+                     <ExpiryDate>31-07-2025</ExpiryDate>
+                     <CreatedDate>21-07-2023 04:28:09 PM</CreatedDate>
+                     <ActivatedDate>21-07-2023 04:28:09 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails32" msdata:rowOrder="31">
+                     <Name>Test 08</Name>
+                     <Description>test</Description>
+                     <Type>Fixed</Type>
+                     <Rate>2</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>01-08-2023 12:18:08 PM</CreatedDate>
+                     <ActivatedDate>01-08-2023 12:18:08 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails33" msdata:rowOrder="32">
+                     <Name>Test 0815</Name>
+                     <Description>TEST</Description>
+                     <Type>Fixed</Type>
+                     <Rate>500</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>01-08-2023 12:52:53 PM</CreatedDate>
+                     <ActivatedDate>01-08-2023 12:52:53 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails34" msdata:rowOrder="33">
+                     <Name>August 202325</Name>
+                     <Description>Constraints Check</Description>
+                     <Type>Percentage</Type>
+                     <Rate>25</Rate>
+                     <ExpiryDate>31-07-2025</ExpiryDate>
+                     <CreatedDate>05-08-2023 10:11:48 AM</CreatedDate>
+                     <ActivatedDate>05-08-2023 10:11:48 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails35" msdata:rowOrder="34">
+                     <Name>Independence Day</Name>
+                     <Description>Test</Description>
+                     <Type>Percentage</Type>
+                     <Rate>15</Rate>
+                     <ExpiryDate>31-07-2025</ExpiryDate>
+                     <CreatedDate>07-08-2023 12:08:09 PM</CreatedDate>
+                     <ActivatedDate>07-08-2023 12:08:09 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails36" msdata:rowOrder="35">
+                     <Name/>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>30</Rate>
+                     <ExpiryDate>31-07-2025</ExpiryDate>
+                     <CreatedDate>10-08-2023 02:28:18 PM</CreatedDate>
+                     <ActivatedDate>10-08-2023 02:28:18 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails37" msdata:rowOrder="36">
+                     <Name>Mum50</Name>
+                     <Description/>
+                     <Type>Fixed</Type>
+                     <Rate>50</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>26-08-2023 12:27:12 PM</CreatedDate>
+                     <ActivatedDate>26-08-2023 12:27:12 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails38" msdata:rowOrder="37">
+                     <Name>Test City Matrix</Name>
+                     <Description>Test</Description>
+                     <Type>Percentage</Type>
+                     <Rate>25</Rate>
+                     <ExpiryDate>31-07-2025</ExpiryDate>
+                     <CreatedDate>29-08-2023 12:26:13 PM</CreatedDate>
+                     <ActivatedDate>29-08-2023 12:26:13 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails39" msdata:rowOrder="38">
+                     <Name>Test 001</Name>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>35</Rate>
+                     <ExpiryDate>31-07-2025</ExpiryDate>
+                     <CreatedDate>29-08-2023 12:37:28 PM</CreatedDate>
+                     <ActivatedDate>29-08-2023 12:37:28 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails40" msdata:rowOrder="39">
+                     <Name>RKT To AMD</Name>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>35</Rate>
+                     <ExpiryDate>31-07-2025</ExpiryDate>
+                     <CreatedDate>29-08-2023 12:58:30 PM</CreatedDate>
+                     <ActivatedDate>29-08-2023 12:58:30 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails41" msdata:rowOrder="40">
+                     <Name>hoho rajkot</Name>
+                     <Description>test</Description>
+                     <Type>Fixed</Type>
+                     <Rate>100</Rate>
+                     <ExpiryDate>31-07-2025</ExpiryDate>
+                     <CreatedDate>11-12-2023 03:54:00 PM</CreatedDate>
+                     <ActivatedDate>11-12-2023 03:54:00 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails42" msdata:rowOrder="41">
+                     <Name>Demovt Test 1</Name>
+                     <Description>Test</Description>
+                     <Type>Percentage</Type>
+                     <Rate>10</Rate>
+                     <ExpiryDate>31-07-2025</ExpiryDate>
+                     <CreatedDate>13-12-2023 05:10:20 PM</CreatedDate>
+                     <ActivatedDate>13-12-2023 05:10:20 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails43" msdata:rowOrder="42">
+                     <Name>Demovt Test Disocunt 2</Name>
+                     <Description>Test</Description>
+                     <Type>Percentage</Type>
+                     <Rate>10</Rate>
+                     <ExpiryDate>31-07-2025</ExpiryDate>
+                     <CreatedDate>13-12-2023 05:12:11 PM</CreatedDate>
+                     <ActivatedDate>13-12-2023 05:12:11 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails44" msdata:rowOrder="43">
+                     <Name>Womens Day</Name>
+                     <Description>Womens Day Discount For Female Seats</Description>
+                     <Type>Percentage</Type>
+                     <Rate>10</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>28-02-2024 04:52:31 PM</CreatedDate>
+                     <ActivatedDate>28-02-2024 04:52:31 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails45" msdata:rowOrder="44">
+                     <Name>Happy Womens Day</Name>
+                     <Description>Womens Day Discount For Female Seats</Description>
+                     <Type>Percentage</Type>
+                     <Rate>5</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>28-02-2024 04:52:31 PM</CreatedDate>
+                     <ActivatedDate>28-02-2024 04:52:31 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails46" msdata:rowOrder="45">
+                     <Name>Scheme Rs.1</Name>
+                     <Description>Discount Scehme Book Your Ticket In Just Rs.1</Description>
+                     <Type>Percentage</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>03-07-2024 12:49:15 PM</CreatedDate>
+                     <ActivatedDate>03-07-2024 12:49:15 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails47" msdata:rowOrder="46">
+                     <Name>HappyDiwali 200</Name>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>10</Rate>
+                     <ExpiryDate>31-03-2025</ExpiryDate>
+                     <CreatedDate>14-11-2024 02:58:11 PM</CreatedDate>
+                     <ActivatedDate>14-11-2024 02:58:11 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails48" msdata:rowOrder="47">
+                     <Name>Higher Amount Free</Name>
+                     <Description>0</Description>
+                     <Type>Percentage</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>04-12-2024 04:04:56 PM</CreatedDate>
+                     <ActivatedDate>04-12-2024 04:04:56 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails49" msdata:rowOrder="48">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>05-12-2024 10:01:19 AM</CreatedDate>
+                     <ActivatedDate>05-12-2024 10:01:19 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails50" msdata:rowOrder="49">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>05-12-2024 10:01:19 AM</CreatedDate>
+                     <ActivatedDate>05-12-2024 10:01:19 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails51" msdata:rowOrder="50">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>05-12-2024 10:01:19 AM</CreatedDate>
+                     <ActivatedDate>05-12-2024 10:01:19 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails52" msdata:rowOrder="51">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>05-12-2024 10:01:19 AM</CreatedDate>
+                     <ActivatedDate>05-12-2024 10:01:19 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails53" msdata:rowOrder="52">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>05-12-2024 10:01:19 AM</CreatedDate>
+                     <ActivatedDate>05-12-2024 10:01:19 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails54" msdata:rowOrder="53">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>05-12-2024 10:13:05 AM</CreatedDate>
+                     <ActivatedDate>05-12-2024 10:13:05 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails55" msdata:rowOrder="54">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>05-12-2024 10:13:05 AM</CreatedDate>
+                     <ActivatedDate>05-12-2024 10:13:05 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails56" msdata:rowOrder="55">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>05-12-2024 10:13:05 AM</CreatedDate>
+                     <ActivatedDate>05-12-2024 10:13:05 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails57" msdata:rowOrder="56">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>05-12-2024 10:13:05 AM</CreatedDate>
+                     <ActivatedDate>05-12-2024 10:13:05 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails58" msdata:rowOrder="57">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>05-12-2024 10:13:05 AM</CreatedDate>
+                     <ActivatedDate>05-12-2024 10:13:05 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails59" msdata:rowOrder="58">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>07-12-2024 04:20:04 PM</CreatedDate>
+                     <ActivatedDate>07-12-2024 04:20:04 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails60" msdata:rowOrder="59">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>07-12-2024 04:20:04 PM</CreatedDate>
+                     <ActivatedDate>07-12-2024 04:20:04 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails61" msdata:rowOrder="60">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>10-12-2024 11:50:34 AM</CreatedDate>
+                     <ActivatedDate>10-12-2024 11:50:34 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails62" msdata:rowOrder="61">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>11-12-2024 02:38:21 PM</CreatedDate>
+                     <ActivatedDate>11-12-2024 02:38:21 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails63" msdata:rowOrder="62">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>0</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>11-12-2024 03:24:31 PM</CreatedDate>
+                     <ActivatedDate>11-12-2024 03:24:31 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails64" msdata:rowOrder="63">
+                     <Name>Higher Amount Free</Name>
+                     <Description>Higher Amount Free Per PNR</Description>
+                     <Type>Fixed</Type>
+                     <Rate>100</Rate>
+                     <ExpiryDate>31-12-2026</ExpiryDate>
+                     <CreatedDate>12-12-2024 03:18:48 PM</CreatedDate>
+                     <ActivatedDate>12-12-2024 03:18:48 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails65" msdata:rowOrder="64">
+                     <Name>flat booking</Name>
+                     <Description/>
+                     <Type>Fixed</Type>
+                     <Rate>100</Rate>
+                     <ExpiryDate>30-03-2025</ExpiryDate>
+                     <CreatedDate>10-03-2025 11:31:27 AM</CreatedDate>
+                     <ActivatedDate>10-03-2025 11:31:27 AM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails66" msdata:rowOrder="65">
+                     <Name>Flat Rs.15 Off</Name>
+                     <Description>Flat Rs.15 Off Monthly Coupon</Description>
+                     <Type>Fixed</Type>
+                     <Rate>15</Rate>
+                     <ExpiryDate>17-05-2025</ExpiryDate>
+                     <CreatedDate>17-04-2025 03:53:51 PM</CreatedDate>
+                     <ActivatedDate>17-04-2025 03:53:51 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails67" msdata:rowOrder="66">
+                     <Name>Flat 12% Off</Name>
+                     <Description>Flat 12% Off</Description>
+                     <Type>Percentage</Type>
+                     <Rate>12</Rate>
+                     <ExpiryDate>30-06-2025</ExpiryDate>
+                     <CreatedDate>08-05-2025 01:55:35 PM</CreatedDate>
+                     <ActivatedDate>08-05-2025 01:55:35 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails68" msdata:rowOrder="67">
+                     <Name>Flat 12.50% Off</Name>
+                     <Description>Flat 12.50% Off</Description>
+                     <Type>Fixed</Type>
+                     <Rate>12</Rate>
+                     <ExpiryDate>10-05-2025</ExpiryDate>
+                     <CreatedDate>08-05-2025 02:14:16 PM</CreatedDate>
+                     <ActivatedDate>08-05-2025 02:14:16 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails69" msdata:rowOrder="68">
+                     <Name>Learning Purpose 10% off</Name>
+                     <Description/>
+                     <Type>Percentage</Type>
+                     <Rate>10</Rate>
+                     <ExpiryDate>11-05-2025</ExpiryDate>
+                     <CreatedDate>09-05-2025 04:59:54 PM</CreatedDate>
+                     <ActivatedDate>09-05-2025 04:59:54 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails70" msdata:rowOrder="69">
+                     <Name>For GJ 03 HD 9325</Name>
+                     <Description>Test Check</Description>
+                     <Type>Percentage</Type>
+                     <Rate>12</Rate>
+                     <ExpiryDate>31-12-2026</ExpiryDate>
+                     <CreatedDate>21-05-2025 03:25:42 PM</CreatedDate>
+                     <ActivatedDate>21-05-2025 03:25:42 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails71" msdata:rowOrder="70">
+                     <Name>Higher Amount Free</Name>
+                     <Description>test</Description>
+                     <Type>Fixed</Type>
+                     <Rate>100</Rate>
+                     <ExpiryDate>31-08-2025</ExpiryDate>
+                     <CreatedDate>30-07-2025 06:21:30 PM</CreatedDate>
+                     <ActivatedDate>30-07-2025 06:21:30 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+                  <GetRoutesWithCouponDetails diffgr:id="GetRoutesWithCouponDetails72" msdata:rowOrder="71">
+                     <Name>For bus connect amount coupon code test</Name>
+                     <Description>Test Check</Description>
+                     <Type>Fixed</Type>
+                     <Rate>100</Rate>
+                     <ExpiryDate>31-12-2025</ExpiryDate>
+                     <CreatedDate>31-07-2025 12:43:34 PM</CreatedDate>
+                     <ActivatedDate>31-07-2025 12:43:34 PM</ActivatedDate>
+                  </GetRoutesWithCouponDetails>
+               </DocumentElement>
+            </diffgr:diffgram>
+         </GetRoutesWithCouponDetailsResult>
+      </GetRoutesWithCouponDetailsResponse>
+   </soap:Body>
+</soap:Envelope>

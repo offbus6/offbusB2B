@@ -290,13 +290,48 @@ export const apiConfigurations = pgTable("api_configurations", {
   apiType: varchar("api_type", { 
     enum: ["get_routes", "book_seat", "routes_with_coupon", "daily_booking_summary"] 
   }).notNull(),
-  name: varchar("name").notNull(), // Display name for the API
+  name: varchar("name").notNull(),
   baseUrl: varchar("base_url").notNull(),
-  headers: jsonb("headers"), // JSON object for headers configuration
-  payloadTemplate: jsonb("payload_template"), // JSON template for request payload
-  responseStructure: jsonb("response_structure"), // JSON describing response structure
-  dataExtractionPath: varchar("data_extraction_path"), // JSONPath or dot notation to find data
+  headers: jsonb("headers"),
+  payloadTemplate: jsonb("payload_template"),
+  responseStructure: jsonb("response_structure"),
+  dataExtractionPath: varchar("data_extraction_path"),
   isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Agency API Providers (SAAS Provider Credentials)
+export const agencyApiProviders = pgTable("agency_api_providers", {
+  id: serial("id").primaryKey(),
+  agencyId: integer("agency_id").notNull().references(() => agencies.id),
+  providerType: varchar("provider_type", { 
+    enum: ["ITS", "Bitla", "Other"] 
+  }).notNull(),
+  providerName: varchar("provider_name").notNull(),
+  baseUrl: varchar("base_url").notNull(),
+  companyId: varchar("company_id").notNull(),
+  verifyCallEncrypted: text("verify_call_encrypted").notNull(),
+  encryptionSalt: varchar("encryption_salt").notNull(),
+  isActive: boolean("is_active").default(true),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Agency API Endpoints (Individual API Configurations)
+export const agencyApiEndpoints = pgTable("agency_api_endpoints", {
+  id: serial("id").primaryKey(),
+  providerConfigId: integer("provider_config_id").notNull().references(() => agencyApiProviders.id),
+  apiName: varchar("api_name").notNull(),
+  method: varchar("method", { enum: ["SOAP", "REST"] }).notNull().default("SOAP"),
+  path: varchar("path"),
+  requestTemplate: text("request_template").notNull(),
+  responseTemplate: text("response_template"),
+  extractionRules: jsonb("extraction_rules"),
+  headers: jsonb("headers"),
+  isActive: boolean("is_active").default(true),
+  version: varchar("version"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -306,13 +341,25 @@ export const apiConfigurationsRelations = relations(apiConfigurations, ({ one })
   agency: one(agencies, { fields: [apiConfigurations.agencyId], references: [agencies.id] }),
 }));
 
-// Update agencies relations to include API configurations
+// Relations for Agency API Providers
+export const agencyApiProvidersRelations = relations(agencyApiProviders, ({ one, many }) => ({
+  agency: one(agencies, { fields: [agencyApiProviders.agencyId], references: [agencies.id] }),
+  endpoints: many(agencyApiEndpoints),
+}));
+
+// Relations for Agency API Endpoints
+export const agencyApiEndpointsRelations = relations(agencyApiEndpoints, ({ one }) => ({
+  provider: one(agencyApiProviders, { fields: [agencyApiEndpoints.providerConfigId], references: [agencyApiProviders.id] }),
+}));
+
+// Update agencies relations to include API configurations and providers
 export const agenciesRelationsUpdated = relations(agencies, ({ one, many }) => ({
   user: one(users, { fields: [agencies.userId], references: [users.id] }),
   buses: many(buses),
   travelerData: many(travelerData),
   uploadHistory: many(uploadHistory),
   apiConfigurations: many(apiConfigurations),
+  apiProviders: many(agencyApiProviders),
 }));
 
 // API configuration schemas
@@ -324,3 +371,27 @@ export const insertApiConfigurationSchema = createInsertSchema(apiConfigurations
 
 export type ApiConfiguration = typeof apiConfigurations.$inferSelect;
 export type InsertApiConfiguration = z.infer<typeof insertApiConfigurationSchema>;
+
+// Agency API Provider schemas
+export const insertAgencyApiProviderSchema = createInsertSchema(agencyApiProviders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  verifyCallEncrypted: true,
+  encryptionSalt: true,
+}).extend({
+  verifyCall: z.string().min(1, "VerifyCall token is required"),
+});
+
+export type AgencyApiProvider = typeof agencyApiProviders.$inferSelect;
+export type InsertAgencyApiProvider = z.infer<typeof insertAgencyApiProviderSchema>;
+
+// Agency API Endpoint schemas
+export const insertAgencyApiEndpointSchema = createInsertSchema(agencyApiEndpoints).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AgencyApiEndpoint = typeof agencyApiEndpoints.$inferSelect;
+export type InsertAgencyApiEndpoint = z.infer<typeof insertAgencyApiEndpointSchema>;

@@ -7,7 +7,14 @@ import { z } from "zod";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import validator from "validator";
-import { insertAgencySchema, insertBusSchema, insertTravelerDataSchema } from "@shared/schema";
+import { 
+  insertAgencySchema, 
+  insertBusSchema, 
+  insertTravelerDataSchema,
+  insertApiConfigurationSchema,
+  insertAgencyApiProviderSchema,
+  insertAgencyApiEndpointSchema
+} from "@shared/schema";
 import { 
   createAuthLimiter, 
   createGeneralLimiter, 
@@ -1995,6 +2002,275 @@ export function registerRoutes(app: Express) {
       res.json({ message: "API configuration deleted successfully" });
     } catch (error) {
       console.error("Delete API configuration error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ==================== AGENCY API PROVIDER ROUTES ====================
+  
+  // Get all API providers for an agency
+  app.get("/api/admin/agencies/:id/providers", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const agencyId = parseInt(req.params.id);
+      if (isNaN(agencyId)) {
+        return res.status(400).json({ message: "Invalid agency ID" });
+      }
+
+      const providers = await storage.getAgencyApiProvidersByAgency(agencyId);
+      res.json(providers);
+    } catch (error) {
+      console.error("Get API providers error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create a new API provider for an agency
+  app.post("/api/admin/agencies/:id/providers", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const agencyId = parseInt(req.params.id);
+      if (isNaN(agencyId)) {
+        return res.status(400).json({ message: "Invalid agency ID" });
+      }
+
+      // Validate request body using shared Zod schema
+      const validationResult = insertAgencyApiProviderSchema.safeParse({ ...req.body, agencyId });
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: validationResult.error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+
+      const { verifyCall, ...providerData } = validationResult.data;
+      
+      if (!verifyCall) {
+        return res.status(400).json({ message: "VerifyCall token is required" });
+      }
+
+      const provider = await storage.createAgencyApiProvider(providerData, verifyCall);
+      res.status(201).json(provider);
+    } catch (error: any) {
+      console.error("Create API provider error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update an API provider
+  app.patch("/api/admin/agencies/:id/providers/:providerId", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const agencyId = parseInt(req.params.id);
+      const providerId = parseInt(req.params.providerId);
+      
+      if (isNaN(agencyId) || isNaN(providerId)) {
+        return res.status(400).json({ message: "Invalid agency ID or provider ID" });
+      }
+
+      // Verify the provider belongs to this agency
+      const existingProvider = await storage.getAgencyApiProvider(providerId);
+      if (!existingProvider || existingProvider.agencyId !== agencyId) {
+        return res.status(404).json({ message: "API provider not found" });
+      }
+
+      // Validate request body using shared Zod schema (partial for PATCH)
+      const validationResult = insertAgencyApiProviderSchema.partial().safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: validationResult.error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+
+      const { verifyCall, ...updates } = validationResult.data;
+
+      const updatedProvider = await storage.updateAgencyApiProvider(providerId, updates, verifyCall);
+      res.json(updatedProvider);
+    } catch (error: any) {
+      console.error("Update API provider error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete an API provider (also deletes all associated endpoints)
+  app.delete("/api/admin/agencies/:id/providers/:providerId", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const agencyId = parseInt(req.params.id);
+      const providerId = parseInt(req.params.providerId);
+      
+      if (isNaN(agencyId) || isNaN(providerId)) {
+        return res.status(400).json({ message: "Invalid agency ID or provider ID" });
+      }
+
+      // Verify the provider belongs to this agency
+      const existingProvider = await storage.getAgencyApiProvider(providerId);
+      if (!existingProvider || existingProvider.agencyId !== agencyId) {
+        return res.status(404).json({ message: "API provider not found" });
+      }
+
+      await storage.deleteAgencyApiProvider(providerId);
+      res.json({ message: "API provider deleted successfully" });
+    } catch (error) {
+      console.error("Delete API provider error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ==================== AGENCY API ENDPOINT ROUTES ====================
+  
+  // Get all endpoints for a provider
+  app.get("/api/admin/providers/:providerId/endpoints", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const providerId = parseInt(req.params.providerId);
+      if (isNaN(providerId)) {
+        return res.status(400).json({ message: "Invalid provider ID" });
+      }
+
+      const endpoints = await storage.getAgencyApiEndpointsByProvider(providerId);
+      res.json(endpoints);
+    } catch (error) {
+      console.error("Get API endpoints error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create a new API endpoint for a provider
+  app.post("/api/admin/providers/:providerId/endpoints", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const providerId = parseInt(req.params.providerId);
+      if (isNaN(providerId)) {
+        return res.status(400).json({ message: "Invalid provider ID" });
+      }
+
+      // Verify provider exists
+      const provider = await storage.getAgencyApiProvider(providerId);
+      if (!provider) {
+        return res.status(404).json({ message: "Provider not found" });
+      }
+
+      // Validate request body using shared Zod schema
+      const validationResult = insertAgencyApiEndpointSchema.safeParse({ 
+        ...req.body, 
+        providerConfigId: providerId 
+      });
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: validationResult.error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+
+      const endpoint = await storage.createAgencyApiEndpoint(validationResult.data);
+      res.status(201).json(endpoint);
+    } catch (error: any) {
+      console.error("Create API endpoint error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Update an API endpoint
+  app.patch("/api/admin/providers/:providerId/endpoints/:endpointId", authLimiter, async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const providerId = parseInt(req.params.providerId);
+      const endpointId = parseInt(req.params.endpointId);
+      
+      if (isNaN(providerId) || isNaN(endpointId)) {
+        return res.status(400).json({ message: "Invalid provider ID or endpoint ID" });
+      }
+
+      // Verify the endpoint belongs to this provider
+      const existingEndpoint = await storage.getAgencyApiEndpoint(endpointId);
+      if (!existingEndpoint || existingEndpoint.providerConfigId !== providerId) {
+        return res.status(404).json({ message: "API endpoint not found" });
+      }
+
+      // Validate request body using shared Zod schema (partial for PATCH)
+      const validationResult = insertAgencyApiEndpointSchema.partial().safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: validationResult.error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+
+      const updatedEndpoint = await storage.updateAgencyApiEndpoint(endpointId, validationResult.data);
+      res.json(updatedEndpoint);
+    } catch (error: any) {
+      console.error("Update API endpoint error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Delete an API endpoint
+  app.delete("/api/admin/providers/:providerId/endpoints/:endpointId", async (req: Request, res: Response) => {
+    try {
+      const user = (req.session as any)?.user;
+      if (!user || user.role !== "super_admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const providerId = parseInt(req.params.providerId);
+      const endpointId = parseInt(req.params.endpointId);
+      
+      if (isNaN(providerId) || isNaN(endpointId)) {
+        return res.status(400).json({ message: "Invalid provider ID or endpoint ID" });
+      }
+
+      // Verify the endpoint belongs to this provider
+      const existingEndpoint = await storage.getAgencyApiEndpoint(endpointId);
+      if (!existingEndpoint || existingEndpoint.providerConfigId !== providerId) {
+        return res.status(404).json({ message: "API endpoint not found" });
+      }
+
+      await storage.deleteAgencyApiEndpoint(endpointId);
+      res.json({ message: "API endpoint deleted successfully" });
+    } catch (error) {
+      console.error("Delete API endpoint error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
