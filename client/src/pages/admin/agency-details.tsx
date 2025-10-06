@@ -2078,11 +2078,10 @@ export default function AgencyDetails() {
 
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-semibold text-lg">Configured Providers</h3>
-                <p className="text-xs text-red-600">DEBUG: Button section rendering</p>
                 <Dialog open={providerDialogOpen} onOpenChange={setProviderDialogOpen}>
                   <DialogTrigger asChild>
                     <Button 
-                      className="bg-[var(--airbnb-pink)] hover:bg-[var(--airbnb-pink-dark)] text-white"
+                      className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90 text-white"
                       data-testid="button-add-provider"
                       onClick={() => {
                         setEditingProvider(null);
