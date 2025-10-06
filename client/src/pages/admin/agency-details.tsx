@@ -2276,6 +2276,7 @@ export default function AgencyDetails() {
                               size="sm"
                               onClick={() => {
                                 setSelectedProvider(provider);
+                                setEndpointDialogOpen(true);
                               }}
                             >
                               <Route className="w-4 h-4 mr-1" />
