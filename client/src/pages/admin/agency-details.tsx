@@ -2078,6 +2078,7 @@ export default function AgencyDetails() {
 
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-semibold text-lg">Configured Providers</h3>
+                <p className="text-xs text-red-600">DEBUG: Button section rendering</p>
                 <Dialog open={providerDialogOpen} onOpenChange={setProviderDialogOpen}>
                   <DialogTrigger asChild>
                     <Button 
