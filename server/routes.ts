@@ -29,6 +29,7 @@ import {
 import { securityMonitor, createSecurityMiddleware } from "./security-monitor";
 import { whatsappService, sendBhashWhatsAppMessage, replaceApprovedTemplateVariables } from "./whatsapp-service";
 import { testWhatsAppMessage, sendWhatsAppToTraveler, testWhatsAppWithImage } from "./whatsapp-test";
+import { getSources, getDestinations, getAvailableRoutes } from "./saas-soap-client";
 
 // Rate limiting configurations from security config
 const authLimiter = createAuthLimiter();
@@ -5317,6 +5318,200 @@ Happy Travels!`;
       res.status(500).json({ 
         success: false, 
         error: 'Failed to analyze bulk delivery' 
+      });
+    }
+  });
+
+  // ==================== SAAS Bus Search REST API Routes ====================
+
+  // GET /api/bus/sources - Get all source cities
+  app.get("/api/bus/sources", apiLimiter, async (req: Request, res: Response) => {
+    try {
+      const agencyId = req.query.agencyId ? parseInt(req.query.agencyId as string) : 144; // Default to agency 144
+      
+      // Get provider config
+      const providers = await storage.getAgencyApiProvidersByAgency(agencyId);
+      if (!providers || providers.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          error: 'No SAAS provider configured for this agency' 
+        });
+      }
+      
+      const provider = providers[0]; // Use first active provider
+      
+      // Get GetSources endpoint
+      const endpoints = await storage.getAgencyApiEndpointsByProvider(provider.id);
+      const sourcesEndpoint = endpoints.find(e => e.apiName === 'GetSources');
+      
+      if (!sourcesEndpoint) {
+        return res.status(404).json({ 
+          success: false, 
+          error: 'GetSources API not configured' 
+        });
+      }
+      
+      // Call SOAP API
+      const sources = await getSources(
+        {
+          baseUrl: provider.baseUrl,
+          companyId: provider.companyId,
+          verifyCall: provider.verifyCall
+        },
+        { requestTemplate: sourcesEndpoint.requestTemplate }
+      );
+      
+      res.json({
+        success: true,
+        data: sources,
+        count: sources.length
+      });
+      
+    } catch (error: any) {
+      console.error('Get sources error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || 'Failed to fetch sources' 
+      });
+    }
+  });
+
+  // GET /api/bus/destinations?sourceId=70 - Get destinations for a source
+  app.get("/api/bus/destinations", apiLimiter, async (req: Request, res: Response) => {
+    try {
+      const sourceId = req.query.sourceId as string;
+      const agencyId = req.query.agencyId ? parseInt(req.query.agencyId as string) : 144;
+      
+      if (!sourceId) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'sourceId query parameter is required' 
+        });
+      }
+      
+      // Get provider config
+      const providers = await storage.getAgencyApiProvidersByAgency(agencyId);
+      if (!providers || providers.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          error: 'No SAAS provider configured for this agency' 
+        });
+      }
+      
+      const provider = providers[0];
+      
+      // Get GetDestinationsBasedOnSource endpoint
+      const endpoints = await storage.getAgencyApiEndpointsByProvider(provider.id);
+      const destEndpoint = endpoints.find(e => e.apiName === 'GetDestinationsBasedOnSource');
+      
+      if (!destEndpoint) {
+        return res.status(404).json({ 
+          success: false, 
+          error: 'GetDestinationsBasedOnSource API not configured' 
+        });
+      }
+      
+      // Call SOAP API
+      const destinations = await getDestinations(
+        {
+          baseUrl: provider.baseUrl,
+          companyId: provider.companyId,
+          verifyCall: provider.verifyCall
+        },
+        { requestTemplate: destEndpoint.requestTemplate },
+        sourceId
+      );
+      
+      res.json({
+        success: true,
+        data: destinations,
+        count: destinations.length,
+        sourceId
+      });
+      
+    } catch (error: any) {
+      console.error('Get destinations error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || 'Failed to fetch destinations' 
+      });
+    }
+  });
+
+  // GET /api/bus/search?from=70&to=1&date=09-10-2025 - Search available buses
+  app.get("/api/bus/search", apiLimiter, async (req: Request, res: Response) => {
+    try {
+      const fromId = req.query.from as string;
+      const toId = req.query.to as string;
+      const travelDate = req.query.date as string;
+      const agencyId = req.query.agencyId ? parseInt(req.query.agencyId as string) : 144;
+      
+      if (!fromId || !toId || !travelDate) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'from, to, and date query parameters are required' 
+        });
+      }
+      
+      // Validate date format (DD-MM-YYYY)
+      if (!/^\d{2}-\d{2}-\d{4}$/.test(travelDate)) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Invalid date format. Use DD-MM-YYYY (e.g., 09-10-2025)' 
+        });
+      }
+      
+      // Get provider config
+      const providers = await storage.getAgencyApiProvidersByAgency(agencyId);
+      if (!providers || providers.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          error: 'No SAAS provider configured for this agency' 
+        });
+      }
+      
+      const provider = providers[0];
+      
+      // Get GetAvailableRoutes endpoint
+      const endpoints = await storage.getAgencyApiEndpointsByProvider(provider.id);
+      const routesEndpoint = endpoints.find(e => e.apiName === 'GetAvailableRoutes');
+      
+      if (!routesEndpoint) {
+        return res.status(404).json({ 
+          success: false, 
+          error: 'GetAvailableRoutes API not configured' 
+        });
+      }
+      
+      // Call SOAP API
+      const routes = await getAvailableRoutes(
+        {
+          baseUrl: provider.baseUrl,
+          companyId: provider.companyId,
+          verifyCall: provider.verifyCall
+        },
+        { requestTemplate: routesEndpoint.requestTemplate },
+        fromId,
+        toId,
+        travelDate
+      );
+      
+      res.json({
+        success: true,
+        data: routes,
+        count: routes.length,
+        searchParams: {
+          from: fromId,
+          to: toId,
+          date: travelDate
+        }
+      });
+      
+    } catch (error: any) {
+      console.error('Search buses error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || 'Failed to search buses' 
       });
     }
   });
