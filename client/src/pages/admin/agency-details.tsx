@@ -2330,6 +2330,292 @@ export default function AgencyDetails() {
         </TabsContent>
       </Tabs>
 
+      {/* API Endpoints Dialog */}
+      <Dialog open={endpointDialogOpen} onOpenChange={setEndpointDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingEndpoint ? "Edit API Endpoint" : "Add New API Endpoint"}
+              {selectedProvider && (
+                <span className="text-sm font-normal text-gray-600 ml-2">
+                  for {selectedProvider.providerName}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <Form {...endpointForm}>
+            <form 
+              onSubmit={endpointForm.handleSubmit((data) => {
+                if (editingEndpoint) {
+                  updateEndpointMutation.mutate({ id: editingEndpoint.id, data });
+                } else {
+                  createEndpointMutation.mutate(data);
+                }
+              })}
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={endpointForm.control}
+                  name="apiName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>API Name *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., Get Routes API" 
+                          {...field} 
+                          data-testid="input-api-name"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={endpointForm.control}
+                  name="method"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Method</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-method">
+                            <SelectValue placeholder="Select method" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="SOAP">SOAP</SelectItem>
+                          <SelectItem value="REST">REST</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={endpointForm.control}
+                name="path"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Path (Optional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g., /api/getRoutes" 
+                        {...field} 
+                        data-testid="input-path"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={endpointForm.control}
+                name="requestTemplate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Request Template *</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="XML or JSON request template"
+                        rows={6}
+                        {...field} 
+                        data-testid="textarea-request-template"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={endpointForm.control}
+                name="responseTemplate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Response Template (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Expected XML or JSON response structure"
+                        rows={4}
+                        {...field} 
+                        data-testid="textarea-response-template"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={endpointForm.control}
+                name="extractionRules"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Extraction Rules (Optional, JSON format)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder='{"dataPath": "response.data", "fields": ["id", "name"]}'
+                        rows={3}
+                        {...field} 
+                        data-testid="textarea-extraction-rules"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={endpointForm.control}
+                name="headers"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Headers (Optional, JSON format)</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder='{"Content-Type": "application/xml", "Authorization": "Bearer token"}'
+                        rows={3}
+                        {...field} 
+                        data-testid="textarea-headers"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={endpointForm.control}
+                  name="version"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Version (Optional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., v1.0" 
+                          {...field} 
+                          data-testid="input-version"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={endpointForm.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center space-x-2 pt-8">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-endpoint-active"
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0">Active</FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-4 border-t">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => {
+                    setEndpointDialogOpen(false);
+                    setEditingEndpoint(null);
+                    endpointForm.reset();
+                  }}
+                  data-testid="button-cancel-endpoint"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  className="bg-[var(--airbnb-primary)] hover:bg-[var(--airbnb-primary)]/90"
+                  disabled={createEndpointMutation.isPending || updateEndpointMutation.isPending}
+                  data-testid="button-save-endpoint"
+                >
+                  {createEndpointMutation.isPending || updateEndpointMutation.isPending 
+                    ? "Saving..." 
+                    : (editingEndpoint ? "Update" : "Add")} Endpoint
+                </Button>
+              </div>
+            </form>
+          </Form>
+
+          {/* List existing endpoints */}
+          {selectedProvider && (
+            <div className="mt-6 border-t pt-6">
+              <h4 className="font-semibold mb-4">Existing Endpoints</h4>
+              {endpointsQuery.isLoading ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--airbnb-primary)] mx-auto"></div>
+                </div>
+              ) : endpointsQuery.data && endpointsQuery.data.length > 0 ? (
+                <div className="space-y-2">
+                  {endpointsQuery.data.map((endpoint: any) => (
+                    <div key={endpoint.id} className="flex justify-between items-center p-3 border rounded-lg">
+                      <div>
+                        <p className="font-medium">{endpoint.apiName}</p>
+                        <p className="text-sm text-gray-600">{endpoint.method} • {endpoint.path || "No path"}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={endpoint.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                          {endpoint.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingEndpoint(endpoint);
+                            endpointForm.reset({
+                              apiName: endpoint.apiName,
+                              method: endpoint.method,
+                              path: endpoint.path || "",
+                              requestTemplate: endpoint.requestTemplate,
+                              responseTemplate: endpoint.responseTemplate || "",
+                              extractionRules: endpoint.extractionRules ? JSON.stringify(endpoint.extractionRules) : "",
+                              headers: endpoint.headers ? JSON.stringify(endpoint.headers) : "",
+                              isActive: endpoint.isActive,
+                              version: endpoint.version || "",
+                            });
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete endpoint "${endpoint.apiName}"?`)) {
+                              deleteEndpointMutation.mutate(endpoint.id);
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-gray-500 py-4">No endpoints configured</p>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Payment Update Dialog */}
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <DialogContent>
