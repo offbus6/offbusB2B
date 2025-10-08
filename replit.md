@@ -117,3 +117,8 @@ Agency login: Unapproved agencies can login but see pending approval page with c
 - **Complete REST API**: Full CRUD operations for providers and endpoints with Zod validation
 - **UI Integration**: New "SAAS Providers" tab in agency details page with provider and endpoint management dialogs
 - **Database Tables**: `agency_api_providers` for credentials, `agency_api_endpoints` for SOAP/XML configurations
+- **Coupon Integration**: GetRoutesWithCouponDetails API integrated with bus search endpoint
+  - Automatically fetches and filters expired coupons (DD-MM-YYYY format)
+  - Returns valid coupons alongside bus routes in `/api/bus/search` response
+  - Non-critical error handling ensures coupon failures don't affect bus search results
+  - Coupon data includes: code, description, discountType (Percentage/Fixed), discountValue, expiryDate

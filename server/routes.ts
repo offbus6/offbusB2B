@@ -29,7 +29,7 @@ import {
 import { securityMonitor, createSecurityMiddleware } from "./security-monitor";
 import { whatsappService, sendBhashWhatsAppMessage, replaceApprovedTemplateVariables } from "./whatsapp-service";
 import { testWhatsAppMessage, sendWhatsAppToTraveler, testWhatsAppWithImage } from "./whatsapp-test";
-import { getSources, getDestinations, getAvailableRoutes } from "./saas-soap-client";
+import { getSources, getDestinations, getAvailableRoutes, getCoupons } from "./saas-soap-client";
 
 // Rate limiting configurations from security config
 const authLimiter = createAuthLimiter();
@@ -5483,7 +5483,7 @@ Happy Travels!`;
         });
       }
       
-      // Call SOAP API
+      // Call SOAP API for routes
       const routes = await getAvailableRoutes(
         {
           baseUrl: provider.baseUrl,
@@ -5496,10 +5496,31 @@ Happy Travels!`;
         travelDate
       );
       
+      // Fetch available coupons
+      let coupons: any[] = [];
+      try {
+        const couponEndpoint = endpoints.find(e => e.apiName === 'GetRoutesWithCouponDetails');
+        if (couponEndpoint) {
+          coupons = await getCoupons(
+            {
+              baseUrl: provider.baseUrl,
+              companyId: provider.companyId,
+              verifyCall: provider.verifyCall
+            },
+            { requestTemplate: couponEndpoint.requestTemplate }
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching coupons (non-critical):', error);
+        // Continue without coupons if API fails
+      }
+      
       res.json({
         success: true,
         data: routes,
+        coupons: coupons,
         count: routes.length,
+        couponCount: coupons.length,
         searchParams: {
           from: fromId,
           to: toId,

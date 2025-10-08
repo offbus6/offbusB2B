@@ -185,3 +185,75 @@ export async function getAvailableRoutes(
   
   return extractRoutes(response);
 }
+
+// Extract coupons from XML
+function extractCoupons(xmlResponse: string): Array<any> {
+  const couponPattern = /<GetRoutesWithCouponDetails[^>]*>([\s\S]*?)<\/GetRoutesWithCouponDetails>/g;
+  const coupons: any[] = [];
+  
+  let match;
+  while ((match = couponPattern.exec(xmlResponse)) !== null) {
+    const couponXml = match[1];
+    
+    const extractField = (field: string) => {
+      const regex = new RegExp(`<${field}>(.*?)</${field}>`, 's');
+      const match = couponXml.match(regex);
+      return match ? match[1] : null;
+    };
+    
+    const name = extractField('Name');
+    const type = extractField('Type');
+    const rate = extractField('Rate');
+    const expiryDate = extractField('ExpiryDate');
+    
+    // Only add coupons with valid names and non-zero rates
+    if (name && name.trim() && rate && parseFloat(rate) > 0) {
+      coupons.push({
+        code: name,
+        description: extractField('Description') || '',
+        discountType: type, // 'Percentage' or 'Fixed'
+        discountValue: parseFloat(rate),
+        expiryDate: expiryDate,
+      });
+    }
+  }
+  
+  return coupons;
+}
+
+// Check if coupon is expired
+function isCouponExpired(expiryDateStr: string): boolean {
+  if (!expiryDateStr) return true;
+  
+  try {
+    // Parse DD-MM-YYYY format
+    const [day, month, year] = expiryDateStr.split('-').map(Number);
+    const expiryDate = new Date(year, month - 1, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to midnight
+    
+    return expiryDate < today;
+  } catch {
+    return true; // If parsing fails, consider expired
+  }
+}
+
+export async function getCoupons(
+  config: ProviderConfig,
+  endpoint: ApiEndpoint
+): Promise<Array<any>> {
+  // The template already has the full envelope, just replace placeholders
+  const soapRequest = replacePlaceholders(endpoint.requestTemplate, {
+    'CompanyId': config.companyId,
+    'VerifyCall': config.verifyCall
+  });
+  
+  const response = await callSoapApi(config.baseUrl, 'GetRoutesWithCouponDetails', soapRequest);
+  
+  const allCoupons = extractCoupons(response);
+  
+  // Filter out expired coupons
+  const validCoupons = allCoupons.filter(coupon => !isCouponExpired(coupon.expiryDate));
+  
+  return validCoupons;
+}
